@@ -14,4 +14,15 @@ public class AuthResponse {
     private String email;
     private String rol;
     private String token;
+    private Long empresaId; // ID de la empresa asociada, si existe
+    
+    // Constructor sin empresaId para compatibilidad con código existente
+    public AuthResponse(Long id, String nombre, String apellidos, String email, String rol, String token) {
+        this.id = id;
+        this.nombre = nombre;
+        this.apellidos = apellidos;
+        this.email = email;
+        this.rol = rol;
+        this.token = token;
+    }
 } 
