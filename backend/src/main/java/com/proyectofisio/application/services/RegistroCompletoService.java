@@ -43,12 +43,10 @@ public class RegistroCompletoService {
         // 1. Crear la empresa primero
         Empresa empresa = Empresa.builder()
                 .nombre(registroDTO.getNombreEmpresa())
-                .cifNif(registroDTO.getCifNif())
+                .nif(registroDTO.getCifNif())
                 .direccion(registroDTO.getDireccion())
-                .codigoPostal(registroDTO.getCodigoPostal())
-                .ciudad(registroDTO.getCiudad())
-                .provincia(registroDTO.getProvincia())
-                .pais(registroDTO.getPais())
+                .telefono(registroDTO.getTelefono())
+                .email(registroDTO.getEmail())
                 .build();
         
         Empresa empresaGuardada = empresaService.crearEmpresa(empresa);
