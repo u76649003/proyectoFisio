@@ -1,0 +1,496 @@
+openapi: 3.0.0
+info:
+  title: FisioAyuda API
+  version: 1.0.0
+  description: API RESTful completa para la gestión de clínicas de fisioterapia.
+
+servers:
+  - url: https://api.fisioayuda.com
+
+tags:
+  - name: usuarios
+  - name: empresas
+  - name: pacientes
+  - name: agenda
+  - name: facturas
+  - name: productos
+  - name: sesiones
+  - name: historialClinico
+  - name: notificaciones
+
+paths:
+  /usuarios:
+    get:
+      tags: [usuarios]
+      summary: Listar usuarios
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Lista de usuarios }
+        '500': { description: Error interno }
+
+    post:
+      tags: [usuarios]
+      summary: Crear usuario
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200': { description: Usuario creado }
+        '400': { description: Datos inválidos }
+        '500': { description: Error interno }
+
+    put:
+      tags: [usuarios]
+      summary: Actualizar usuario
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: ID cifrado del usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200': { description: Usuario actualizado }
+        '400': { description: Datos inválidos }
+        '404': { description: Usuario no encontrado }
+        '500': { description: Error interno }
+
+    delete:
+      tags: [usuarios]
+      summary: Eliminar usuario
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: ID cifrado del usuario
+      responses:
+        '200': { description: Usuario eliminado }
+        '404': { description: Usuario no encontrado }
+        '500': { description: Error interno }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  /empresas:
+    get:
+      tags: [empresas]
+      summary: Listar empresas
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Lista de empresas }
+        '500': { description: Error interno }
+    post:
+      tags: [empresas]
+      summary: Crear empresa
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Empresa creada }
+        '400': { description: Datos inválidos }
+        '500': { description: Error interno }
+
+    put:
+      tags: [empresas]
+      summary: Actualizar empresa
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: ID cifrado de la empresa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Empresa actualizada }
+        '400': { description: Datos inválidos }
+        '404': { description: Empresa no encontrada }
+        '500': { description: Error interno }
+
+    delete:
+      tags: [empresas]
+      summary: Eliminar empresa
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: ID cifrado de la empresa
+      responses:
+        '200': { description: Empresa eliminada }
+        '404': { description: Empresa no encontrada }
+        '500': { description: Error interno }
+
+  /pacientes:
+    get:
+      tags: [pacientes]
+      summary: Listar pacientes
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Lista de pacientes }
+
+    post:
+      tags: [pacientes]
+      summary: Crear paciente
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Paciente creado }
+
+    put:
+      tags: [pacientes]
+      summary: Actualizar paciente
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: ID cifrado del paciente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Paciente actualizado }
+
+    delete:
+      tags: [pacientes]
+      summary: Eliminar paciente
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: ID cifrado del paciente
+      responses:
+        '200': { description: Paciente eliminado }
+
+  /agenda:
+    get:
+      tags: [agenda]
+      summary: Listar citas
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Lista de citas }
+
+    post:
+      tags: [agenda]
+      summary: Crear cita
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Cita creada }
+
+    put:
+      tags: [agenda]
+      summary: Actualizar cita
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: ID cifrado de la cita
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Cita actualizada }
+
+    delete:
+      tags: [agenda]
+      summary: Eliminar cita
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: ID cifrado de la cita
+      responses:
+        '200': { description: Cita eliminada }
+  /facturas:
+    get:
+      tags: [facturas]
+      summary: Listar facturas
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Lista de facturas }
+
+    post:
+      tags: [facturas]
+      summary: Crear factura
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Factura creada }
+
+    put:
+      tags: [facturas]
+      summary: Actualizar factura
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: ID cifrado de la factura
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Factura actualizada }
+
+    delete:
+      tags: [facturas]
+      summary: Eliminar factura
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: ID cifrado de la factura
+      responses:
+        '200': { description: Factura eliminada }
+
+  /productos:
+    get:
+      tags: [productos]
+      summary: Listar productos
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Lista de productos }
+
+    post:
+      tags: [productos]
+      summary: Crear producto
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Producto creado }
+
+    put:
+      tags: [productos]
+      summary: Actualizar producto
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: ID cifrado del producto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Producto actualizado }
+
+    delete:
+      tags: [productos]
+      summary: Eliminar producto
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: ID cifrado del producto
+      responses:
+        '200': { description: Producto eliminado }
+
+  /sesiones:
+    get:
+      tags: [sesiones]
+      summary: Listar sesiones de tratamiento
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Lista de sesiones }
+
+    post:
+      tags: [sesiones]
+      summary: Crear sesión de tratamiento
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Sesión creada }
+
+    put:
+      tags: [sesiones]
+      summary: Actualizar sesión
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: ID cifrado de la sesión
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Sesión actualizada }
+
+    delete:
+      tags: [sesiones]
+      summary: Eliminar sesión
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: ID cifrado de la sesión
+      responses:
+        '200': { description: Sesión eliminada }
+
+  /historiales-clinicos:
+    get:
+      tags: [historialClinico]
+      summary: Listar historiales clínicos
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Lista de historiales }
+
+    post:
+      tags: [historialClinico]
+      summary: Crear historial clínico
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Historial creado }
+
+    put:
+      tags: [historialClinico]
+      summary: Actualizar historial clínico
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: ID cifrado del historial
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Historial actualizado }
+
+    delete:
+      tags: [historialClinico]
+      summary: Eliminar historial clínico
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: ID cifrado del historial
+      responses:
+        '200': { description: Historial eliminado }
+  /notificaciones/whatsapp:
+    post:
+      tags: [notificaciones]
+      summary: Enviar mensaje por WhatsApp
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                telefono:
+                  type: string
+                  example: "+34612345678"
+                mensaje:
+                  type: string
+                  example: "Hola, te recordamos tu cita mañana a las 10:00"
+      responses:
+        '200': { description: Mensaje enviado correctamente }
+        '400': { description: Datos inválidos }
+        '500': { description: Error interno }
+
+  /notificaciones/email:
+    post:
+      tags: [notificaciones]
+      summary: Enviar correo electrónico
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                destinatario:
+                  type: string
+                  format: email
+                asunto:
+                  type: string
+                contenido:
+                  type: string
+      responses:
+        '200': { description: Correo enviado correctamente }
+        '400': { description: Datos inválidos }
+        '500': { description: Error interno }
