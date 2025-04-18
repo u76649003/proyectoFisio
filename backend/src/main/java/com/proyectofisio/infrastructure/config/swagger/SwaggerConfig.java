@@ -16,6 +16,7 @@ import io.swagger.v3.oas.models.servers.Server;
 public class SwaggerConfig {
 
     @Bean
+    @Primary
     public OpenAPI detailedOpenAPI() {
         return new OpenAPI()
                 .addServersItem(new Server().url("/").description("Servidor por defecto"))
