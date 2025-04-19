@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Crear una instancia de axios con la URL base de la API
-const API_URL = process.env.REACT_APP_API_URL || 'https://proyectofisio.onrender.com/api';
+const API_URL = 'https://proyectofisio.onrender.com/api';
 
 // Crear diferentes instancias para cada microservicio si es necesario
 const api = axios.create({
@@ -68,10 +68,15 @@ export const authService = {
   registerComplete: async (registerData) => {
     try {
       const response = await api.post('/auth/registro-completo', registerData);
-      if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data));
-      }
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+  
+  verifyEmail: async (token) => {
+    try {
+      const response = await api.get(`/auth/verificar-email/${token}`);
       return response.data;
     } catch (error) {
       throw error;

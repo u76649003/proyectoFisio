@@ -4,6 +4,8 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Landing from './pages/Landing';
 import Register from './pages/Register';
+import VerifyEmail from './pages/VerifyEmail';
+import { authService } from './services/api';
 
 // Definir el tema personalizado
 const theme = createTheme({
@@ -70,6 +72,17 @@ const theme = createTheme({
   },
 });
 
+// Componente para proteger rutas
+const ProtectedRoute = ({ children }) => {
+  const isAuthenticated = authService.isAuthenticated();
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  
+  return children;
+};
+
 function App() {
   return (
     <ThemeProvider theme={theme}>
@@ -77,7 +90,8 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Landing />} />
-          <Route path="/registro" element={<Register />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/verify-email/:token" element={<VerifyEmail />} />
           {/* Añadir más rutas aquí según se vayan creando más páginas */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

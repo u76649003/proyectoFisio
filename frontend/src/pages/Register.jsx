@@ -39,6 +39,20 @@ const RegisterPaper = styled(Paper)(({ theme }) => ({
 
 const steps = ['Datos personales', 'Datos de la empresa', 'Confirmación'];
 
+// Lista de dominios de email temporales
+const TEMP_EMAIL_DOMAINS = [
+  'mailinator.com', 
+  '10minutemail.com', 
+  'guerrillamail.com',
+  'tempmail.com',
+  'temp-mail.org',
+  'fakeinbox.com',
+  'throwawaymail.com',
+  'yopmail.com',
+  'getnada.com',
+  'dispostable.com'
+];
+
 const Register = () => {
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
@@ -126,7 +140,7 @@ const Register = () => {
       } else if (formData.password.length < 8) {
         newErrors.password = 'La contraseña debe tener al menos 8 caracteres';
         isValid = false;
-      } else if (!/(?=.*[0-9])(?=.*[a-zA-Z])(?=.*[@#$%^&+=!])/.test(formData.password)) {
+      } else if (!/(?=.*[0-9])(?=.*[a-zA-Z])(?=.*[@#$%^&+=!,\.])/.test(formData.password)) {
         newErrors.password = 'La contraseña debe contener al menos un número, una letra y un carácter especial';
         isValid = false;
       }
@@ -201,6 +215,21 @@ const Register = () => {
       return;
     }
     
+    // Verificar si el dominio es un email temporal
+    const emailDomain = formData.email.split('@')[1].toLowerCase();
+    if (TEMP_EMAIL_DOMAINS.includes(emailDomain)) {
+      setSnackbar({
+        open: true,
+        message: 'No se permiten correos electrónicos temporales. Por favor, utilice una dirección de correo permanente.',
+        severity: 'error'
+      });
+      setErrors({
+        ...errors,
+        email: 'No se permiten correos electrónicos temporales'
+      });
+      return;
+    }
+    
     setLoading(true);
     
     try {
@@ -219,29 +248,25 @@ const Register = () => {
         codigoPostal: formData.codigoPostal,
         ciudad: formData.ciudad,
         provincia: formData.provincia,
-        pais: formData.pais
+        pais: formData.pais,
+        // Estado de verificación
+        verificado: false
       };
       
       // Enviar los datos a la API
       const response = await authService.registerComplete(registerData);
       
-      // Extraer información de la respuesta del backend
-      const { token, id, rol, empresaId } = response;
-      
-      // Guardar información adicional si es necesario
-      localStorage.setItem('empresaId', empresaId);
-      
-      // Mostrar mensaje de éxito
+      // Mostrar mensaje de éxito con instrucciones para verificar el email
       setSnackbar({
         open: true,
-        message: '¡Registro completado con éxito! Redirigiendo al dashboard...',
+        message: '¡Registro completado! Por favor, verifica tu correo electrónico para activar tu cuenta.',
         severity: 'success'
       });
       
-      // Redirigir al dashboard después de 2 segundos
+      // Redirigir a la página de inicio después de 3 segundos
       setTimeout(() => {
-        navigate('/dashboard');
-      }, 2000);
+        navigate('/');
+      }, 3000);
       
     } catch (error) {
       console.error('Error al registrar:', error);
@@ -524,6 +549,10 @@ const Register = () => {
               </Grid>
             </Grid>
             
+            <Alert severity="info" sx={{ mt: 3, mb: 2 }}>
+              Al registrarte, recibirás un correo electrónico de verificación. Por favor, revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta.
+            </Alert>
+            
             <FormControlLabel
               control={
                 <Checkbox
@@ -534,7 +563,7 @@ const Register = () => {
                 />
               }
               label="Acepto los términos y condiciones y la política de privacidad"
-              sx={{ mt: 3 }}
+              sx={{ mt: 1 }}
             />
             {errors.aceptaTerminos && (
               <Typography color="error" variant="caption">

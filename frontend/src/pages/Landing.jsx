@@ -281,11 +281,20 @@ const Landing = () => {
           >
             Iniciar sesión
           </Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             color="primary"
+            size="large"
             component={Link}
-            to="/registro"
+            to="/register"
+            sx={{
+              py: 1.5,
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 'bold',
+              fontSize: '1rem',
+              width: { xs: '100%', sm: 'auto' },
+            }}
           >
             Registrarse
           </Button>
@@ -313,7 +322,7 @@ const Landing = () => {
                   borderRadius: '30px'
                 }}
                 component={Link}
-                to="/registro"
+                to="/register"
               >
                 Iniciar ahora
               </Button>
@@ -412,10 +421,7 @@ const Landing = () => {
             </Button>
             <Box sx={{ textAlign: 'center', mt: 2 }}>
               <Typography variant="body2">
-                ¿No tienes una cuenta?{' '}
-                <Link to="/registro" style={{ textDecoration: 'none', color: 'primary.main' }} onClick={handleLoginClose}>
-                  Regístrate ahora
-                </Link>
+                ¿No tienes una cuenta? <Link to="/register" style={{ textDecoration: 'none', color: 'primary.main' }} onClick={handleLoginClose}>Regístrate</Link>
               </Typography>
               <Typography variant="body2" sx={{ mt: 1 }}>
                 <Link to="/recuperar-password" style={{ textDecoration: 'none', color: 'primary.main' }} onClick={handleLoginClose}>
