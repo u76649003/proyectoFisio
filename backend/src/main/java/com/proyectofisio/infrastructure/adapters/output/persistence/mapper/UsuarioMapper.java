@@ -36,6 +36,7 @@ public class UsuarioMapper {
                 .contraseña(entity.getContraseña())
                 .empresaId(entity.getEmpresa() != null ? entity.getEmpresa().getId() : null)
                 .fechaAlta(entity.getFechaAlta())
+                .emailVerificado(entity.isEmailVerificado())
                 .build();
     }
 
@@ -55,7 +56,8 @@ public class UsuarioMapper {
                 .especialidad(domain.getEspecialidad())
                 .rol(domain.getRol())
                 .contraseña(domain.getContraseña())
-                .fechaAlta(domain.getFechaAlta());
+                .fechaAlta(domain.getFechaAlta())
+                .emailVerificado(domain.isEmailVerificado());
 
         if (domain.getEmpresaId() != null) {
             EmpresaEntity empresaEntity = empresaRepository.findById(domain.getEmpresaId()).orElse(null);

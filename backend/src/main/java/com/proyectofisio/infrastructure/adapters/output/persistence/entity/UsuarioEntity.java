@@ -63,4 +63,7 @@ public class UsuarioEntity {
     
     @Column(name = "fecha_alta")
     private LocalDate fechaAlta;
+    
+    @Column(name = "email_verificado", nullable = false)
+    private boolean emailVerificado = false;
 } 

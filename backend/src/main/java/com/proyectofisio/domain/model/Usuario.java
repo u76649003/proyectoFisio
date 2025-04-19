@@ -26,4 +26,5 @@ public class Usuario {
     private String contraseña;
     private Long empresaId;
     private LocalDate fechaAlta;
+    private boolean emailVerificado;
 } 

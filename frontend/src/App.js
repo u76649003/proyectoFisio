@@ -5,6 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import Landing from './pages/Landing';
 import Register from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import { authService } from './services/api';
 
 // Definir el tema personalizado
@@ -92,6 +93,7 @@ function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-email/:token" element={<VerifyEmail />} />
+          <Route path="/politica-privacidad" element={<PrivacyPolicy />} />
           {/* Añadir más rutas aquí según se vayan creando más páginas */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
