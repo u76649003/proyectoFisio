@@ -1,0 +1,52 @@
+body {
+  margin: 0;
+  font-family: 'Roboto', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f5f5;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Estilos globales adicionales */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Scroll suavizado */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Responsive images */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Evitar desbordamientos horizontales */
+* {
+  box-sizing: border-box;
+}
+
+/* Estilos de texto predeterminados */
+h1, h2, h3, h4, h5, h6 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+p {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+/* Contenedor para estilos de impresión */
+@media print {
+  body {
+    background-color: #fff;
+  }
+} 
