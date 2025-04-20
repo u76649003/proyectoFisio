@@ -67,7 +67,53 @@ export const authService = {
   
   registerComplete: async (registerData) => {
     try {
-      const response = await api.post('/auth/registro-completo', registerData);
+      // Crear un objeto FormData para enviar los datos, incluyendo archivos
+      const formData = new FormData();
+      
+      // Extraer los datos del usuario y empresa
+      const usuarioData = {
+        nombre: registerData.nombre,
+        apellidos: registerData.apellidos,
+        email: registerData.email,
+        contraseña: registerData.password,
+        telefono: registerData.telefono,
+        dni: registerData.dni,
+        numeroColegiado: registerData.numeroColegiado || '',
+        especialidad: registerData.especialidad || '',
+        rol: registerData.rol
+      };
+      
+      const empresaData = {
+        nombre: registerData.nombreEmpresa,
+        nif: registerData.cifNif,
+        direccion: registerData.direccion,
+        codigoPostal: registerData.codigoPostal,
+        ciudad: registerData.ciudad,
+        provincia: registerData.provincia,
+        pais: registerData.pais,
+        web: registerData.web || '',
+        email: registerData.email,
+        telefono: registerData.telefono
+      };
+      
+      // Convertir los objetos a JSON y agregarlos al FormData
+      formData.append('usuario', new Blob([JSON.stringify(usuarioData)], { type: 'application/json' }));
+      formData.append('empresa', new Blob([JSON.stringify(empresaData)], { type: 'application/json' }));
+      
+      // Añadir el logo si existe
+      if (registerData.logo) {
+        formData.append('empresa.logo', registerData.logo);
+      }
+      
+      // Configurar la petición para manejar FormData
+      const config = {
+        headers: { 
+          'Content-Type': 'multipart/form-data'
+        },
+        timeout: 30000 // 30 segundos para permitir la subida de archivos
+      };
+      
+      const response = await api.post('/auth/registro-completo', formData, config);
       return response.data;
     } catch (error) {
       throw error;

@@ -2,6 +2,7 @@ package com.proyectofisio.infrastructure.adapters.input.rest;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -9,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,6 +30,7 @@ import com.proyectofisio.infrastructure.config.security.JwtTokenProvider;
 
 import jakarta.validation.Valid;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -106,9 +109,19 @@ public class AuthController {
         }
     }
     
-    @PostMapping("/registro-completo")
-    public ResponseEntity<?> registroCompleto(@Valid @RequestBody RegistroCompletoDTO registroDTO) {
+    @PostMapping(value = "/registro-completo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> registroCompleto(@ModelAttribute @Valid RegistroCompletoDTO registroDTO) {
         try {
+            // Verificar que los objetos no son nulos (ya lo hace @Valid, pero por si acaso)
+            if (registroDTO.getUsuario() == null || registroDTO.getEmpresa() == null) {
+                return ResponseEntity.badRequest().body("Los datos de usuario y empresa son obligatorios");
+            }
+            
+            // Si la fecha de alta es nula, establecerla
+            if (registroDTO.getUsuario().getFechaAlta() == null) {
+                registroDTO.getUsuario().setFechaAlta(LocalDate.now());
+            }
+            
             // Usar el servicio de registro completo para crear empresa y usuario
             Usuario usuarioGuardado = registroCompletoService.registrarUsuarioYEmpresa(registroDTO);
             

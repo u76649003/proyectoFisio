@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Box, 
@@ -17,12 +17,18 @@ import {
   FormControlLabel,
   Checkbox,
   Alert,
-  Snackbar
+  Snackbar,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select,
+  FormHelperText
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { Visibility, VisibilityOff, ArrowBack } from '@mui/icons-material';
+import { Visibility, VisibilityOff, ArrowBack, CloudUpload } from '@mui/icons-material';
 import logoImg from '../assets/logo.svg';
 import { authService } from '../services/api';
+import { countries, provinces, getCitiesByProvince } from '../data/locationData';
 
 const Logo = styled('img')({
   height: '50px',
@@ -36,6 +42,27 @@ const RegisterPaper = styled(Paper)(({ theme }) => ({
     padding: theme.spacing(8),
   }
 }));
+
+const VisuallyHiddenInput = styled('input')({
+  clip: 'rect(0 0 0 0)',
+  clipPath: 'inset(50%)',
+  height: 1,
+  overflow: 'hidden',
+  position: 'absolute',
+  bottom: 0,
+  left: 0,
+  whiteSpace: 'nowrap',
+  width: 1,
+});
+
+const CompanyLogoPreview = styled('img')({
+  width: '100%',
+  maxHeight: '200px',
+  objectFit: 'contain',
+  marginTop: '16px',
+  borderRadius: '8px',
+  border: '1px solid #ddd'
+});
 
 const steps = ['Datos personales', 'Datos de la empresa', 'Confirmación'];
 
@@ -53,10 +80,35 @@ const TEMP_EMAIL_DOMAINS = [
   'dispostable.com'
 ];
 
+// Tamaño máximo de logo en bytes (2MB)
+const MAX_LOGO_SIZE = 2 * 1024 * 1024;
+// Tipos de archivo permitidos
+const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml'];
+
+// Lista de roles disponibles
+const ROLES = ['FISIOTERAPEUTA', 'ADMINISTRADOR', 'RECEPCIONISTA'];
+
+// Lista de especialidades comunes de fisioterapia
+const ESPECIALIDADES = [
+  'Fisioterapia General',
+  'Fisioterapia Deportiva',
+  'Fisioterapia Neurológica',
+  'Fisioterapia Pediátrica',
+  'Fisioterapia Geriátrica',
+  'Fisioterapia Respiratoria',
+  'Fisioterapia Traumatológica',
+  'Fisioterapia Reumatológica',
+  'Terapia Manual',
+  'Osteopatía',
+  'Rehabilitación',
+  'Otro'
+];
+
 const Register = () => {
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
+  const [availableCities, setAvailableCities] = useState([]);
   const [formData, setFormData] = useState({
     // Datos personales
     nombre: '',
@@ -64,6 +116,10 @@ const Register = () => {
     email: '',
     password: '',
     telefono: '',
+    dni: '',
+    numeroColegiado: '',
+    especialidad: '',
+    rol: 'FISIOTERAPEUTA',
     // Datos de empresa
     nombreEmpresa: '',
     cifNif: '',
@@ -72,6 +128,8 @@ const Register = () => {
     ciudad: '',
     provincia: '',
     pais: 'España',
+    web: '',
+    logoEmpresa: null,
     // Términos
     aceptaTerminos: false
   });
@@ -82,20 +140,78 @@ const Register = () => {
     message: '',
     severity: 'success'
   });
+  const [logoPreview, setLogoPreview] = useState(null);
+
+  // Actualizar ciudades cuando cambia la provincia
+  useEffect(() => {
+    if (formData.provincia) {
+      const cities = getCitiesByProvince(formData.provincia);
+      setAvailableCities(cities);
+      
+      // Si la ciudad actual no está en la nueva lista de ciudades, resetearla
+      if (cities.length > 0 && !cities.includes(formData.ciudad)) {
+        setFormData(prev => ({
+          ...prev,
+          ciudad: ''
+        }));
+      }
+    }
+  }, [formData.provincia]);
 
   const handleChange = (e) => {
-    const { name, value, checked, type } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value
-    });
+    const { name, value, checked, type, files } = e.target;
     
-    // Limpiar error del campo cuando el usuario escribe
-    if (errors[name]) {
-      setErrors({
-        ...errors,
-        [name]: ''
+    if (type === 'file') {
+      const file = files[0];
+      
+      // Validar tamaño y tipo de archivo
+      if (file) {
+        if (file.size > MAX_LOGO_SIZE) {
+          setErrors(prev => ({
+            ...prev,
+            logoEmpresa: `El archivo es demasiado grande. El tamaño máximo es de 2MB.`
+          }));
+          return;
+        }
+        
+        if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+          setErrors(prev => ({
+            ...prev,
+            logoEmpresa: `Tipo de archivo no permitido. Use: JPG, PNG, GIF o SVG.`
+          }));
+          return;
+        }
+        
+        // Crear URL para previsualización
+        const fileUrl = URL.createObjectURL(file);
+        setLogoPreview(fileUrl);
+        
+        setFormData({
+          ...formData,
+          logoEmpresa: file
+        });
+        
+        // Limpiar error si existe
+        if (errors.logoEmpresa) {
+          setErrors({
+            ...errors,
+            logoEmpresa: ''
+          });
+        }
+      }
+    } else {
+      setFormData({
+        ...formData,
+        [name]: type === 'checkbox' ? checked : value
       });
+      
+      // Limpiar error del campo cuando el usuario escribe
+      if (errors[name]) {
+        setErrors({
+          ...errors,
+          [name]: ''
+        });
+      }
     }
   };
 
@@ -152,6 +268,24 @@ const Register = () => {
         newErrors.telefono = 'El formato del teléfono no es válido';
         isValid = false;
       }
+      
+      if (!formData.dni.trim()) {
+        newErrors.dni = 'El DNI es obligatorio';
+        isValid = false;
+      } else if (!/^[0-9]{8}[A-Z]$/.test(formData.dni)) {
+        newErrors.dni = 'El formato del DNI no es válido (8 números seguidos de una letra mayúscula)';
+        isValid = false;
+      }
+      
+      if (formData.rol === 'FISIOTERAPEUTA' && !formData.numeroColegiado.trim()) {
+        newErrors.numeroColegiado = 'El número de colegiado es obligatorio para fisioterapeutas';
+        isValid = false;
+      }
+      
+      if (formData.rol === 'FISIOTERAPEUTA' && !formData.especialidad) {
+        newErrors.especialidad = 'La especialidad es obligatoria para fisioterapeutas';
+        isValid = false;
+      }
     } else if (step === 1) {
       // Validar datos de empresa
       if (!formData.nombreEmpresa.trim()) {
@@ -184,6 +318,25 @@ const Register = () => {
       
       if (!formData.provincia.trim()) {
         newErrors.provincia = 'La provincia es obligatoria';
+        isValid = false;
+      }
+      
+      if (!formData.email.trim()) {
+        newErrors.email = 'El email de la empresa es obligatorio';
+        isValid = false;
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        newErrors.email = 'El formato del email no es válido';
+        isValid = false;
+      }
+      
+      if (!formData.telefono.trim()) {
+        newErrors.telefono = 'El teléfono de la empresa es obligatorio';
+        isValid = false;
+      }
+      
+      // La web no es obligatoria, pero si se proporciona, validar el formato
+      if (formData.web && !/^(https?:\/\/)?(www\.)?[a-zA-Z0-9]+(\.[a-zA-Z]{2,})+\/?.*$/.test(formData.web)) {
+        newErrors.web = 'El formato de la URL no es válido';
         isValid = false;
       }
     } else if (step === 2) {
@@ -233,28 +386,48 @@ const Register = () => {
     setLoading(true);
     
     try {
-      // Preparar los datos para enviar a la API según el formato esperado por el backend
-      const registerData = {
-        // Datos de usuario
-        nombre: formData.nombre,
-        apellidos: formData.apellidos,
-        email: formData.email,
-        password: formData.password,
-        telefono: formData.telefono,
-        // Datos de empresa
-        nombreEmpresa: formData.nombreEmpresa,
-        cifNif: formData.cifNif,
-        direccion: formData.direccion,
-        codigoPostal: formData.codigoPostal,
-        ciudad: formData.ciudad,
-        provincia: formData.provincia,
-        pais: formData.pais,
-        // Estado de verificación
-        verificado: false
-      };
+      // Crear un FormData para incluir el archivo de logo
+      const formDataToSend = new FormData();
+      
+      // Añadir los datos de usuario
+      formDataToSend.append('nombre', formData.nombre);
+      formDataToSend.append('apellidos', formData.apellidos);
+      formDataToSend.append('email', formData.email);
+      formDataToSend.append('password', formData.password);
+      formDataToSend.append('telefono', formData.telefono);
+      formDataToSend.append('dni', formData.dni);
+      formDataToSend.append('rol', formData.rol);
+      
+      // Datos opcionales según el rol
+      if (formData.rol === 'FISIOTERAPEUTA') {
+        formDataToSend.append('numeroColegiado', formData.numeroColegiado);
+        formDataToSend.append('especialidad', formData.especialidad);
+      } else {
+        formDataToSend.append('numeroColegiado', '');
+        formDataToSend.append('especialidad', '');
+      }
+      
+      // Añadir los datos de empresa
+      formDataToSend.append('nombreEmpresa', formData.nombreEmpresa);
+      formDataToSend.append('cifNif', formData.cifNif);
+      formDataToSend.append('direccion', formData.direccion);
+      formDataToSend.append('codigoPostal', formData.codigoPostal);
+      formDataToSend.append('ciudad', formData.ciudad);
+      formDataToSend.append('provincia', formData.provincia);
+      formDataToSend.append('pais', formData.pais);
+      formDataToSend.append('web', formData.web || '');
+      
+      // Añadir el logo si existe
+      if (formData.logoEmpresa) {
+        formDataToSend.append('logoEmpresa', formData.logoEmpresa);
+      }
+      
+      // Metadatos adicionales
+      formDataToSend.append('verificado', false);
+      formDataToSend.append('fechaAlta', new Date().toISOString().split('T')[0]);
       
       // Enviar los datos a la API
-      const response = await authService.registerComplete(registerData);
+      const response = await authService.registerComplete(formDataToSend);
       
       // Mostrar mensaje de éxito con instrucciones para verificar el email
       setSnackbar({
@@ -300,6 +473,7 @@ const Register = () => {
   const getStepContent = (step) => {
     switch (step) {
       case 0:
+        // Datos personales (con campos adicionales)
         return (
           <Grid container spacing={3}>
             <Grid item xs={12} sm={6}>
@@ -328,7 +502,20 @@ const Register = () => {
                 helperText={errors.apellidos}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                required
+                fullWidth
+                id="dni"
+                name="dni"
+                label="DNI"
+                value={formData.dni}
+                onChange={handleChange}
+                error={!!errors.dni}
+                helperText={errors.dni || "Formato: 12345678A"}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
               <TextField
                 required
                 fullWidth
@@ -369,7 +556,7 @@ const Register = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 required
                 fullWidth
@@ -382,6 +569,65 @@ const Register = () => {
                 helperText={errors.telefono}
               />
             </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth required>
+                <InputLabel id="rol-label">Rol</InputLabel>
+                <Select
+                  labelId="rol-label"
+                  id="rol"
+                  name="rol"
+                  value={formData.rol}
+                  onChange={handleChange}
+                  label="Rol"
+                >
+                  {ROLES.map((rol) => (
+                    <MenuItem key={rol} value={rol}>
+                      {rol}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            {formData.rol === 'FISIOTERAPEUTA' && (
+              <>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    required
+                    fullWidth
+                    id="numeroColegiado"
+                    name="numeroColegiado"
+                    label="Número de colegiado"
+                    value={formData.numeroColegiado}
+                    onChange={handleChange}
+                    error={!!errors.numeroColegiado}
+                    helperText={errors.numeroColegiado}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth required error={!!errors.especialidad}>
+                    <InputLabel id="especialidad-label">Especialidad</InputLabel>
+                    <Select
+                      labelId="especialidad-label"
+                      id="especialidad"
+                      name="especialidad"
+                      value={formData.especialidad}
+                      onChange={handleChange}
+                      label="Especialidad"
+                    >
+                      {ESPECIALIDADES.map((especialidad) => (
+                        <MenuItem key={especialidad} value={especialidad}>
+                          {especialidad}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {errors.especialidad && (
+                      <FormHelperText>{errors.especialidad}</FormHelperText>
+                    )}
+                  </FormControl>
+                </Grid>
+              </>
+            )}
           </Grid>
         );
       case 1:
@@ -440,47 +686,123 @@ const Register = () => {
               />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField
-                required
-                fullWidth
-                id="ciudad"
-                name="ciudad"
-                label="Ciudad"
-                value={formData.ciudad}
-                onChange={handleChange}
-                error={!!errors.ciudad}
-                helperText={errors.ciudad}
-              />
+              <FormControl fullWidth required error={!!errors.pais}>
+                <InputLabel id="pais-label">País</InputLabel>
+                <Select
+                  labelId="pais-label"
+                  id="pais"
+                  name="pais"
+                  value={formData.pais}
+                  onChange={handleChange}
+                  label="País"
+                >
+                  {countries.map((country) => (
+                    <MenuItem key={country.code} value={country.name}>
+                      {country.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {errors.pais && (
+                  <Typography variant="caption" color="error">
+                    {errors.pais}
+                  </Typography>
+                )}
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth required error={!!errors.provincia}>
+                <InputLabel id="provincia-label">Provincia</InputLabel>
+                <Select
+                  labelId="provincia-label"
+                  id="provincia"
+                  name="provincia"
+                  value={formData.provincia}
+                  onChange={handleChange}
+                  label="Provincia"
+                >
+                  {provinces.map((provincia) => (
+                    <MenuItem key={provincia} value={provincia}>
+                      {provincia}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {errors.provincia && (
+                  <Typography variant="caption" color="error">
+                    {errors.provincia}
+                  </Typography>
+                )}
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth required error={!!errors.ciudad} disabled={!formData.provincia}>
+                <InputLabel id="ciudad-label">Ciudad</InputLabel>
+                <Select
+                  labelId="ciudad-label"
+                  id="ciudad"
+                  name="ciudad"
+                  value={formData.ciudad}
+                  onChange={handleChange}
+                  label="Ciudad"
+                >
+                  {availableCities.map((ciudad) => (
+                    <MenuItem key={ciudad} value={ciudad}>
+                      {ciudad}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {errors.ciudad && (
+                  <Typography variant="caption" color="error">
+                    {errors.ciudad}
+                  </Typography>
+                )}
+              </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
-                required
                 fullWidth
-                id="provincia"
-                name="provincia"
-                label="Provincia"
-                value={formData.provincia}
+                id="web"
+                name="web"
+                label="Página web (opcional)"
+                value={formData.web}
                 onChange={handleChange}
-                error={!!errors.provincia}
-                helperText={errors.provincia}
+                error={!!errors.web}
+                helperText={errors.web || "Ej: https://www.miempresa.com"}
+                placeholder="https://www.miempresa.com"
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                required
-                fullWidth
-                id="pais"
-                name="pais"
-                label="País"
-                value={formData.pais}
-                onChange={handleChange}
-                error={!!errors.pais}
-                helperText={errors.pais}
-              />
+            <Grid item xs={12}>
+              <FormControl error={!!errors.logoEmpresa} fullWidth>
+                <Button
+                  component="label"
+                  variant="outlined"
+                  startIcon={<CloudUpload />}
+                  sx={{ height: '56px' }}
+                >
+                  Subir logo de empresa
+                  <VisuallyHiddenInput 
+                    type="file" 
+                    name="logoEmpresa"
+                    onChange={handleChange}
+                    accept=".jpg,.jpeg,.png,.gif,.svg"
+                  />
+                </Button>
+                <FormHelperText>
+                  {errors.logoEmpresa || "Formatos permitidos: JPG, PNG, GIF, SVG. Tamaño máximo: 2MB"}
+                </FormHelperText>
+                {logoPreview && (
+                  <Box mt={2}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Vista previa:
+                    </Typography>
+                    <CompanyLogoPreview src={logoPreview} alt="Logo de empresa" />
+                  </Box>
+                )}
+              </FormControl>
             </Grid>
           </Grid>
         );
       case 2:
+        // Confirmación (añadiendo nuevos campos)
         return (
           <Box>
             <Typography variant="h6" gutterBottom>
@@ -491,7 +813,7 @@ const Register = () => {
               Datos personales
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid item xs={12} sm={6}>
                 <Typography variant="body2" color="text.secondary">
                   Nombre completo
                 </Typography>
@@ -499,7 +821,15 @@ const Register = () => {
                   {formData.nombre} {formData.apellidos}
                 </Typography>
               </Grid>
-              <Grid item xs={6}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" color="text.secondary">
+                  DNI
+                </Typography>
+                <Typography variant="body1">
+                  {formData.dni}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
                 <Typography variant="body2" color="text.secondary">
                   Email
                 </Typography>
@@ -507,7 +837,7 @@ const Register = () => {
                   {formData.email}
                 </Typography>
               </Grid>
-              <Grid item xs={6}>
+              <Grid item xs={12} sm={6}>
                 <Typography variant="body2" color="text.secondary">
                   Teléfono
                 </Typography>
@@ -515,6 +845,34 @@ const Register = () => {
                   {formData.telefono}
                 </Typography>
               </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" color="text.secondary">
+                  Rol
+                </Typography>
+                <Typography variant="body1">
+                  {formData.rol}
+                </Typography>
+              </Grid>
+              {formData.rol === 'FISIOTERAPEUTA' && (
+                <>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      Número de colegiado
+                    </Typography>
+                    <Typography variant="body1">
+                      {formData.numeroColegiado}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      Especialidad
+                    </Typography>
+                    <Typography variant="body1">
+                      {formData.especialidad}
+                    </Typography>
+                  </Grid>
+                </>
+              )}
             </Grid>
             
             <Divider sx={{ my: 3 }} />
@@ -523,7 +881,7 @@ const Register = () => {
               Datos de la empresa
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid item xs={12} sm={6}>
                 <Typography variant="body2" color="text.secondary">
                   Nombre de la empresa
                 </Typography>
@@ -531,7 +889,7 @@ const Register = () => {
                   {formData.nombreEmpresa}
                 </Typography>
               </Grid>
-              <Grid item xs={6}>
+              <Grid item xs={12} sm={6}>
                 <Typography variant="body2" color="text.secondary">
                   CIF/NIF
                 </Typography>
@@ -547,6 +905,26 @@ const Register = () => {
                   {formData.direccion}, {formData.codigoPostal}, {formData.ciudad}, {formData.provincia}, {formData.pais}
                 </Typography>
               </Grid>
+              {formData.web && (
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    Página web
+                  </Typography>
+                  <Typography variant="body1">
+                    {formData.web}
+                  </Typography>
+                </Grid>
+              )}
+              {logoPreview && (
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    Logo de la empresa
+                  </Typography>
+                  <Box sx={{ maxWidth: '200px', mt: 1 }}>
+                    <CompanyLogoPreview src={logoPreview} alt="Logo de empresa" />
+                  </Box>
+                </Grid>
+              )}
             </Grid>
             
             <Alert severity="info" sx={{ mt: 3, mb: 2 }}>
@@ -562,7 +940,11 @@ const Register = () => {
                   color="primary"
                 />
               }
-              label="Acepto los términos y condiciones y la política de privacidad"
+              label={
+                <Typography variant="body2">
+                  Acepto los términos y condiciones y la <Link to="/politica-privacidad" target="_blank" rel="noopener">política de privacidad</Link>
+                </Typography>
+              }
               sx={{ mt: 1 }}
             />
             {errors.aceptaTerminos && (

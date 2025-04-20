@@ -1,6 +1,8 @@
 package com.proyectofisio.infrastructure.adapters.input.rest.dto;
 
-import java.util.List;
+import java.time.LocalDate;
+
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -12,54 +14,23 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.proyectofisio.infrastructure.adapters.input.rest.dto.UsuarioDTO;
+import com.proyectofisio.infrastructure.adapters.input.rest.dto.EmpresaDTO;
 
+/**
+ * DTO para el registro completo que combina usuario y empresa
+ */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class RegistroCompletoDTO {
     
-    // Datos de usuario
-    @NotBlank(message = "El nombre es obligatorio")
-    @Size(min = 2, max = 100, message = "El nombre debe tener entre 2 y 100 caracteres")
-    private String nombre;
+    @Valid
+    @NotNull(message = "Los datos de usuario son obligatorios")
+    private UsuarioDTO usuario;
     
-    @NotBlank(message = "Los apellidos son obligatorios")
-    @Size(min = 2, max = 100, message = "Los apellidos deben tener entre 2 y 100 caracteres")
-    private String apellidos;
-    
-    @NotBlank(message = "El email es obligatorio")
-    @Email(message = "El formato del email no es válido")
-    private String email;
-    
-    @NotBlank(message = "La contraseña es obligatoria")
-    @Size(min = 8, message = "La contraseña debe tener al menos 8 caracteres")
-    @Pattern(regexp = "^(?=.*[0-9])(?=.*[a-zA-Z])(?=.*[@#$%^&+=!]).*$", 
-             message = "La contraseña debe contener al menos un número, una letra y un caracter especial")
-    private String password;
-    
-    @NotBlank(message = "El teléfono es obligatorio")
-    @Pattern(regexp = "^\\+?[0-9]{9,15}$", message = "El formato del teléfono no es válido")
-    private String telefono;
-    
-    private List<String> roles;
-    
-    // Datos de empresa
-    @NotBlank(message = "El nombre de la empresa es obligatorio")
-    @Size(min = 2, max = 100, message = "El nombre de la empresa debe tener entre 2 y 100 caracteres")
-    private String nombreEmpresa;
-    
-    @NotBlank(message = "El CIF/NIF es obligatorio")
-    @Pattern(regexp = "^[A-Z0-9]{9}$", message = "El formato del CIF/NIF no es válido")
-    private String cifNif;
-    
-    private String direccion;
-    
-    private String codigoPostal;
-    
-    private String ciudad;
-    
-    private String provincia;
-    
-    private String pais;
+    @Valid
+    @NotNull(message = "Los datos de empresa son obligatorios")
+    private EmpresaDTO empresa;
 } 
