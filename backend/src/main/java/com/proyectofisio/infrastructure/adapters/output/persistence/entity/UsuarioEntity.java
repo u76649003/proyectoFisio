@@ -64,6 +64,6 @@ public class UsuarioEntity {
     @Column(name = "fecha_alta")
     private LocalDate fechaAlta;
     
-    @Column(name = "email_verificado", nullable = false)
+    @Column(name = "email_verificado", nullable = false, columnDefinition = "boolean default false")
     private boolean emailVerificado = false;
 } 

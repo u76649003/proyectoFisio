@@ -62,7 +62,6 @@ public class FileController implements FileControllerDocs {
     public ResponseEntity<?> actualizarLogoEmpresa(
             @PathVariable Long empresaId,
             @RequestParam("logo") MultipartFile file) {
-        
         try {
             // Verificar que la empresa existe
             Optional<Empresa> empresaOpt = empresaService.obtenerEmpresaPorId(empresaId);
