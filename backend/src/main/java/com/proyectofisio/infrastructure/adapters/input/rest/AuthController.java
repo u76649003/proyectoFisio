@@ -9,14 +9,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.proyectofisio.application.ports.input.EmailServicePort;
 import com.proyectofisio.application.ports.input.UsuarioServicePort;
 import com.proyectofisio.application.ports.input.VerificationTokenServicePort;
@@ -25,11 +21,14 @@ import com.proyectofisio.domain.model.Usuario;
 import com.proyectofisio.domain.model.VerificationToken;
 import com.proyectofisio.infrastructure.adapters.input.rest.dto.AuthRequest;
 import com.proyectofisio.infrastructure.adapters.input.rest.dto.AuthResponse;
+import com.proyectofisio.infrastructure.adapters.input.rest.dto.EmpresaDTO;
 import com.proyectofisio.infrastructure.adapters.input.rest.dto.RegistroCompletoDTO;
+import com.proyectofisio.infrastructure.adapters.input.rest.dto.UsuarioDTO;
 import com.proyectofisio.infrastructure.config.security.JwtTokenProvider;
 
 import jakarta.validation.Valid;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
@@ -47,6 +46,7 @@ public class AuthController {
     private final RegistroCompletoService registroCompletoService;
     private final EmailServicePort emailService;
     private final VerificationTokenServicePort verificationTokenService;
+    private final ObjectMapper objectMapper;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest request) {
@@ -110,30 +110,40 @@ public class AuthController {
     }
     
     @PostMapping(value = "/registro-completo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> registroCompleto(@ModelAttribute @Valid RegistroCompletoDTO registroDTO) {
+    public ResponseEntity<?> registroCompleto(
+            @RequestPart("usuario") UsuarioDTO usuario,
+            @RequestPart("empresa") EmpresaDTO empresa,
+            @RequestPart(value = "logo", required = false) MultipartFile logo) {
         try {
-            // Verificar que los objetos no son nulos (ya lo hace @Valid, pero por si acaso)
-            if (registroDTO.getUsuario() == null || registroDTO.getEmpresa() == null) {
-                return ResponseEntity.badRequest().body("Los datos de usuario y empresa son obligatorios");
+            // Establecer el logo en el DTO de empresa
+            if (logo != null && !logo.isEmpty()) {
+                empresa.setLogo(logo);
             }
             
             // Si la fecha de alta es nula, establecerla
-            if (registroDTO.getUsuario().getFechaAlta() == null) {
-                registroDTO.getUsuario().setFechaAlta(LocalDate.now());
+            if (usuario.getFechaAlta() == null) {
+                usuario.setFechaAlta(LocalDate.now());
             }
+            
+            // Crear DTO completo
+            RegistroCompletoDTO registroDTO = new RegistroCompletoDTO();
+            registroDTO.setUsuario(usuario);
+            registroDTO.setEmpresa(empresa);
             
             // Usar el servicio de registro completo para crear empresa y usuario
             Usuario usuarioGuardado = registroCompletoService.registrarUsuarioYEmpresa(registroDTO);
             
-            // Por defecto, establecer email como no verificado
-            usuarioGuardado.setEmailVerificado(false);
-            usuarioGuardado = usuarioService.actualizarUsuario(usuarioGuardado);
-            
-            // Generar token de verificación
-            String tokenVerificacion = verificationTokenService.crearToken(usuarioGuardado.getEmail(), usuarioGuardado.getId());
-            
-            // Enviar correo de verificación
-            emailService.enviarCorreoVerificacion(usuarioGuardado, tokenVerificacion);
+            // Por defecto, establecer email como no verificado (si no viene especificado)
+            if (!usuarioGuardado.isEmailVerificado()) {
+                usuarioGuardado.setEmailVerificado(false);
+                usuarioGuardado = usuarioService.actualizarUsuario(usuarioGuardado);
+                
+                // Generar token de verificación
+                String tokenVerificacion = verificationTokenService.crearToken(usuarioGuardado.getEmail(), usuarioGuardado.getId());
+                
+                // Enviar correo de verificación
+                emailService.enviarCorreoVerificacion(usuarioGuardado, tokenVerificacion);
+            }
             
             // Generar token JWT
             String jwtToken = jwtTokenProvider.createToken(usuarioGuardado.getEmail(), usuarioGuardado.getRol().name());

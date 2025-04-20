@@ -86,7 +86,7 @@ const MAX_LOGO_SIZE = 2 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml'];
 
 // Lista de roles disponibles
-const ROLES = ['FISIOTERAPEUTA', 'ADMINISTRADOR', 'RECEPCIONISTA'];
+const ROLES = ['FISIOTERAPEUTA', 'RECEPCIONISTA', 'DUENO'];
 
 // Lista de especialidades comunes de fisioterapia
 const ESPECIALIDADES = [

@@ -70,7 +70,7 @@ export const authService = {
       // Crear un objeto FormData para enviar los datos, incluyendo archivos
       const formData = new FormData();
       
-      // Extraer los datos del usuario y empresa
+      // Prepara los datos del usuario
       const usuarioData = {
         nombre: registerData.nombre,
         apellidos: registerData.apellidos,
@@ -80,9 +80,12 @@ export const authService = {
         dni: registerData.dni,
         numeroColegiado: registerData.numeroColegiado || '',
         especialidad: registerData.especialidad || '',
-        rol: registerData.rol
+        rol: registerData.rol || 'DUENO',
+        fechaAlta: new Date().toISOString().split('T')[0],
+        emailVerificado: false // Por defecto, no está verificado
       };
       
+      // Prepara los datos de la empresa
       const empresaData = {
         nombre: registerData.nombreEmpresa,
         nif: registerData.cifNif,
@@ -96,13 +99,17 @@ export const authService = {
         telefono: registerData.telefono
       };
       
-      // Convertir los objetos a JSON y agregarlos al FormData
-      formData.append('usuario', new Blob([JSON.stringify(usuarioData)], { type: 'application/json' }));
-      formData.append('empresa', new Blob([JSON.stringify(empresaData)], { type: 'application/json' }));
+      // Convertir los objetos a Blob para mantener la integridad del JSON
+      const usuarioBlob = new Blob([JSON.stringify(usuarioData)], { type: 'application/json' });
+      const empresaBlob = new Blob([JSON.stringify(empresaData)], { type: 'application/json' });
+      
+      // Agregar los objetos al FormData
+      formData.append('usuario', usuarioBlob);
+      formData.append('empresa', empresaBlob);
       
       // Añadir el logo si existe
       if (registerData.logo) {
-        formData.append('empresa.logo', registerData.logo);
+        formData.append('logo', registerData.logo);
       }
       
       // Configurar la petición para manejar FormData
@@ -385,6 +392,63 @@ export const empresaService = {
       const response = await api.put(`/empresas/${id}`, empresaData);
       return response.data;
     } catch (error) {
+      throw error;
+    }
+  },
+  
+  // Nuevo método para actualizar una empresa con su logo
+  updateEmpresaConLogo: async (id, empresaData, logoFile) => {
+    try {
+      const formData = new FormData();
+      
+      // Añadir los datos de la empresa como un JSON string en el campo "empresa"
+      formData.append('empresa', new Blob([JSON.stringify(empresaData)], { 
+        type: 'application/json' 
+      }));
+      
+      // Añadir el archivo de logo si existe
+      if (logoFile) {
+        formData.append('logo', logoFile);
+      }
+      
+      const response = await api.put(
+        `/empresas/${id}/with-logo`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          },
+          timeout: 30000 // 30 segundos para permitir la subida de archivos
+        }
+      );
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error al actualizar empresa con logo:', error);
+      throw error;
+    }
+  },
+  
+  // Nuevo método para actualizar solo el logo de una empresa
+  updateLogoEmpresa: async (id, logoFile) => {
+    try {
+      const formData = new FormData();
+      formData.append('logo', logoFile);
+      
+      const response = await api.post(
+        `/files/empresas/${id}/logo`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          },
+          timeout: 30000 // 30 segundos para permitir la subida de archivos
+        }
+      );
+      
+      return response.data.logoUrl;
+    } catch (error) {
+      console.error('Error al actualizar logo:', error);
       throw error;
     }
   },

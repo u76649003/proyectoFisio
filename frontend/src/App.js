@@ -6,6 +6,7 @@ import Landing from './pages/Landing';
 import Register from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import EditarEmpresa from './pages/EditarEmpresa';
 import { authService } from './services/api';
 
 // Definir el tema personalizado
@@ -94,7 +95,18 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/verify-email/:token" element={<VerifyEmail />} />
           <Route path="/politica-privacidad" element={<PrivacyPolicy />} />
-          {/* Añadir más rutas aquí según se vayan creando más páginas */}
+          
+          {/* Rutas protegidas */}
+          <Route 
+            path="/empresa/:id/editar" 
+            element={
+              <ProtectedRoute>
+                <EditarEmpresa />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Ruta de fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>

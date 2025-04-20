@@ -58,6 +58,8 @@ public class UsuarioDTO {
     
     private Long empresaId;
     
+    private boolean emailVerificado;
+    
     // Constructor de conveniencia para crear un DTO a partir de un objeto de dominio
     public static UsuarioDTO fromDomainModel(com.proyectofisio.domain.model.Usuario usuario) {
         return UsuarioDTO.builder()
@@ -71,6 +73,7 @@ public class UsuarioDTO {
                 .rol(usuario.getRol().name())
                 .fechaAlta(usuario.getFechaAlta())
                 .empresaId(usuario.getEmpresaId())
+                .emailVerificado(usuario.isEmailVerificado())
                 .build();
     }
 } 

@@ -3,8 +3,10 @@ package com.proyectofisio.infrastructure.adapters.input.rest.docs;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.proyectofisio.domain.model.Empresa;
+import com.proyectofisio.infrastructure.adapters.input.rest.dto.EmpresaDTO;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -62,6 +64,21 @@ public interface EmpresaControllerDocs {
     ResponseEntity<?> actualizarEmpresa(
             @Parameter(description = "ID de la empresa a actualizar", required = true) Long id,
             @Parameter(description = "Objeto empresa con los datos actualizados", required = true) Empresa empresa);
+    
+    @Operation(summary = "Actualizar empresa con logo", description = "Actualiza los datos de una empresa existente incluyendo su logo")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Empresa actualizada correctamente",
+                    content = @Content(schema = @Schema(implementation = Empresa.class))),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos o NIF duplicado"),
+            @ApiResponse(responseCode = "404", description = "Empresa no encontrada"),
+            @ApiResponse(responseCode = "401", description = "No autorizado"),
+            @ApiResponse(responseCode = "403", description = "Prohibido - No tiene permisos suficientes"),
+            @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+    })
+    ResponseEntity<?> actualizarEmpresaConLogo(
+            @Parameter(description = "ID de la empresa a actualizar", required = true) Long id,
+            @Parameter(description = "Objeto EmpresaDTO con los datos actualizados", required = true) EmpresaDTO empresaDTO,
+            @Parameter(description = "Archivo del logo de la empresa", required = false) MultipartFile logo);
 
     @Operation(summary = "Eliminar empresa", description = "Elimina una empresa del sistema por su ID")
     @ApiResponses(value = {
