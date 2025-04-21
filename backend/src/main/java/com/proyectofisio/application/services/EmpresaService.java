@@ -62,4 +62,9 @@ public class EmpresaService implements EmpresaServicePort {
     public boolean existeEmpresaConNif(String nif) {
         return empresaRepository.existsByNif(nif);
     }
+    
+    @Override
+    public Optional<Empresa> obtenerEmpresaPorNif(String nif) {
+        return empresaRepository.findByNif(nif);
+    }
 } 

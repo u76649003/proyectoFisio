@@ -18,4 +18,6 @@ public interface EmpresaServicePort {
     void eliminarEmpresa(Long id);
     
     boolean existeEmpresaConNif(String nif);
+    
+    Optional<Empresa> obtenerEmpresaPorNif(String nif);
 } 

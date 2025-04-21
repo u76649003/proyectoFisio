@@ -40,7 +40,12 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         // Crear usuario administrador por defecto si no existe
-        crearUsuarioAdminPorDefecto();
+        try {
+            crearUsuarioAdminPorDefecto();
+        } catch (Exception e) {
+            log.error("Error al inicializar datos: {}", e.getMessage());
+            // No propagar la excepción para permitir que la aplicación se inicie
+        }
     }
 
     /**
@@ -49,6 +54,7 @@ public class DataInitializer implements CommandLineRunner {
      */
     private void crearUsuarioAdminPorDefecto() {
         String adminEmail = "admin@fisioayuda.com";
+        String adminNif = "A12345678";
         
         // Verificar si ya existe un usuario admin
         Optional<Usuario> usuarioExistente = usuarioService.obtenerUsuarioPorEmail(adminEmail);
@@ -56,16 +62,49 @@ public class DataInitializer implements CommandLineRunner {
         if (usuarioExistente.isEmpty()) {
             log.info("Creando usuario administrador por defecto...");
             
-            // Crear empresa para el administrador
-            Empresa empresaAdmin = Empresa.builder()
-                    .nombre("FisioAyuda Admin")
-                    .nif("A12345678")
-                    .direccion("Calle Administración, 1")
-                    .telefono("600000000")
-                    .email(adminEmail)
-                    .build();
+            Empresa empresaAdmin;
+            Long empresaId;
             
-            Empresa empresaGuardada = empresaService.crearEmpresa(empresaAdmin);
+            // Verificar si ya existe una empresa con el NIF
+            boolean empresaExiste = empresaService.existeEmpresaConNif(adminNif);
+            
+            if (empresaExiste) {
+                // Si la empresa ya existe, intentar obtenerla para usar su ID
+                log.info("Ya existe una empresa con NIF {}. Buscando su ID...", adminNif);
+                Optional<Empresa> empresaExistente = empresaService.obtenerEmpresaPorNif(adminNif);
+                
+                if (empresaExistente.isPresent()) {
+                    empresaId = empresaExistente.get().getId();
+                    log.info("Usando empresa existente con ID: {}", empresaId);
+                } else {
+                    // Si por alguna razón no se puede obtener, crear una con un NIF único
+                    String nuevoNif = adminNif + "_" + System.currentTimeMillis();
+                    log.info("No se pudo obtener la empresa existente. Creando nueva con NIF: {}", nuevoNif);
+                    empresaAdmin = Empresa.builder()
+                            .nombre("FisioAyuda Admin")
+                            .nif(nuevoNif)
+                            .direccion("Calle Administración, 1")
+                            .telefono("600000000")
+                            .email(adminEmail)
+                            .build();
+                    
+                    empresaAdmin = empresaService.crearEmpresa(empresaAdmin);
+                    empresaId = empresaAdmin.getId();
+                }
+            } else {
+                // Crear empresa para el administrador
+                log.info("Creando empresa administrativa...");
+                empresaAdmin = Empresa.builder()
+                        .nombre("FisioAyuda Admin")
+                        .nif(adminNif)
+                        .direccion("Calle Administración, 1")
+                        .telefono("600000000")
+                        .email(adminEmail)
+                        .build();
+                
+                empresaAdmin = empresaService.crearEmpresa(empresaAdmin);
+                empresaId = empresaAdmin.getId();
+            }
             
             // Crear usuario administrador
             Usuario usuarioAdmin = Usuario.builder()
@@ -76,7 +115,7 @@ public class DataInitializer implements CommandLineRunner {
                     .telefono("600000000")
                     .dni("12345678Z")
                     .rol(RolUsuario.ADMINISTRADOR)
-                    .empresaId(empresaGuardada.getId())
+                    .empresaId(empresaId)
                     .fechaAlta(LocalDate.now())
                     .emailVerificado(true)
                     .build();
