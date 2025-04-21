@@ -59,7 +59,7 @@ public class SecurityConfig {
 
     @Bean
     public CorsFilter corsFilter() {
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+       /* UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         
         // Permitir credenciales (cookies, encabezados de autenticación)
@@ -83,6 +83,24 @@ public class SecurityConfig {
         // Configurar tiempo de caché de preflight (opciones)
         config.setMaxAge(3600L);
         
+        source.registerCorsConfiguration("/**", config);
+        return new CorsFilter(source);*/
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration config = new CorsConfiguration();
+
+        config.setAllowCredentials(true);
+
+        // Define aquí tus orígenes permitidos
+        config.addAllowedOrigin("http://localhost:3000");
+        config.addAllowedOrigin("https://proyectofisio.vercel.app");
+        config.addAllowedOrigin("https://proyectofisio.netlify.app");
+
+        config.addAllowedHeader("*");
+        config.addAllowedMethod("*");
+        config.addExposedHeader("Authorization");
+        config.setMaxAge(3600L);
+
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
     }
