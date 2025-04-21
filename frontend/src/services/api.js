@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { formatCifNif } from '../utils/formatters';
 
 // Crear una instancia de axios con la URL base de la API
 const API_URL = 'https://proyectofisio.onrender.com/api';
@@ -77,7 +78,7 @@ export const authService = {
         email: registerData.email,
         contraseña: registerData.password,
         telefono: registerData.telefono,
-        dni: registerData.dni,
+        dni: registerData.dni ? formatCifNif(registerData.dni) : '',
         numeroColegiado: registerData.numeroColegiado || '',
         especialidad: registerData.especialidad || '',
         rol: registerData.rol || 'DUENO',
@@ -88,7 +89,7 @@ export const authService = {
       // Prepara los datos de la empresa
       const empresaData = {
         nombre: registerData.nombreEmpresa,
-        nif: registerData.cifNif,
+        nif: registerData.cifNif ? formatCifNif(registerData.cifNif) : '',
         direccion: registerData.direccion,
         codigoPostal: registerData.codigoPostal,
         ciudad: registerData.ciudad,
@@ -99,13 +100,12 @@ export const authService = {
         telefono: registerData.telefono
       };
       
-      // Convertir los objetos a Blob para mantener la integridad del JSON
-      const usuarioBlob = new Blob([JSON.stringify(usuarioData)], { type: 'application/json' });
-      const empresaBlob = new Blob([JSON.stringify(empresaData)], { type: 'application/json' });
+      console.log('Datos de usuario a enviar:', usuarioData);
+      console.log('Datos de empresa a enviar:', empresaData);
       
-      // Agregar los objetos al FormData
-      formData.append('usuario', usuarioBlob);
-      formData.append('empresa', empresaBlob);
+      // Agregar los objetos JSON como strings al FormData
+      formData.append('usuario', JSON.stringify(usuarioData));
+      formData.append('empresa', JSON.stringify(empresaData));
       
       // Añadir el logo si existe
       if (registerData.logo) {
@@ -123,6 +123,7 @@ export const authService = {
       const response = await api.post('/auth/registro-completo', formData, config);
       return response.data;
     } catch (error) {
+      console.error('Error en registro completo:', error);
       throw error;
     }
   },
@@ -332,18 +333,30 @@ export const usuarioService = {
   
   createUsuario: async (usuarioData) => {
     try {
+      // Formatear el DNI
+      if (usuarioData.dni) {
+        usuarioData.dni = formatCifNif(usuarioData.dni);
+      }
+      
       const response = await api.post('/usuarios', usuarioData);
       return response.data;
     } catch (error) {
+      console.error('Error al crear usuario:', error);
       throw error;
     }
   },
   
   updateUsuario: async (id, usuarioData) => {
     try {
+      // Formatear el DNI
+      if (usuarioData.dni) {
+        usuarioData.dni = formatCifNif(usuarioData.dni);
+      }
+      
       const response = await api.put(`/usuarios/${id}`, usuarioData);
       return response.data;
     } catch (error) {
+      console.error('Error al actualizar usuario:', error);
       throw error;
     }
   },
@@ -380,18 +393,30 @@ export const empresaService = {
   
   createEmpresa: async (empresaData) => {
     try {
+      // Formatear el NIF/CIF
+      if (empresaData.nif) {
+        empresaData.nif = formatCifNif(empresaData.nif);
+      }
+      
       const response = await api.post('/empresas', empresaData);
       return response.data;
     } catch (error) {
+      console.error('Error al crear empresa:', error);
       throw error;
     }
   },
   
   updateEmpresa: async (id, empresaData) => {
     try {
+      // Formatear el NIF/CIF
+      if (empresaData.nif) {
+        empresaData.nif = formatCifNif(empresaData.nif);
+      }
+      
       const response = await api.put(`/empresas/${id}`, empresaData);
       return response.data;
     } catch (error) {
+      console.error('Error al actualizar empresa:', error);
       throw error;
     }
   },
@@ -401,10 +426,13 @@ export const empresaService = {
     try {
       const formData = new FormData();
       
-      // Añadir los datos de la empresa como un JSON string en el campo "empresa"
-      formData.append('empresa', new Blob([JSON.stringify(empresaData)], { 
-        type: 'application/json' 
-      }));
+      // Formatear CIF/NIF si existe
+      if (empresaData.nif) {
+        empresaData.nif = formatCifNif(empresaData.nif);
+      }
+      
+      // Añadir los datos de la empresa como un JSON string
+      formData.append('empresa', JSON.stringify(empresaData));
       
       // Añadir el archivo de logo si existe
       if (logoFile) {

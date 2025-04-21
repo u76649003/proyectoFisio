@@ -23,6 +23,7 @@ import com.proyectofisio.domain.model.enums.RolUsuario;
 import com.proyectofisio.infrastructure.adapters.input.rest.dto.RegistroCompletoDTO;
 import com.proyectofisio.infrastructure.adapters.input.rest.dto.EmpresaDTO;
 import com.proyectofisio.infrastructure.adapters.input.rest.dto.UsuarioDTO;
+import com.proyectofisio.infrastructure.util.NifCifUtils;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -69,6 +70,16 @@ public class RegistroCompletoService {
         
         // Validar datos obligatorios del usuario
         validarDatosUsuario(usuarioDTO);
+        
+        // Formatear NIF/CIF
+        if (StringUtils.hasText(empresaDTO.getNif())) {
+            empresaDTO.setNif(NifCifUtils.formatearNifCif(empresaDTO.getNif()));
+        }
+        
+        // Formatear DNI del usuario
+        if (StringUtils.hasText(usuarioDTO.getDni())) {
+            usuarioDTO.setDni(NifCifUtils.formatearNifCif(usuarioDTO.getDni()));
+        }
         
         // Validaciones previas
         if (usuarioService.existeUsuarioConEmail(usuarioDTO.getEmail())) {

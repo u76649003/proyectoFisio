@@ -25,7 +25,8 @@ public class EmpresaDTO {
     private String nombre;
     
     @NotBlank(message = "El CIF/NIF es obligatorio")
-    @Pattern(regexp = "^[A-Z0-9]{9}$", message = "El formato del CIF/NIF no es válido")
+    @Pattern(regexp = "^([A-Z][0-9]{8}|[A-Z]-[0-9]{8}|[0-9]{8}[A-Z])$", 
+             message = "El formato del CIF/NIF no es válido. Debe ser formato empresarial (B12345678 o B-12345678) o personal (12345678Z)")
     private String nif;
     
     private String direccion;
