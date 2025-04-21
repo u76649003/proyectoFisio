@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.proyectofisio.application.ports.input.EmpresaServicePort;
@@ -23,7 +24,10 @@ import com.proyectofisio.infrastructure.adapters.input.rest.dto.RegistroCompleto
 import com.proyectofisio.infrastructure.adapters.input.rest.dto.EmpresaDTO;
 import com.proyectofisio.infrastructure.adapters.input.rest.dto.UsuarioDTO;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 public class RegistroCompletoService {
 
     private final UsuarioServicePort usuarioService;
@@ -45,8 +49,26 @@ public class RegistroCompletoService {
     
     @Transactional
     public Usuario registrarUsuarioYEmpresa(RegistroCompletoDTO registroDTO) {
+        if (registroDTO == null) {
+            throw new IllegalArgumentException("Los datos de registro no pueden ser nulos");
+        }
+        
         UsuarioDTO usuarioDTO = registroDTO.getUsuario();
         EmpresaDTO empresaDTO = registroDTO.getEmpresa();
+        
+        if (usuarioDTO == null) {
+            throw new IllegalArgumentException("Los datos del usuario no pueden ser nulos");
+        }
+        
+        if (empresaDTO == null) {
+            throw new IllegalArgumentException("Los datos de la empresa no pueden ser nulos");
+        }
+        
+        // Validar datos obligatorios de la empresa
+        validarDatosEmpresa(empresaDTO);
+        
+        // Validar datos obligatorios del usuario
+        validarDatosUsuario(usuarioDTO);
         
         // Validaciones previas
         if (usuarioService.existeUsuarioConEmail(usuarioDTO.getEmail())) {
@@ -63,22 +85,25 @@ public class RegistroCompletoService {
             logoUrl = guardarLogo(empresaDTO.getLogo());
         }
         
+        log.info("Creando empresa con nombre: {}, NIF: {}", empresaDTO.getNombre(), empresaDTO.getNif());
+        
         // 1. Crear la empresa primero
         Empresa empresa = Empresa.builder()
                 .nombre(empresaDTO.getNombre())
                 .nif(empresaDTO.getNif())
-                .direccion(String.format("%s, %s, %s, %s", 
-                        empresaDTO.getDireccion(), 
-                        empresaDTO.getCodigoPostal(),
-                        empresaDTO.getCiudad(),
-                        empresaDTO.getProvincia()))
+                .direccion(construirDireccion(empresaDTO))
                 .telefono(empresaDTO.getTelefono())
                 .email(empresaDTO.getEmail())
-                .web(empresaDTO.getWeb())
+                .web(empresaDTO.getWeb() != null ? empresaDTO.getWeb() : "")
                 .logoUrl(logoUrl)
                 .build();
         
         Empresa empresaGuardada = empresaService.crearEmpresa(empresa);
+        log.info("Empresa creada con ID: {}", empresaGuardada.getId());
+        
+        if (empresaGuardada == null || empresaGuardada.getId() == null) {
+            throw new RuntimeException("Error al crear la empresa: la empresa guardada o su ID es nulo");
+        }
         
         // Determinar el rol del usuario
         RolUsuario rol;
@@ -93,6 +118,9 @@ public class RegistroCompletoService {
         LocalDate fechaAlta = usuarioDTO.getFechaAlta() != null ? 
                 usuarioDTO.getFechaAlta() : LocalDate.now();
         
+        log.info("Creando usuario con nombre: {}, email: {}, vinculado a empresa ID: {}", 
+                usuarioDTO.getNombre(), usuarioDTO.getEmail(), empresaGuardada.getId());
+        
         // 2. Crear el usuario asociado a la empresa
         Usuario usuario = Usuario.builder()
                 .nombre(usuarioDTO.getNombre())
@@ -101,14 +129,83 @@ public class RegistroCompletoService {
                 .contraseña(passwordEncoder.encode(usuarioDTO.getContraseña()))
                 .telefono(usuarioDTO.getTelefono())
                 .dni(usuarioDTO.getDni())
-                .numeroColegiado(usuarioDTO.getNumeroColegiado())
-                .especialidad(usuarioDTO.getEspecialidad())
+                .numeroColegiado(usuarioDTO.getNumeroColegiado() != null ? usuarioDTO.getNumeroColegiado() : "")
+                .especialidad(usuarioDTO.getEspecialidad() != null ? usuarioDTO.getEspecialidad() : "")
                 .rol(rol)
                 .empresaId(empresaGuardada.getId())
                 .fechaAlta(fechaAlta)
+                .emailVerificado(false)
                 .build();
         
-        return usuarioService.crearUsuario(usuario);
+        Usuario usuarioCreado = usuarioService.crearUsuario(usuario);
+        log.info("Usuario creado con ID: {}", usuarioCreado.getId());
+        
+        return usuarioCreado;
+    }
+    
+    private void validarDatosEmpresa(EmpresaDTO empresaDTO) {
+        if (StringUtils.isEmpty(empresaDTO.getNombre())) {
+            throw new IllegalArgumentException("El nombre de la empresa es obligatorio");
+        }
+        
+        if (StringUtils.isEmpty(empresaDTO.getNif())) {
+            throw new IllegalArgumentException("El NIF/CIF de la empresa es obligatorio");
+        }
+        
+        if (StringUtils.isEmpty(empresaDTO.getTelefono())) {
+            throw new IllegalArgumentException("El teléfono de la empresa es obligatorio");
+        }
+        
+        if (StringUtils.isEmpty(empresaDTO.getEmail())) {
+            throw new IllegalArgumentException("El email de la empresa es obligatorio");
+        }
+    }
+    
+    private void validarDatosUsuario(UsuarioDTO usuarioDTO) {
+        if (StringUtils.isEmpty(usuarioDTO.getNombre())) {
+            throw new IllegalArgumentException("El nombre del usuario es obligatorio");
+        }
+        
+        if (StringUtils.isEmpty(usuarioDTO.getApellidos())) {
+            throw new IllegalArgumentException("Los apellidos del usuario son obligatorios");
+        }
+        
+        if (StringUtils.isEmpty(usuarioDTO.getEmail())) {
+            throw new IllegalArgumentException("El email del usuario es obligatorio");
+        }
+        
+        if (StringUtils.isEmpty(usuarioDTO.getContraseña())) {
+            throw new IllegalArgumentException("La contraseña del usuario es obligatoria");
+        }
+        
+        if (StringUtils.isEmpty(usuarioDTO.getDni())) {
+            throw new IllegalArgumentException("El DNI del usuario es obligatorio");
+        }
+    }
+    
+    private String construirDireccion(EmpresaDTO empresaDTO) {
+        StringBuilder direccion = new StringBuilder();
+        
+        if (!StringUtils.isEmpty(empresaDTO.getDireccion())) {
+            direccion.append(empresaDTO.getDireccion());
+        }
+        
+        if (!StringUtils.isEmpty(empresaDTO.getCodigoPostal())) {
+            if (direccion.length() > 0) direccion.append(", ");
+            direccion.append(empresaDTO.getCodigoPostal());
+        }
+        
+        if (!StringUtils.isEmpty(empresaDTO.getCiudad())) {
+            if (direccion.length() > 0) direccion.append(", ");
+            direccion.append(empresaDTO.getCiudad());
+        }
+        
+        if (!StringUtils.isEmpty(empresaDTO.getProvincia())) {
+            if (direccion.length() > 0) direccion.append(", ");
+            direccion.append(empresaDTO.getProvincia());
+        }
+        
+        return direccion.length() > 0 ? direccion.toString() : "";
     }
     
     /**
@@ -135,7 +232,9 @@ public class RegistroCompletoService {
             // Devolver la URL relativa
             return "/uploads/" + uniqueFileName;
         } catch (IOException e) {
-            throw new RuntimeException("No se pudo guardar el logo: " + e.getMessage());
+            log.error("Error al guardar el logo: {}", e.getMessage());
+            // No propagamos la excepción para que no falle todo el registro por un problema con el logo
+            return null;
         }
     }
     

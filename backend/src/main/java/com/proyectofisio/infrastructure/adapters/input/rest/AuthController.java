@@ -1,6 +1,7 @@
 package com.proyectofisio.infrastructure.adapters.input.rest;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -37,6 +38,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
@@ -111,13 +113,25 @@ public class AuthController {
     
     @PostMapping(value = "/registro-completo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> registroCompleto(
-            @RequestPart("usuario") UsuarioDTO usuario,
-            @RequestPart("empresa") EmpresaDTO empresa,
+            @RequestPart("usuario") String usuarioJson,
+            @RequestPart("empresa") String empresaJson,
             @RequestPart(value = "logo", required = false) MultipartFile logo) {
         try {
+            log.info("Recibiendo petición de registro completo");
+            log.info("Usuario JSON: {}", usuarioJson);
+            log.info("Empresa JSON: {}", empresaJson);
+            
+            // Convertir JSON a objetos DTO
+            UsuarioDTO usuario = objectMapper.readValue(usuarioJson, UsuarioDTO.class);
+            EmpresaDTO empresa = objectMapper.readValue(empresaJson, EmpresaDTO.class);
+            
+            log.info("Usuario deserializado: {}", usuario);
+            log.info("Empresa deserializada: {}", empresa);
+            
             // Establecer el logo en el DTO de empresa
             if (logo != null && !logo.isEmpty()) {
                 empresa.setLogo(logo);
+                log.info("Logo recibido: {}, tamaño: {}", logo.getOriginalFilename(), logo.getSize());
             }
             
             // Si la fecha de alta es nula, establecerla
@@ -160,8 +174,10 @@ public class AuthController {
             
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (IllegalArgumentException e) {
+            log.error("Error de validación: {}", e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
+            log.error("Error al registrar usuario y empresa", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error al registrar usuario y empresa: " + e.getMessage());
         }
