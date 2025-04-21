@@ -40,8 +40,8 @@ public class EmailService implements EmailServicePort {
         context.setVariable("verificacionUrl", baseUrl + "/verify-email/" + token);
         context.setVariable("logoUrl", baseUrl + "/logo.svg");
         
-        // Procesar plantilla
-        String contenido = templateEngine.process("email-verificacion", context);
+        // Procesar plantilla con la ruta correcta
+        String contenido = templateEngine.process("email/email-verificacion", context);
         
         // Enviar correo
         return enviarCorreo(usuario.getEmail(), asunto, contenido);

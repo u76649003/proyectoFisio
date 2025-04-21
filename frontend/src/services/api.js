@@ -107,9 +107,16 @@ export const authService = {
       formData.append('usuario', JSON.stringify(usuarioData));
       formData.append('empresa', JSON.stringify(empresaData));
       
-      // Añadir el logo si existe
+      // Añadir el logo si existe (usamos registerData.logo directamente)
+      // El frontend debe asegurarse de que este campo se llame 'logo' para que coincida 
+      // con lo que espera el backend (ver método handleSubmit en Register.jsx)
       if (registerData.logo) {
         formData.append('logo', registerData.logo);
+        console.log('Logo adjuntado al FormData:', registerData.logo.name);
+      } else if (registerData.logoEmpresa) {
+        // Compatibilidad con versiones anteriores por si aún se usa logoEmpresa
+        formData.append('logo', registerData.logoEmpresa);
+        console.log('Logo adjuntado al FormData desde logoEmpresa:', registerData.logoEmpresa.name);
       }
       
       // Configurar la petición para manejar FormData

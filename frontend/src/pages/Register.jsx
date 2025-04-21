@@ -129,7 +129,7 @@ const Register = () => {
     provincia: '',
     pais: 'España',
     web: '',
-    logoEmpresa: null,
+    logo: null,
     // Términos
     aceptaTerminos: false
   });
@@ -169,7 +169,7 @@ const Register = () => {
         if (file.size > MAX_LOGO_SIZE) {
           setErrors(prev => ({
             ...prev,
-            logoEmpresa: `El archivo es demasiado grande. El tamaño máximo es de 2MB.`
+            logo: `El archivo es demasiado grande. El tamaño máximo es de 2MB.`
           }));
           return;
         }
@@ -177,7 +177,7 @@ const Register = () => {
         if (!ALLOWED_FILE_TYPES.includes(file.type)) {
           setErrors(prev => ({
             ...prev,
-            logoEmpresa: `Tipo de archivo no permitido. Use: JPG, PNG, GIF o SVG.`
+            logo: `Tipo de archivo no permitido. Use: JPG, PNG, GIF o SVG.`
           }));
           return;
         }
@@ -188,14 +188,14 @@ const Register = () => {
         
         setFormData({
           ...formData,
-          logoEmpresa: file
+          logo: file
         });
         
         // Limpiar error si existe
-        if (errors.logoEmpresa) {
+        if (errors.logo) {
           setErrors({
             ...errors,
-            logoEmpresa: ''
+            logo: ''
           });
         }
       }
@@ -386,48 +386,37 @@ const Register = () => {
     setLoading(true);
     
     try {
-      // Crear un FormData para incluir el archivo de logo
-      const formDataToSend = new FormData();
+      // Preparar los datos para el registro completo
+      const registerData = {
+        // Datos del usuario
+        nombre: formData.nombre,
+        apellidos: formData.apellidos,
+        email: formData.email,
+        password: formData.password,
+        telefono: formData.telefono,
+        dni: formData.dni,
+        numeroColegiado: formData.numeroColegiado || '',
+        especialidad: formData.especialidad || '',
+        rol: formData.rol || 'DUENO',
+        
+        // Datos de la empresa
+        nombreEmpresa: formData.nombreEmpresa,
+        cifNif: formData.cifNif,
+        direccion: formData.direccion,
+        codigoPostal: formData.codigoPostal,
+        ciudad: formData.ciudad,
+        provincia: formData.provincia,
+        pais: formData.pais,
+        web: formData.web || '',
+        
+        // Usar directamente 'logo' como nombre del campo
+        logo: formData.logo
+      };
       
-      // Añadir los datos de usuario
-      formDataToSend.append('nombre', formData.nombre);
-      formDataToSend.append('apellidos', formData.apellidos);
-      formDataToSend.append('email', formData.email);
-      formDataToSend.append('password', formData.password);
-      formDataToSend.append('telefono', formData.telefono);
-      formDataToSend.append('dni', formData.dni);
-      formDataToSend.append('rol', formData.rol);
+      console.log('Enviando datos de registro:', registerData);
       
-      // Datos opcionales según el rol
-      if (formData.rol === 'FISIOTERAPEUTA') {
-        formDataToSend.append('numeroColegiado', formData.numeroColegiado);
-        formDataToSend.append('especialidad', formData.especialidad);
-      } else {
-        formDataToSend.append('numeroColegiado', '');
-        formDataToSend.append('especialidad', '');
-      }
-      
-      // Añadir los datos de empresa
-      formDataToSend.append('nombreEmpresa', formData.nombreEmpresa);
-      formDataToSend.append('cifNif', formData.cifNif);
-      formDataToSend.append('direccion', formData.direccion);
-      formDataToSend.append('codigoPostal', formData.codigoPostal);
-      formDataToSend.append('ciudad', formData.ciudad);
-      formDataToSend.append('provincia', formData.provincia);
-      formDataToSend.append('pais', formData.pais);
-      formDataToSend.append('web', formData.web || '');
-      
-      // Añadir el logo si existe
-      if (formData.logoEmpresa) {
-        formDataToSend.append('logoEmpresa', formData.logoEmpresa);
-      }
-      
-      // Metadatos adicionales
-      formDataToSend.append('verificado', false);
-      formDataToSend.append('fechaAlta', new Date().toISOString().split('T')[0]);
-      
-      // Enviar los datos a la API
-      const response = await authService.registerComplete(formDataToSend);
+      // Enviar los datos a través del servicio de autenticación
+      const response = await authService.registerComplete(registerData);
       
       // Mostrar mensaje de éxito con instrucciones para verificar el email
       setSnackbar({
@@ -771,7 +760,7 @@ const Register = () => {
               />
             </Grid>
             <Grid item xs={12}>
-              <FormControl error={!!errors.logoEmpresa} fullWidth>
+              <FormControl error={!!errors.logo} fullWidth>
                 <Button
                   component="label"
                   variant="outlined"
@@ -781,13 +770,13 @@ const Register = () => {
                   Subir logo de empresa
                   <VisuallyHiddenInput 
                     type="file" 
-                    name="logoEmpresa"
+                    name="logo"
                     onChange={handleChange}
                     accept=".jpg,.jpeg,.png,.gif,.svg"
                   />
                 </Button>
                 <FormHelperText>
-                  {errors.logoEmpresa || "Formatos permitidos: JPG, PNG, GIF, SVG. Tamaño máximo: 2MB"}
+                  {errors.logo || "Formatos permitidos: JPG, PNG, GIF, SVG. Tamaño máximo: 2MB"}
                 </FormHelperText>
                 {logoPreview && (
                   <Box mt={2}>

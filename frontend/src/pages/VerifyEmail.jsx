@@ -34,6 +34,7 @@ const VerifyEmail = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState('loading'); // 'loading', 'success', 'error'
   const [message, setMessage] = useState('');
+  const [countdown, setCountdown] = useState(10);
 
   useEffect(() => {
     const verifyEmailToken = async () => {
@@ -41,6 +42,34 @@ const VerifyEmail = () => {
         const response = await authService.verifyEmail(token);
         setStatus('success');
         setMessage(response.message || '¡Tu cuenta ha sido verificada correctamente!');
+        
+        // Iniciar cuenta regresiva para redirección automática
+        let seconds = 10;
+        setCountdown(seconds);
+        
+        // Intentar realizar login automático con la información del usuario
+        if (response.email) {
+          try {
+            // Se podría implementar un login automático aquí si el backend devuelve credenciales
+            // O almacenar la información del usuario verificado para utilizarla en el login
+            localStorage.setItem('verifiedEmail', response.email);
+          } catch (loginError) {
+            console.error('Error al iniciar sesión automáticamente:', loginError);
+          }
+        }
+        
+        const timer = setInterval(() => {
+          seconds -= 1;
+          setCountdown(seconds);
+          
+          if (seconds <= 0) {
+            clearInterval(timer);
+            // Redireccionar a la página de inicio para login
+            navigate('/');
+          }
+        }, 1000);
+        
+        return () => clearInterval(timer);
       } catch (error) {
         console.error('Error al verificar email:', error);
         setStatus('error');
@@ -57,7 +86,7 @@ const VerifyEmail = () => {
       setStatus('error');
       setMessage('Token de verificación no proporcionado.');
     }
-  }, [token]);
+  }, [token, navigate]);
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#f5f5f5', py: 4 }}>
@@ -92,8 +121,11 @@ const VerifyEmail = () => {
               <Typography variant="h5" gutterBottom>
                 ¡Verificación Exitosa!
               </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
                 {message}
+              </Typography>
+              <Typography variant="body2" color="primary" sx={{ mb: 4 }}>
+                Serás redirigido al inicio de sesión en {countdown} segundos...
               </Typography>
               <Button 
                 variant="contained" 
@@ -102,7 +134,7 @@ const VerifyEmail = () => {
                 to="/"
                 size="large"
               >
-                Iniciar Sesión
+                Iniciar Sesión Ahora
               </Button>
             </>
           )}

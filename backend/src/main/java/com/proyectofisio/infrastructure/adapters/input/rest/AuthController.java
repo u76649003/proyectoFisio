@@ -221,10 +221,13 @@ public class AuthController {
             // Marcar token como usado
             verificationTokenService.marcarComoUsado(token);
             
-            // Retornar respuesta exitosa
+            // Retornar respuesta exitosa con datos para facilitar el login automático
             Map<String, String> response = new HashMap<>();
             response.put("status", "success");
             response.put("message", "¡Email verificado correctamente!");
+            response.put("email", usuario.getEmail());
+            response.put("nombre", usuario.getNombre());
+            
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, String> response = new HashMap<>();

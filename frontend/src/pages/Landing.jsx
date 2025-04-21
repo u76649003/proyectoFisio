@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Box, 
@@ -84,8 +84,8 @@ const Landing = () => {
   const navigate = useNavigate();
   const [openLogin, setOpenLogin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [loginData, setLoginData] = useState({
-    email: '',
+  const [formData, setFormData] = useState({
+    email: localStorage.getItem('verifiedEmail') || '',
     password: ''
   });
   const [errors, setErrors] = useState({});
@@ -95,6 +95,24 @@ const Landing = () => {
     message: '',
     severity: 'success'
   });
+
+  useEffect(() => {
+    const verifiedEmail = localStorage.getItem('verifiedEmail');
+    if (verifiedEmail) {
+      setFormData(prev => ({
+        ...prev,
+        email: verifiedEmail
+      }));
+      
+      setSnackbar({
+        open: true,
+        message: '¡Tu cuenta ha sido verificada correctamente! Ahora puedes iniciar sesión.',
+        severity: 'success'
+      });
+      
+      localStorage.removeItem('verifiedEmail');
+    }
+  }, []);
 
   const handleLoginOpen = () => {
     setOpenLogin(true);
@@ -107,8 +125,8 @@ const Landing = () => {
 
   const handleLoginChange = (e) => {
     const { name, value } = e.target;
-    setLoginData({
-      ...loginData,
+    setFormData({
+      ...formData,
       [name]: value
     });
     
@@ -136,15 +154,15 @@ const Landing = () => {
     let isValid = true;
     const newErrors = {};
 
-    if (!loginData.email.trim()) {
+    if (!formData.email.trim()) {
       newErrors.email = 'El email es obligatorio';
       isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginData.email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'El formato del email no es válido';
       isValid = false;
     }
 
-    if (!loginData.password) {
+    if (!formData.password) {
       newErrors.password = 'La contraseña es obligatoria';
       isValid = false;
     }
@@ -164,7 +182,7 @@ const Landing = () => {
     
     try {
       // Llamar al servicio de autenticación
-      const response = await authService.login(loginData.email, loginData.password);
+      const response = await authService.login(formData.email, formData.password);
       
       // Extraer información relevante de la respuesta
       const { token, id, rol, empresaId } = response;
@@ -375,7 +393,7 @@ const Landing = () => {
               name="email"
               autoComplete="email"
               autoFocus
-              value={loginData.email}
+              value={formData.email}
               onChange={handleLoginChange}
               error={!!errors.email}
               helperText={errors.email}
@@ -390,7 +408,7 @@ const Landing = () => {
               type={showPassword ? 'text' : 'password'}
               id="password"
               autoComplete="current-password"
-              value={loginData.password}
+              value={formData.password}
               onChange={handleLoginChange}
               error={!!errors.password}
               helperText={errors.password}
