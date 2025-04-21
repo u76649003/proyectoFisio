@@ -61,10 +61,28 @@ public class SecurityConfig {
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
+        
+        // Permitir credenciales (cookies, encabezados de autenticación)
         config.setAllowCredentials(true);
-        config.addAllowedOrigin("*");
+        
+        // En lugar de usar "*", usar allowedOriginPatterns que es compatible con allowCredentials=true
+        config.addAllowedOriginPattern("*");
+        
+        // También puedes configurar orígenes específicos si lo prefieres:
+        // config.addAllowedOrigin("http://localhost:3000");
+        // config.addAllowedOrigin("https://proyectofisio.netlify.app");
+        // config.addAllowedOrigin("https://proyectofisio.vercel.app");
+        
+        // Permitir todos los encabezados y métodos
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
+        
+        // Exponer encabezados que el frontend pueda necesitar
+        config.addExposedHeader("Authorization");
+        
+        // Configurar tiempo de caché de preflight (opciones)
+        config.setMaxAge(3600L);
+        
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
     }
