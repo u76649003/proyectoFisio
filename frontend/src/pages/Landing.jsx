@@ -180,6 +180,13 @@ const Landing = () => {
     
     setLoading(true);
     
+    // Mostrar mensaje de que se está intentando conectar
+    setSnackbar({
+      open: true,
+      message: 'Conectando con el servidor...',
+      severity: 'info'
+    });
+    
     try {
       console.log("Iniciando proceso de login...");
       
@@ -241,22 +248,64 @@ const Landing = () => {
     } catch (error) {
       console.error('Error al iniciar sesión:', error);
       
-      // Mostrar detalles del error para diagnóstico
-      if (error.response) {
+      // Determinar el mensaje apropiado para mostrar al usuario
+      let errorMessage = 'Error al iniciar sesión. Por favor, inténtalo de nuevo.';
+      let errorDetails = '';
+      
+      if (error.message.includes('timeout') || error.code === 'ECONNABORTED') {
+        errorMessage = 'El servidor está tardando en responder.';
+        errorDetails = 'Esto puede deberse a que el servidor está iniciando o sobrecargado. Por favor, espera unos minutos e inténtalo de nuevo.';
+      } else if (error.message.includes('Network Error')) {
+        errorMessage = 'No se pudo conectar con el servidor.';
+        errorDetails = 'Verifica tu conexión a internet o si el servicio está disponible.';
+      } else if (error.response) {
+        // Error con respuesta del servidor
         console.error('Estado de respuesta:', error.response.status);
         console.error('Datos de respuesta:', error.response.data);
         
-        setSnackbar({
-          open: true,
-          message: `Error: ${error.response.data || 'Credenciales inválidas'}`,
-          severity: 'error'
-        });
-      } else {
-        setSnackbar({
-          open: true,
-          message: `Error de conexión: ${error.message}`,
-          severity: 'error'
-        });
+        switch (error.response.status) {
+          case 401:
+            errorMessage = 'Credenciales incorrectas.';
+            errorDetails = 'Verifica tu email y contraseña.';
+            break;
+          case 403:
+            errorMessage = 'Acceso denegado.';
+            errorDetails = 'No tienes permisos para acceder.';
+            break;
+          case 404:
+            errorMessage = 'Servicio no encontrado.';
+            errorDetails = 'La URL del servicio puede haber cambiado.';
+            break;
+          case 500:
+          case 502:
+          case 503:
+            errorMessage = 'Error en el servidor.';
+            errorDetails = 'El servidor está experimentando problemas. Inténtalo más tarde.';
+            break;
+          default:
+            errorMessage = `Error: ${error.response.status}`;
+            errorDetails = error.response.data || 'Error desconocido';
+        }
+      }
+      
+      // Mostrar mensaje de error con más detalles
+      setSnackbar({
+        open: true,
+        message: errorMessage + (errorDetails ? ' ' + errorDetails : ''),
+        severity: 'error',
+        autoHideDuration: 8000 // Dar más tiempo para leer el mensaje de error
+      });
+      
+      // Si el error se debe a un timeout, sugiere intentarlo de nuevo
+      if (error.message.includes('timeout') || error.code === 'ECONNABORTED') {
+        setTimeout(() => {
+          setSnackbar({
+            open: true,
+            message: 'Tip: El servidor alojado en Render puede tardar en iniciar si ha estado inactivo. Inténtalo de nuevo en unos minutos.',
+            severity: 'info',
+            autoHideDuration: 10000
+          });
+        }, 5000);
       }
     } finally {
       setLoading(false);

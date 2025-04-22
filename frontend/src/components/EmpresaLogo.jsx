@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Typography, Avatar } from '@mui/material';
 import BusinessIcon from '@mui/icons-material/Business';
+import logoImg from '../assets/logo.svg';
 
 /**
  * Componente para mostrar el logo de una empresa con manejo de errores
@@ -10,13 +11,15 @@ import BusinessIcon from '@mui/icons-material/Business';
  * @param {string} props.altText - Texto alternativo para la imagen
  * @param {number} props.size - Tamaño del avatar (en px)
  * @param {string} props.className - Clases CSS adicionales
+ * @param {boolean} props.useDefaultLogo - Si debe usar el logo por defecto en vez de icono en caso de error
  * @returns {JSX.Element} Componente de logo
  */
 const EmpresaLogo = ({ 
   logoUrl, 
   altText = "Logo de la empresa", 
   size = 50, 
-  className = '' 
+  className = '',
+  useDefaultLogo = false
 }) => {
   const [error, setError] = useState(false);
   
@@ -48,6 +51,12 @@ const EmpresaLogo = ({
             src={logoUrl} 
             alt={altText} 
             onError={handleError}
+            style={styles.img}
+          />
+        ) : useDefaultLogo ? (
+          <img 
+            src={logoImg} 
+            alt="Logo FisioAyuda" 
             style={styles.img}
           />
         ) : (

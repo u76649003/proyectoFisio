@@ -10,6 +10,7 @@ import EditarEmpresa from './pages/EditarEmpresa';
 import Dashboard from './pages/Dashboard';
 import Pacientes from './pages/Pacientes';
 import Citas from './pages/Citas';
+import OrganizarClinica from './pages/OrganizarClinica';
 import { authService } from './services/api';
 
 // Definir el tema personalizado
@@ -192,6 +193,7 @@ function App() {
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/pacientes" element={<ProtectedRoute><Pacientes /></ProtectedRoute>} />
           <Route path="/citas" element={<ProtectedRoute><Citas /></ProtectedRoute>} />
+          <Route path="/organizar-clinica" element={<ProtectedRoute><OrganizarClinica /></ProtectedRoute>} />
           <Route path="/editar-empresa/:id" element={<ProtectedRoute><EditarEmpresa /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

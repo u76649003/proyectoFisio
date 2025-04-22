@@ -82,7 +82,7 @@ export const authService = {
       
       // Configurar timeout y opciones para optimizar la petición
       const config = {
-        timeout: 10000, // 10 segundos máximo de espera
+        timeout: 60000, // Aumentado a 60 segundos para dar más tiempo al servidor
         headers: {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
@@ -90,6 +90,17 @@ export const authService = {
       };
       
       console.log("Enviando petición de login al servidor...");
+      console.log("URL de la API:", API_URL);
+      
+      // Intentamos hacer ping al servidor primero para verificar que está disponible
+      try {
+        await axios.get(`${API_URL}/health-check`, { timeout: 5000 });
+        console.log("El servidor está respondiendo correctamente");
+      } catch (pingError) {
+        console.warn("No se pudo verificar el estado del servidor", pingError.message);
+        // No bloqueamos el flujo, continuamos con el intento de login
+      }
+      
       const response = await api.post('/auth/login', { email, password }, config);
       
       console.log("Respuesta del servidor recibida:", response.status);
@@ -123,11 +134,36 @@ export const authService = {
     } catch (error) {
       console.error("Error en login:", error);
       console.error("Detalles del error:", error.message);
+      
+      // Mensajes de error más descriptivos según el tipo de error
+      let errorMessage = error.message;
+      
+      if (error.code === 'ECONNABORTED') {
+        errorMessage = "El servidor tardó demasiado en responder. El servicio puede estar iniciándose o sobrecargado. Por favor, espera unos minutos e inténtalo de nuevo.";
+        console.error("Error de timeout detectado. Tiempo de espera agotado:", config.timeout, "ms");
+      } else if (error.message.includes('Network Error')) {
+        errorMessage = "No se pudo conectar con el servidor. Verifica tu conexión a internet o si el servicio está disponible.";
+        console.error("Error de red detectado. Detalles:", error);
+      }
+      
       if (error.response) {
         console.error("Estado de respuesta:", error.response.status);
         console.error("Datos de respuesta:", error.response.data);
+        
+        // Mensajes específicos según el código de estado
+        if (error.response.status === 401) {
+          errorMessage = "Credenciales incorrectas. Verifica tu email y contraseña.";
+        } else if (error.response.status === 403) {
+          errorMessage = "No tienes permisos para acceder.";
+        } else if (error.response.status >= 500) {
+          errorMessage = "Error en el servidor. Inténtalo de nuevo más tarde.";
+        }
       }
-      throw error;
+      
+      // Propagar el error con mensaje mejorado
+      const enhancedError = new Error(errorMessage);
+      enhancedError.originalError = error;
+      throw enhancedError;
     }
   },
   
