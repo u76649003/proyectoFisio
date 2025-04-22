@@ -236,4 +236,24 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+    
+    /**
+     * Endpoint para verificar si un token JWT es válido
+     * Este endpoint requiere autenticación, por lo que si el token
+     * no es válido, la petición será rechazada automáticamente por
+     * el filtro de seguridad
+     * 
+     * @return Estado de validez del token
+     */
+    @GetMapping("/verify-token")
+    public ResponseEntity<?> verifyToken() {
+        // Si la petición llega hasta aquí, significa que el token es válido
+        // ya que ha pasado por el filtro de seguridad
+        Map<String, Object> response = new HashMap<>();
+        response.put("valid", true);
+        response.put("message", "Token válido");
+        response.put("timestamp", System.currentTimeMillis());
+        
+        return ResponseEntity.ok(response);
+    }
 } 

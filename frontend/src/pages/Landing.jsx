@@ -192,6 +192,10 @@ const Landing = () => {
         localStorage.setItem('empresaId', empresaId);
       }
       
+      // Log para depuración
+      console.log('Login exitoso. Token recibido:', token?.substring(0, 15) + '...');
+      console.log('Redirigiendo a Dashboard...');
+      
       // Mostrar mensaje de éxito
       setSnackbar({
         open: true,
@@ -202,8 +206,17 @@ const Landing = () => {
       // Cerrar el modal
       handleLoginClose();
       
-      // Redirigir inmediatamente al dashboard para todos los roles
-      navigate('/dashboard');
+      // Usar setTimeout con 0ms para asegurar que otros procesos terminen primero
+      setTimeout(() => {
+        try {
+          // Intentar usar el hook de navegación 
+          navigate('/dashboard');
+        } catch (navError) {
+          console.error('Error en navigate:', navError);
+          // Como fallback, usar window.location que siempre funciona
+          window.location.href = '/dashboard';
+        }
+      }, 0);
       
     } catch (error) {
       console.error('Error al iniciar sesión:', error);

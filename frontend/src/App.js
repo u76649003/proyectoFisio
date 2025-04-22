@@ -79,12 +79,22 @@ const theme = createTheme({
 
 // Componente para proteger rutas
 const ProtectedRoute = ({ children }) => {
+  // Verificar autenticación de forma más completa
   const isAuthenticated = authService.isAuthenticated();
+  const currentUser = authService.getCurrentUser();
   
-  if (!isAuthenticated) {
+  // Log para depuración
+  console.log("ProtectedRoute - Estado de autenticación:", isAuthenticated);
+  console.log("ProtectedRoute - Usuario actual:", currentUser ? `ID: ${currentUser.id}, Rol: ${currentUser.rol}` : "No hay usuario");
+  
+  // Si no está autenticado, redirigir al inicio
+  if (!isAuthenticated || !currentUser) {
+    console.log("Acceso denegado a ruta protegida - Redirigiendo a inicio");
     return <Navigate to="/" replace />;
   }
   
+  // Si está autenticado, permitir acceso a la ruta
+  console.log("Acceso permitido a ruta protegida");
   return children;
 };
 
@@ -100,10 +110,55 @@ const preloadResources = () => {
   });
 };
 
+// Intervalo de verificación de sesión (en milisegundos) - 5 minutos
+const SESSION_CHECK_INTERVAL = 5 * 60 * 1000;
+
 function App() {
   useEffect(() => {
     // Despertar el servidor cuando se carga la aplicación
     preloadResources();
+    
+    // Verificar si hay una sesión activa al cargar la app
+    const checkInitialSession = async () => {
+      if (authService.isAuthenticated()) {
+        // Refrescar la sesión para extender su validez
+        authService.refreshSession();
+        console.log("Sesión existente refrescada al iniciar la aplicación");
+      }
+    };
+    
+    checkInitialSession();
+    
+    // Configurar verificación periódica de la sesión
+    const sessionCheckInterval = setInterval(() => {
+      if (authService.isAuthenticated()) {
+        // Refrescar la sesión para mantenerla activa mientras el usuario usa la app
+        authService.refreshSession();
+        console.log("Sesión refrescada periódicamente");
+      }
+    }, SESSION_CHECK_INTERVAL);
+    
+    // Configurar detección de actividad del usuario
+    const handleUserActivity = () => {
+      if (authService.isAuthenticated()) {
+        authService.refreshSession();
+      }
+    };
+    
+    // Eventos para detectar actividad del usuario
+    window.addEventListener('click', handleUserActivity);
+    window.addEventListener('keypress', handleUserActivity);
+    window.addEventListener('scroll', handleUserActivity);
+    window.addEventListener('mousemove', handleUserActivity);
+    
+    // Limpiar intervalos y event listeners al desmontar
+    return () => {
+      clearInterval(sessionCheckInterval);
+      window.removeEventListener('click', handleUserActivity);
+      window.removeEventListener('keypress', handleUserActivity);
+      window.removeEventListener('scroll', handleUserActivity);
+      window.removeEventListener('mousemove', handleUserActivity);
+    };
   }, []);
 
   return (

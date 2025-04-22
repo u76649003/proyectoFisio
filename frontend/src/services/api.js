@@ -62,12 +62,29 @@ export const authService = {
       };
       
       const response = await api.post('/auth/login', { email, password }, config);
-      if (response.data.token) {
+      
+      if (response.data && response.data.token) {
+        // Almacenar token y datos de usuario de forma segura
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data));
+        
+        // Guardar la fecha de la última autenticación
+        const now = new Date().getTime();
+        localStorage.setItem('lastAuthentication', now.toString());
+        
+        // Asegurarnos de que se escribió correctamente
+        const storedToken = localStorage.getItem('token');
+        console.log("Token almacenado correctamente:", !!storedToken);
+        
+        // Establecer el header de autorización para futuras peticiones
+        api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+      } else {
+        console.error("Login: Respuesta sin token", response.data);
       }
+      
       return response.data;
     } catch (error) {
+      console.error("Error en login:", error);
       throw error;
     }
   },
@@ -166,15 +183,118 @@ export const authService = {
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('lastAuthentication');
+    localStorage.removeItem('empresaId');
+    
+    // Limpiar header de autorización
+    delete api.defaults.headers.common['Authorization'];
+    
+    console.log("Sesión cerrada correctamente");
   },
   
   getCurrentUser: () => {
-    const user = localStorage.getItem('user');
-    return user ? JSON.parse(user) : null;
+    try {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return null;
+      
+      // Actualizar la fecha de última actividad
+      authService.refreshSession();
+      
+      return JSON.parse(userStr);
+    } catch (error) {
+      console.error("Error al obtener usuario actual:", error);
+      // Si hay error al parsear, limpiar el almacenamiento corrupto
+      localStorage.removeItem('user');
+      return null;
+    }
   },
   
   isAuthenticated: () => {
-    return !!localStorage.getItem('token');
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    const lastAuth = localStorage.getItem('lastAuthentication');
+    
+    if (!token || !user || !lastAuth) {
+      console.log("No hay token, datos de usuario o fecha de autenticación");
+      return false;
+    }
+    
+    try {
+      // Verificar que los datos del usuario son válidos
+      const userData = JSON.parse(user);
+      if (!userData || !userData.id || !userData.rol) {
+        console.log("Datos de usuario inválidos");
+        return false;
+      }
+      
+      // Verificar si la sesión ha expirado (24 horas por defecto)
+      const lastAuthTime = parseInt(lastAuth, 10);
+      const now = new Date().getTime();
+      const sessionDuration = 24 * 60 * 60 * 1000; // 24 horas en milisegundos
+      
+      if (now - lastAuthTime > sessionDuration) {
+        console.log("Sesión expirada");
+        authService.logout();
+        return false;
+      }
+      
+      // Actualizar timestamp de actividad
+      authService.refreshSession();
+      
+      return true;
+    } catch (error) {
+      console.error("Error verificando autenticación:", error);
+      return false;
+    }
+  },
+  
+  // Método para refrescar la sesión del usuario
+  refreshSession: () => {
+    try {
+      const now = new Date().getTime();
+      localStorage.setItem('lastAuthentication', now.toString());
+      
+      // Asegurarse de que el token esté configurado en los headers
+      const token = localStorage.getItem('token');
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error al refrescar sesión:", error);
+      return false;
+    }
+  },
+  
+  // Método para verificar el estado del token con el servidor
+  verifyToken: async () => {
+    try {
+      // Verificar primero si hay token en local storage
+      if (!authService.isAuthenticated()) {
+        return false;
+      }
+      
+      // Hacer una petición simple al endpoint de verificación de token
+      const response = await api.get('/auth/verify-token');
+      
+      // Si la respuesta es exitosa, el token es válido
+      if (response.status === 200) {
+        authService.refreshSession();
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error("Error verificando token con el servidor:", error);
+      
+      // Si es un error 401 o 403, el token es inválido
+      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+        authService.logout();
+      }
+      
+      return false;
+    }
   }
 };
 

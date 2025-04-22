@@ -135,21 +135,35 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    console.log("Dashboard - Componente montado");
+    
     // Comprobar si el usuario está autenticado
     if (!authService.isAuthenticated()) {
+      console.log("Dashboard - Usuario no autenticado, redirigiendo a inicio");
       navigate('/');
       return;
     }
     
     // Obtener datos del usuario
     const user = authService.getCurrentUser();
+    console.log("Dashboard - Usuario actual:", user);
+    
+    if (!user) {
+      console.log("Dashboard - No se pudo obtener datos del usuario");
+      authService.logout(); // Limpiar cualquier dato inconsistente
+      navigate('/');
+      return;
+    }
+    
     setUserData(user);
+    console.log("Dashboard - Datos de usuario establecidos correctamente");
     
     // Aquí se podrían cargar los datos del dashboard desde la API
     // fetchDashboardData();
   }, [navigate]);
 
   const handleLogout = () => {
+    console.log("Dashboard - Cerrando sesión");
     authService.logout();
     navigate('/');
   };
@@ -158,10 +172,17 @@ const Dashboard = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
-  // Si no hay datos de usuario, no mostrar nada
+  // Si no hay datos de usuario, mostrar mensaje de carga o redirigir
   if (!userData) {
-    return null;
+    console.log("Dashboard - Renderizando: No hay datos de usuario");
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography variant="h5">Cargando Dashboard...</Typography>
+      </Box>
+    );
   }
+  
+  console.log("Dashboard - Renderizando: Dashboard completo para usuario:", userData.nombre);
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5f5f5' }}>
