@@ -1,448 +1,231 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Box, 
-  Container, 
   Typography, 
-  Grid, 
-  Paper, 
-  Button,
-  Card,
-  CardContent,
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  IconButton,
-  useTheme,
-  useMediaQuery,
+  Button, 
   Avatar,
-  Chip,
-  Tooltip
+  Grid, 
+  Card, 
+  CardContent
 } from '@mui/material';
 import { 
-  Person, 
-  CalendarToday, 
+  ChevronRight, 
   AttachMoney, 
-  ChevronRight,
-  Event,
-  AccessTime,
-  People,
-  Settings,
-  Dashboard as DashboardIcon,
-  Menu as MenuIcon,
-  ExitToApp,
-  Print as PrintIcon,
-  GetApp as ExportIcon,
+  People, 
+  Event, 
   MedicalServices,
-  LocalHospital,
-  BarChart
+  Download as ExportIcon,
+  Print as PrintIcon
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
-import { Link, useNavigate } from 'react-router-dom';
-import { authService, empresaService } from '../services/api';
-import { EmpresaLogo } from '../components';
-import logoImg from '../assets/logo.svg';
+import { useNavigate } from 'react-router-dom';
+import { authService, pacienteService, empresaService, agendaService, usuarioService } from '../services/api';
+import SidebarMenu from '../components/SidebarMenu';
 
-// Componentes estilizados
-const DashboardCard = styled(Paper)(({ theme, color }) => ({
-  padding: theme.spacing(3),
-  borderRadius: '12px',
+// Componentes estilizados para las tarjetas del dashboard
+const DashboardCard = styled(Card)(({ theme, color }) => ({
+  backgroundColor: color,
+  color: '#fff',
   height: '100%',
-  backgroundColor: color || theme.palette.primary.main,
-  color: theme.palette.common.white,
-  transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
+  padding: theme.spacing(3),
   '&:hover': {
-    transform: 'translateY(-5px)',
-    boxShadow: theme.shadows[8],
+    boxShadow: '0 10px 20px rgba(0,0,0,0.1)',
+    transform: 'translateY(-5px)'
   },
-  display: 'flex',
-  flexDirection: 'column',
+  transition: 'transform 0.2s, box-shadow 0.2s'
 }));
 
 const ActionLink = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
-  marginTop: 'auto',
-  paddingTop: theme.spacing(1),
+  justifyContent: 'flex-end',
+  marginTop: theme.spacing(1),
   cursor: 'pointer',
   '&:hover': {
-    textDecoration: 'underline',
-  },
-}));
-
-const Sidebar = styled(Box)(({ theme, open }) => ({
-  width: open ? 280 : 73,
-  flexShrink: 0,
-  height: '100vh',
-  backgroundColor: theme.palette.primary.main,
-  backgroundImage: 'linear-gradient(to bottom, #1976d2, #1565c0)',
-  color: theme.palette.common.white,
-  transition: theme.transitions.create('width', {
-    easing: theme.transitions.easing.sharp,
-    duration: theme.transitions.duration.enteringScreen,
-  }),
-  overflow: 'hidden',
-  position: 'fixed',
-  left: 0,
-  top: 0,
-  zIndex: 1000,
-  boxShadow: '2px 0 10px rgba(0,0,0,0.2)',
-  [theme.breakpoints.down('sm')]: {
-    width: open ? '100%' : 0,
-    position: 'fixed',
-  },
-}));
-
-const ContentArea = styled(Box)(({ theme, sidebarOpen }) => ({
-  flexGrow: 1,
-  padding: theme.spacing(3),
-  marginLeft: sidebarOpen ? 280 : 73,
-  transition: theme.transitions.create('margin-left', {
-    easing: theme.transitions.easing.sharp,
-    duration: theme.transitions.duration.enteringScreen,
-  }),
-  [theme.breakpoints.down('sm')]: {
-    marginLeft: 0,
-    padding: theme.spacing(2),
-  },
-}));
-
-const MenuListItem = styled(ListItem)(({ theme, selected }) => ({
-  padding: theme.spacing(1.5, 2),
-  color: selected ? theme.palette.primary.contrastText : 'rgba(255, 255, 255, 0.8)',
-  backgroundColor: selected ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
-  borderRadius: '8px',
-  margin: theme.spacing(0.5, 1.5),
-  '&:hover': {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-}));
-
-const ActivityItem = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  marginBottom: theme.spacing(2),
-  padding: theme.spacing(1.5),
-  backgroundColor: theme.palette.background.paper,
-  borderRadius: '8px',
-  boxShadow: theme.shadows[1],
-  transition: 'transform 0.2s ease-in-out',
-  '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: theme.shadows[3],
-  },
+    opacity: 0.8
+  }
 }));
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
-  const [userData, setUserData] = useState(null);
-  const [empresaData, setEmpresaData] = useState(null);
+  const isMobile = window.innerWidth < 600;
   
-  // Datos simulados para el dashboard
-  const dashboardData = {
+  // Estados para los datos del dashboard
+  const [userData, setUserData] = useState(null);
+  const [dashboardData, setDashboardData] = useState({
     pacientesActivos: 0,
     citasHoy: 0,
-    ingresosMensuales: '€0.00',
     profesionalesActivos: 0,
-    actividades: []
-  };
-
-  useEffect(() => {
-    console.log("Dashboard - Componente montado");
-    
-    // Comprobar si el usuario está autenticado
-    if (!authService.isAuthenticated()) {
-      console.log("Dashboard - Usuario no autenticado, redirigiendo a inicio");
-      navigate('/');
-      return;
-    }
-    
-    // Obtener datos del usuario
-    const user = authService.getCurrentUser();
-    console.log("Dashboard - Usuario actual:", user);
-    
-    if (!user) {
-      console.log("Dashboard - No se pudo obtener datos del usuario");
-      authService.logout(); // Limpiar cualquier dato inconsistente
-      navigate('/');
-      return;
-    }
-    
-    setUserData(user);
-    console.log("Dashboard - Datos de usuario establecidos correctamente");
-    
-    // Obtener datos de la empresa si hay un empresaId
-    if (user.empresaId) {
-      console.log("Dashboard - Obteniendo datos de la empresa:", user.empresaId);
-      fetchEmpresaData(user.empresaId);
-    }
-    
-    // Aquí se podrían cargar los datos del dashboard desde la API
-    // fetchDashboardData();
-  }, [navigate]);
-
-  const fetchEmpresaData = async (empresaId) => {
-    try {
-      const data = await empresaService.getEmpresaById(empresaId);
-      console.log("Dashboard - Datos de empresa recibidos:", data);
-      setEmpresaData(data);
-    } catch (error) {
-      console.error("Error al obtener datos de la empresa:", error);
-    }
-  };
-
-  const handleLogout = () => {
-    console.log("Dashboard - Cerrando sesión");
-    authService.logout();
-    navigate('/');
-  };
-
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
-  // Si no hay datos de usuario, mostrar mensaje de carga o redirigir
-  if (!userData) {
-    console.log("Dashboard - Renderizando: No hay datos de usuario");
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <Typography variant="h5">Cargando Dashboard...</Typography>
-      </Box>
-    );
-  }
+    ingresosMensuales: '0€'
+  });
   
-  console.log("Dashboard - Renderizando: Dashboard completo para usuario:", userData.nombre);
+  // Cargar datos del usuario y del dashboard
+  useEffect(() => {
+    const loadUserData = async () => {
+      // Verificar autenticación
+      if (!authService.isAuthenticated()) {
+        navigate('/login');
+        return;
+      }
+      
+      // Obtener datos del usuario
+      const currentUser = authService.getCurrentUser();
+      if (currentUser) {
+        setUserData(currentUser);
+        
+        // Cargar datos para el dashboard
+        try {
+          await loadDashboardData(currentUser);
+        } catch (error) {
+          console.error('Error cargando datos del dashboard:', error);
+        }
+      }
+    };
+    
+    loadUserData();
+  }, [navigate]);
+  
+  // Función para cargar los datos del dashboard
+  const loadDashboardData = async (user) => {
+    try {
+      // Contador de pacientes
+      let pacientesCount = 0;
+      try {
+        const pacientes = await pacienteService.getPacientesByEmpresa(user.empresaId);
+        pacientesCount = pacientes.length;
+      } catch (e) {
+        console.error('Error al cargar pacientes:', e);
+      }
+      
+      // Contador de citas para hoy
+      let citasHoyCount = 0;
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const citas = await agendaService.getCitasByFecha(today);
+        citasHoyCount = citas.length;
+      } catch (e) {
+        console.error('Error al cargar citas:', e);
+      }
+      
+      // Contador de profesionales
+      let profesionalesCount = 0;
+      try {
+        const profesionales = await usuarioService.getUsuariosByEmpresa(user.empresaId);
+        profesionalesCount = profesionales.length;
+      } catch (e) {
+        console.error('Error al cargar profesionales:', e);
+      }
+      
+      // Simular cálculo de ingresos (en una aplicación real esto sería una API real)
+      const ingresos = '2.500€';
+      
+      setDashboardData({
+        pacientesActivos: pacientesCount,
+        citasHoy: citasHoyCount,
+        profesionalesActivos: profesionalesCount,
+        ingresosMensuales: ingresos
+      });
+    } catch (error) {
+      console.error('Error obteniendo datos del dashboard:', error);
+    }
+  };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f8f9fa' }}>
-      {/* Sidebar */}
-      <Sidebar open={sidebarOpen}>
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          padding: 2,
-          justifyContent: sidebarOpen ? 'space-between' : 'center',
-        }}>
-          {sidebarOpen ? (
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <EmpresaLogo 
-                logoUrl={empresaData?.logoUrl} 
-                size={36} 
-                useDefaultLogo={true} 
-                sx={{ mr: 1.5 }}
-              />
-              <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {empresaData?.nombre || 'FisioAyuda'}
+    <SidebarMenu>
+      {/* Header */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        mb: 4
+      }}>
+        <Typography variant="h4" component="h1" fontWeight="bold">
+          Dashboard
+        </Typography>
+        
+        <Box>
+          <Button 
+            variant="outlined" 
+            startIcon={<ExportIcon />} 
+            sx={{ mr: 1 }}
+            size={isMobile ? "small" : "medium"}
+          >
+            Exportar
+          </Button>
+          <Button 
+            variant="outlined" 
+            startIcon={<PrintIcon />}
+            size={isMobile ? "small" : "medium"}
+          >
+            Imprimir
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Cards de estadísticas */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={userData?.rol === 'DUENO' ? 3 : 4}>
+          <DashboardCard color="#1976d2" sx={{ borderRadius: 4, boxShadow: '0 6px 20px rgba(25, 118, 210, 0.2)' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', mr: 2 }}>
+                <People />
+              </Avatar>
+              <Typography variant="h6" gutterBottom sx={{ m: 0 }}>
+                Pacientes
               </Typography>
             </Box>
-          ) : (
-            <EmpresaLogo 
-              logoUrl={empresaData?.logoUrl} 
-              size={36} 
-              useDefaultLogo={true}
-            />
-          )}
-          <IconButton 
-            color="inherit" 
-            onClick={toggleSidebar}
-            sx={{ 
-              bgcolor: 'rgba(255,255,255,0.1)',
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' } 
-            }}
-          >
-            <MenuIcon />
-          </IconButton>
-        </Box>
-        
-        <Divider sx={{ bgcolor: 'rgba(255,255,255,0.1)', my: 1 }} />
-        
-        {/* Información del usuario */}
-        {sidebarOpen && (
-          <Box sx={{ p: 2, textAlign: 'center', mb: 1 }}>
-            <Avatar 
-              sx={{ 
-                width: 60, 
-                height: 60, 
-                margin: '0 auto', 
-                mb: 1, 
-                bgcolor: 'primary.light',
-                border: '2px solid white'
-              }}
-            >
-              {userData.nombre?.charAt(0)}{userData.apellidos?.charAt(0)}
-            </Avatar>
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-              {userData.nombre} {userData.apellidos}
+            <Typography variant="h3" component="div" fontWeight="bold">
+              {dashboardData.pacientesActivos}
             </Typography>
-            <Chip 
-              label={userData.rol} 
-              size="small" 
-              sx={{ 
-                bgcolor: 'rgba(255,255,255,0.2)', 
-                color: 'white',
-                mt: 0.5
-              }} 
-            />
-          </Box>
-        )}
+            <ActionLink>
+              <Typography variant="body2">Ver detalles</Typography>
+              <ChevronRight fontSize="small" />
+            </ActionLink>
+          </DashboardCard>
+        </Grid>
         
-        <List>
-          <MenuListItem button component={Link} to="/dashboard" selected={true}>
-            <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
-              <DashboardIcon />
-            </ListItemIcon>
-            {sidebarOpen && <ListItemText primary="Inicio" />}
-          </MenuListItem>
-          
-          <MenuListItem button component={Link} to="/pacientes">
-            <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
-              <People />
-            </ListItemIcon>
-            {sidebarOpen && <ListItemText primary="Pacientes" />}
-          </MenuListItem>
-          
-          <MenuListItem button component={Link} to="/citas">
-            <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
-              <Event />
-            </ListItemIcon>
-            {sidebarOpen && <ListItemText primary="Citas" />}
-          </MenuListItem>
-          
-          {/* Nueva opción: Organizar Clínica */}
-          <MenuListItem button component={Link} to="/organizar-clinica">
-            <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
-              <MedicalServices />
-            </ListItemIcon>
-            {sidebarOpen && <ListItemText primary="Organizar Clínica" />}
-          </MenuListItem>
-          
-          <MenuListItem button component={Link} to="/informes">
-            <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
-              <BarChart />
-            </ListItemIcon>
-            {sidebarOpen && <ListItemText primary="Informes" />}
-          </MenuListItem>
-          
-          {/* Ajustes de Empresa */}
-          {userData.empresaId && (
-            <MenuListItem button component={Link} to={`/editar-empresa/${userData.empresaId}`}>
-              <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
-                <Settings />
-              </ListItemIcon>
-              {sidebarOpen && <ListItemText primary="Configuración" />}
-            </MenuListItem>
-          )}
-        </List>
+        <Grid item xs={12} sm={6} md={userData?.rol === 'DUENO' ? 3 : 4}>
+          <DashboardCard color="#2e7d32" sx={{ borderRadius: 4, boxShadow: '0 6px 20px rgba(46, 125, 50, 0.2)' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', mr: 2 }}>
+                <Event />
+              </Avatar>
+              <Typography variant="h6" gutterBottom sx={{ m: 0 }}>
+                Citas Hoy
+              </Typography>
+            </Box>
+            <Typography variant="h3" component="div" fontWeight="bold">
+              {dashboardData.citasHoy}
+            </Typography>
+            <ActionLink>
+              <Typography variant="body2">Ver detalles</Typography>
+              <ChevronRight fontSize="small" />
+            </ActionLink>
+          </DashboardCard>
+        </Grid>
         
-        <Box sx={{ position: 'absolute', bottom: 0, width: '100%' }}>
-          <Divider sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
-          <MenuListItem button onClick={handleLogout}>
-            <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
-              <ExitToApp />
-            </ListItemIcon>
-            {sidebarOpen && <ListItemText primary="Cerrar sesión" />}
-          </MenuListItem>
-        </Box>
-      </Sidebar>
-
-      {/* Contenido principal */}
-      <ContentArea sidebarOpen={sidebarOpen}>
-        {/* Header */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          mb: 4
-        }}>
-          <Typography variant="h4" component="h1" fontWeight="bold">
-            Dashboard
-          </Typography>
-          
-          <Box>
-            <Button 
-              variant="outlined" 
-              startIcon={<ExportIcon />} 
-              sx={{ mr: 1 }}
-              size={isMobile ? "small" : "medium"}
-            >
-              Exportar
-            </Button>
-            <Button 
-              variant="outlined" 
-              startIcon={<PrintIcon />}
-              size={isMobile ? "small" : "medium"}
-            >
-              Imprimir
-            </Button>
-          </Box>
-        </Box>
-
-        {/* Cards de estadísticas */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
-            <DashboardCard color="#1976d2" sx={{ borderRadius: 4, boxShadow: '0 6px 20px rgba(25, 118, 210, 0.2)' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', mr: 2 }}>
-                  <People />
-                </Avatar>
-                <Typography variant="h6" gutterBottom sx={{ m: 0 }}>
-                  Pacientes
-                </Typography>
-              </Box>
-              <Typography variant="h3" component="div" fontWeight="bold">
-                {dashboardData.pacientesActivos}
+        <Grid item xs={12} sm={6} md={userData?.rol === 'DUENO' ? 3 : 4}>
+          <DashboardCard color="#0097a7" sx={{ borderRadius: 4, boxShadow: '0 6px 20px rgba(0, 151, 167, 0.2)' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', mr: 2 }}>
+                <MedicalServices />
+              </Avatar>
+              <Typography variant="h6" gutterBottom sx={{ m: 0 }}>
+                Profesionales
               </Typography>
-              <ActionLink>
-                <Typography variant="body2">Ver detalles</Typography>
-                <ChevronRight fontSize="small" />
-              </ActionLink>
-            </DashboardCard>
-          </Grid>
-          
-          <Grid item xs={12} sm={6} md={3}>
-            <DashboardCard color="#2e7d32" sx={{ borderRadius: 4, boxShadow: '0 6px 20px rgba(46, 125, 50, 0.2)' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', mr: 2 }}>
-                  <Event />
-                </Avatar>
-                <Typography variant="h6" gutterBottom sx={{ m: 0 }}>
-                  Citas Hoy
-                </Typography>
-              </Box>
-              <Typography variant="h3" component="div" fontWeight="bold">
-                {dashboardData.citasHoy}
-              </Typography>
-              <ActionLink>
-                <Typography variant="body2">Ver detalles</Typography>
-                <ChevronRight fontSize="small" />
-              </ActionLink>
-            </DashboardCard>
-          </Grid>
-          
-          <Grid item xs={12} sm={6} md={3}>
-            <DashboardCard color="#0097a7" sx={{ borderRadius: 4, boxShadow: '0 6px 20px rgba(0, 151, 167, 0.2)' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', mr: 2 }}>
-                  <MedicalServices />
-                </Avatar>
-                <Typography variant="h6" gutterBottom sx={{ m: 0 }}>
-                  Profesionales
-                </Typography>
-              </Box>
-              <Typography variant="h3" component="div" fontWeight="bold">
-                {dashboardData.profesionalesActivos}
-              </Typography>
-              <ActionLink>
-                <Typography variant="body2">Ver detalles</Typography>
-                <ChevronRight fontSize="small" />
-              </ActionLink>
-            </DashboardCard>
-          </Grid>
-          
+            </Box>
+            <Typography variant="h3" component="div" fontWeight="bold">
+              {dashboardData.profesionalesActivos}
+            </Typography>
+            <ActionLink>
+              <Typography variant="body2">Ver detalles</Typography>
+              <ChevronRight fontSize="small" />
+            </ActionLink>
+          </DashboardCard>
+        </Grid>
+        
+        {/* Tarjeta de Ingresos - Solo visible para el DUEÑO */}
+        {userData?.rol === 'DUENO' && (
           <Grid item xs={12} sm={6} md={3}>
             <DashboardCard color="#ed6c02" sx={{ borderRadius: 4, boxShadow: '0 6px 20px rgba(237, 108, 2, 0.2)' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -462,164 +245,172 @@ const Dashboard = () => {
               </ActionLink>
             </DashboardCard>
           </Grid>
-        </Grid>
+        )}
+      </Grid>
 
-        {/* Secciones principales del dashboard */}
-        <Grid container spacing={3}>
-          {/* Actividad reciente */}
-          <Grid item xs={12} md={7}>
-            <Card sx={{ borderRadius: 4, boxShadow: '0 2px 10px rgba(0,0,0,0.08)', height: '100%' }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
-                  Actividad Reciente
-                </Typography>
-                
-                {dashboardData.actividades.length > 0 ? (
-                  dashboardData.actividades.map((actividad, index) => (
-                    <ActivityItem key={index}>
-                      <ListItemIcon>
-                        {actividad.tipo === 'paciente' ? <Person /> : 
-                         actividad.tipo === 'cita' ? <Event /> : 
-                         <AttachMoney />}
-                      </ListItemIcon>
-                      <ListItemText 
-                        primary={actividad.descripcion}
-                        secondary={actividad.fecha}
-                      />
-                    </ActivityItem>
-                  ))
-                ) : (
-                  <Box sx={{ 
-                    py: 4, 
-                    textAlign: 'center', 
-                    bgcolor: '#f9f9f9', 
-                    borderRadius: 2 
-                  }}>
-                    <Typography variant="body1" color="text.secondary">
-                      No hay actividad reciente para mostrar.
+      {/* Actividad reciente */}
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={7}>
+          <Card sx={{ borderRadius: 4, boxShadow: '0 2px 10px rgba(0,0,0,0.08)', height: '100%' }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
+                Actividad reciente
+              </Typography>
+              <Box sx={{ mb: 2 }}>
+                {/* Ejemplo de actividad reciente */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  mb: 2,
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: '#f5f7fa'
+                }}>
+                  <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
+                    <Event />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="body1" fontWeight="medium">Nueva cita agendada</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Juan Pérez - Hoy a las 16:30
                     </Typography>
                   </Box>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-          
-          {/* Enlaces rápidos */}
-          <Grid item xs={12} md={5}>
-            <Card sx={{ borderRadius: 4, boxShadow: '0 2px 10px rgba(0,0,0,0.08)', height: '100%' }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
-                  Acciones Rápidas
-                </Typography>
+                </Box>
                 
-                <Grid container spacing={2}>
-                  <Grid item xs={6}>
-                    <Button 
-                      variant="outlined" 
-                      fullWidth
-                      size="large"
-                      startIcon={<Person />}
-                      component={Link}
-                      to="/pacientes"
-                      sx={{ 
-                        p: 2, 
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        display: 'flex',
-                        justifyContent: 'flex-start',
-                        border: '1px solid rgba(0,0,0,0.1)',
-                        color: '#1976d2',
-                        '&:hover': {
-                          backgroundColor: 'rgba(25, 118, 210, 0.04)',
-                          borderColor: '#1976d2'
-                        }
-                      }}
-                    >
-                      Nuevo Paciente
-                    </Button>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Button 
-                      variant="outlined" 
-                      fullWidth
-                      size="large"
-                      startIcon={<Event />}
-                      component={Link}
-                      to="/citas"
-                      sx={{ 
-                        p: 2, 
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        display: 'flex',
-                        justifyContent: 'flex-start',
-                        border: '1px solid rgba(0,0,0,0.1)',
-                        color: '#2e7d32',
-                        '&:hover': {
-                          backgroundColor: 'rgba(46, 125, 50, 0.04)',
-                          borderColor: '#2e7d32'
-                        }
-                      }}
-                    >
-                      Nueva Cita
-                    </Button>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Button 
-                      variant="outlined" 
-                      fullWidth
-                      size="large"
-                      startIcon={<MedicalServices />}
-                      component={Link}
-                      to="/organizar-clinica"
-                      sx={{ 
-                        p: 2, 
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        display: 'flex',
-                        justifyContent: 'flex-start',
-                        border: '1px solid rgba(0,0,0,0.1)',
-                        color: '#0097a7',
-                        '&:hover': {
-                          backgroundColor: 'rgba(0, 151, 167, 0.04)',
-                          borderColor: '#0097a7'
-                        }
-                      }}
-                    >
-                      Organizar Clínica
-                    </Button>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Button 
-                      variant="outlined" 
-                      fullWidth
-                      size="large"
-                      startIcon={<BarChart />}
-                      component={Link}
-                      to="/informes"
-                      sx={{ 
-                        p: 2, 
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        display: 'flex',
-                        justifyContent: 'flex-start',
-                        border: '1px solid rgba(0,0,0,0.1)',
-                        color: '#ed6c02',
-                        '&:hover': {
-                          backgroundColor: 'rgba(237, 108, 2, 0.04)',
-                          borderColor: '#ed6c02'
-                        }
-                      }}
-                    >
-                      Ver Informes
-                    </Button>
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-          </Grid>
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  mb: 2,
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: '#f5f7fa'
+                }}>
+                  <Avatar sx={{ bgcolor: 'success.main', mr: 2 }}>
+                    <People />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="body1" fontWeight="medium">Nuevo paciente registrado</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      María García - Ayer a las 10:15
+                    </Typography>
+                  </Box>
+                </Box>
+                
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: '#f5f7fa'
+                }}>
+                  <Avatar sx={{ bgcolor: 'info.main', mr: 2 }}>
+                    <MedicalServices />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="body1" fontWeight="medium">Nuevo tratamiento asignado</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Ana Martínez - Hace 2 días
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+              
+              <Box sx={{ textAlign: 'center', mt: 3 }}>
+                <Button variant="text" color="primary">
+                  Ver todas las actividades
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
         </Grid>
-      </ContentArea>
-    </Box>
+        
+        <Grid item xs={12} md={5}>
+          <Card sx={{ borderRadius: 4, boxShadow: '0 2px 10px rgba(0,0,0,0.08)', height: '100%' }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
+                Próximas citas
+              </Typography>
+              
+              <Box>
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: '#f5f7fa',
+                  mb: 2
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>JP</Avatar>
+                    <Box>
+                      <Typography variant="body1" fontWeight="medium">Juan Pérez</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Fisioterapia - Primera visita
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                    16:30
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: '#f5f7fa',
+                  mb: 2
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Avatar sx={{ bgcolor: 'secondary.main', mr: 2 }}>MG</Avatar>
+                    <Box>
+                      <Typography variant="body1" fontWeight="medium">María García</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Rehabilitación - Seguimiento
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                    17:45
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: '#f5f7fa'
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Avatar sx={{ bgcolor: 'error.main', mr: 2 }}>AM</Avatar>
+                    <Box>
+                      <Typography variant="body1" fontWeight="medium">Ana Martínez</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Masaje terapéutico
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                    18:30
+                  </Typography>
+                </Box>
+              </Box>
+              
+              <Box sx={{ textAlign: 'center', mt: 3 }}>
+                <Button variant="text" color="primary" onClick={() => navigate('/citas')}>
+                  Ver todas las citas
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </SidebarMenu>
   );
 };
 

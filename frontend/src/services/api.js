@@ -18,15 +18,10 @@ const api = axios.create({
 // Añadir interceptor para incluir el token en las solicitudes
 api.interceptors.request.use(
   (config) => {
-    console.log("Interceptor de petición - Preparando configuración");
-    
     // Obtener token y añadirlo a la cabecera
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log("Token añadido a la cabecera de la petición");
-    } else {
-      console.log("No hay token disponible para añadir a la cabecera");
     }
     
     // Optimización para evitar caché en peticiones críticas
@@ -35,7 +30,6 @@ api.interceptors.request.use(
       config.headers['Pragma'] = 'no-cache';
     }
     
-    console.log("Petición configurada:", config.method, config.url);
     return config;
   },
   (error) => {
@@ -47,7 +41,6 @@ api.interceptors.request.use(
 // Manejo de errores global
 api.interceptors.response.use(
   (response) => {
-    console.log("Respuesta recibida correctamente:", response.status, response.config.url);
     return response;
   },
   (error) => {
@@ -66,7 +59,6 @@ api.interceptors.response.use(
     // Capturar errores de autenticación (401)
     if (error.response && error.response.status === 401) {
       // Si el token ha expirado o es inválido, cerrar sesión
-      console.log("Error 401 detectado - Cerrando sesión por token inválido");
       authService.logout();
       window.location.href = '/';
     }
@@ -78,8 +70,6 @@ api.interceptors.response.use(
 export const authService = {
   login: async (email, password) => {
     try {
-      console.log("Iniciando proceso de login para:", email);
-      
       // Configurar timeout y opciones para optimizar la petición
       const config = {
         timeout: 60000, // Aumentado a 60 segundos para dar más tiempo al servidor
@@ -89,13 +79,9 @@ export const authService = {
         }
       };
       
-      console.log("Enviando petición de login al servidor...");
-      console.log("URL de la API:", API_URL);
-      
       // Intentamos hacer ping al servidor primero para verificar que está disponible
       try {
         await axios.get(`${API_URL}/health-check`, { timeout: 5000 });
-        console.log("El servidor está respondiendo correctamente");
       } catch (pingError) {
         console.warn("No se pudo verificar el estado del servidor", pingError.message);
         // No bloqueamos el flujo, continuamos con el intento de login
@@ -103,14 +89,8 @@ export const authService = {
       
       const response = await api.post('/auth/login', { email, password }, config);
       
-      console.log("Respuesta del servidor recibida:", response.status);
-      console.log("Datos recibidos:", JSON.stringify(response.data));
-      
       if (response.data && response.data.token) {
         // Almacenar token y datos de usuario de forma segura
-        console.log("Token recibido, longitud:", response.data.token.length);
-        console.log("Almacenando token en localStorage...");
-        
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data));
         
@@ -118,14 +98,8 @@ export const authService = {
         const now = new Date().getTime();
         localStorage.setItem('lastAuthentication', now.toString());
         
-        // Asegurarnos de que se escribió correctamente
-        const storedToken = localStorage.getItem('token');
-        console.log("Token almacenado correctamente:", !!storedToken);
-        console.log("Longitud del token almacenado:", storedToken ? storedToken.length : 0);
-        
         // Establecer el header de autorización para futuras peticiones
         api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-        console.log("Header de autorización configurado");
       } else {
         console.error("Login: Respuesta sin token", response.data);
       }
@@ -133,14 +107,13 @@ export const authService = {
       return response.data;
     } catch (error) {
       console.error("Error en login:", error);
-      console.error("Detalles del error:", error.message);
       
       // Mensajes de error más descriptivos según el tipo de error
       let errorMessage = error.message;
       
       if (error.code === 'ECONNABORTED') {
         errorMessage = "El servidor tardó demasiado en responder. El servicio puede estar iniciándose o sobrecargado. Por favor, espera unos minutos e inténtalo de nuevo.";
-        console.error("Error de timeout detectado. Tiempo de espera agotado:", config.timeout, "ms");
+        console.error("Error de timeout detectado. Tiempo de espera agotado:", error.config?.timeout || 60000, "ms");
       } else if (error.message.includes('Network Error')) {
         errorMessage = "No se pudo conectar con el servidor. Verifica tu conexión a internet o si el servicio está disponible.";
         console.error("Error de red detectado. Detalles:", error);
@@ -214,9 +187,6 @@ export const authService = {
         telefono: registerData.telefono
       };
       
-      console.log('Datos de usuario a enviar:', usuarioData);
-      console.log('Datos de empresa a enviar:', empresaData);
-      
       // Agregar los objetos JSON como strings al FormData
       formData.append('usuario', JSON.stringify(usuarioData));
       formData.append('empresa', JSON.stringify(empresaData));
@@ -226,11 +196,9 @@ export const authService = {
       // con lo que espera el backend (ver método handleSubmit en Register.jsx)
       if (registerData.logo) {
         formData.append('logo', registerData.logo);
-        console.log('Logo adjuntado al FormData:', registerData.logo.name);
       } else if (registerData.logoEmpresa) {
         // Compatibilidad con versiones anteriores por si aún se usa logoEmpresa
         formData.append('logo', registerData.logoEmpresa);
-        console.log('Logo adjuntado al FormData desde logoEmpresa:', registerData.logoEmpresa.name);
       }
       
       // Configurar la petición para manejar FormData
@@ -266,52 +234,55 @@ export const authService = {
     
     // Limpiar header de autorización
     delete api.defaults.headers.common['Authorization'];
-    
-    console.log("Sesión cerrada correctamente");
   },
   
   getCurrentUser: () => {
     try {
       const userStr = localStorage.getItem('user');
-      if (!userStr) return null;
       
-      // Actualizar la fecha de última actividad
-      authService.refreshSession();
+      if (!userStr) {
+        return null;
+      }
       
-      return JSON.parse(userStr);
+      // Intentar parsear los datos del usuario
+      try {
+        const userData = JSON.parse(userStr);
+        
+        // Verificar que los datos del usuario contienen información mínima necesaria
+        if (!userData || !userData.id) {
+          return null;
+        }
+        
+        // Actualizar la fecha de última actividad
+        authService.refreshSession();
+        
+        return userData;
+      } catch (parseError) {
+        // Si hay error al parsear, limpiar el almacenamiento corrupto
+        localStorage.removeItem('user');
+        return null;
+      }
     } catch (error) {
-      console.error("Error al obtener usuario actual:", error);
-      // Si hay error al parsear, limpiar el almacenamiento corrupto
+      // Si hay error, limpiar el almacenamiento
       localStorage.removeItem('user');
       return null;
     }
   },
   
   isAuthenticated: () => {
-    console.log("Verificando autenticación...");
-    
     const token = localStorage.getItem('token');
     const user = localStorage.getItem('user');
     const lastAuth = localStorage.getItem('lastAuthentication');
     
-    console.log("• Token presente:", !!token);
-    console.log("• Datos de usuario presentes:", !!user);
-    console.log("• Timestamp de autenticación presente:", !!lastAuth);
-    
     if (!token || !user || !lastAuth) {
-      console.log("No hay token, datos de usuario o fecha de autenticación");
       return false;
     }
     
     try {
       // Verificar que los datos del usuario son válidos
       const userData = JSON.parse(user);
-      console.log("• Datos de usuario parseados correctamente:", !!userData);
-      console.log("• ID de usuario presente:", !!userData?.id);
-      console.log("• Rol de usuario presente:", !!userData?.rol);
       
       if (!userData || !userData.id || !userData.rol) {
-        console.log("Datos de usuario inválidos");
         return false;
       }
       
@@ -321,11 +292,7 @@ export const authService = {
       const sessionDuration = 24 * 60 * 60 * 1000; // 24 horas en milisegundos
       const timeElapsed = now - lastAuthTime;
       
-      console.log("• Tiempo transcurrido desde la última autenticación:", Math.floor(timeElapsed / 60000), "minutos");
-      console.log("• Tiempo máximo de sesión:", Math.floor(sessionDuration / 60000), "minutos");
-      
       if (timeElapsed > sessionDuration) {
-        console.log("Sesión expirada");
         authService.logout();
         return false;
       }
@@ -335,7 +302,6 @@ export const authService = {
       
       return true;
     } catch (error) {
-      console.error("Error verificando autenticación:", error);
       return false;
     }
   },
@@ -595,6 +561,16 @@ export const usuarioService = {
       return response.data;
     } catch (error) {
       console.error('Error al actualizar usuario:', error);
+      throw error;
+    }
+  },
+  
+  changePassword: async (id, passwordData) => {
+    try {
+      const response = await api.post(`/usuarios/${id}/change-password`, passwordData);
+      return response.data;
+    } catch (error) {
+      console.error('Error al cambiar contraseña:', error);
       throw error;
     }
   },

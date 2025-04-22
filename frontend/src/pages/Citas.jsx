@@ -35,7 +35,8 @@ import {
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { Link, useNavigate } from 'react-router-dom';
-import { authService } from '../services/api';
+import { authService, agendaService } from '../services/api';
+import SidebarMenu from '../components/SidebarMenu';
 
 // Componentes estilizados (reutilizados del Dashboard)
 const Sidebar = styled(Box)(({ theme, open }) => ({
@@ -119,6 +120,21 @@ const CalendarTimeSlot = styled(Box)(({ theme, hasAppointment }) => ({
   cursor: hasAppointment ? 'pointer' : 'default',
 }));
 
+// Función para formatear fechas
+const formatDate = (dateStr) => {
+  const options = { weekday: 'long', day: 'numeric', month: 'long' };
+  return new Date(dateStr).toLocaleDateString('es-ES', options);
+};
+
+// Función para verificar si una fecha es hoy
+const isToday = (dateStr) => {
+  const today = new Date();
+  const date = new Date(dateStr);
+  return date.getDate() === today.getDate() && 
+         date.getMonth() === today.getMonth() && 
+         date.getFullYear() === today.getFullYear();
+};
+
 const Citas = () => {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -127,6 +143,9 @@ const Citas = () => {
   const [userData, setUserData] = useState(null);
   const [selectedProfesional, setSelectedProfesional] = useState('all');
   const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [weekDates, setWeekDates] = useState([]);
+  const [citas, setCitas] = useState([]);
+  const [loading, setLoading] = useState(true);
   
   // Datos simulados de profesionales
   const profesionales = [
@@ -134,9 +153,6 @@ const Citas = () => {
     { id: 2, nombre: 'Dra. María López' },
   ];
   
-  // Datos simulados de citas
-  const citas = [];
-
   // Generar días de la semana actual
   const daysOfWeek = [];
   const startOfWeek = new Date(currentWeek);
@@ -156,14 +172,6 @@ const Citas = () => {
   // Formato de día de la semana
   const formatWeekday = (date) => {
     return new Intl.DateTimeFormat('es', { weekday: 'short' }).format(date);
-  };
-
-  // Comprobar si una fecha es hoy
-  const isToday = (date) => {
-    const today = new Date();
-    return date.getDate() === today.getDate() &&
-      date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear();
   };
 
   // Obtener formato para el encabezado del calendario
@@ -216,9 +224,23 @@ const Citas = () => {
     const user = authService.getCurrentUser();
     setUserData(user);
     
-    // Aquí se podrían cargar los datos de citas desde la API
-    // fetchCitasData();
-  }, [navigate]);
+    // Cargar citas al montar el componente
+    const fetchCitas = async () => {
+      try {
+        // Generar fechas de la semana actual
+        generateWeekDates(currentWeek);
+        
+        // Cargar citas por fecha (implementación simulada)
+        await loadCitasByWeek(currentWeek);
+      } catch (error) {
+        console.error('Error al cargar citas:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchCitas();
+  }, [navigate, currentWeek]);
 
   const handleLogout = () => {
     authService.logout();
@@ -227,6 +249,65 @@ const Citas = () => {
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
+  };
+
+  // Función para generar las fechas de la semana
+  const generateWeekDates = (baseDate) => {
+    const dates = [];
+    const startDate = new Date(baseDate);
+    const day = startDate.getDay(); // 0 = domingo, 1 = lunes, etc.
+    
+    // Ajustar al lunes de la semana actual
+    startDate.setDate(startDate.getDate() - (day === 0 ? 6 : day - 1));
+    
+    // Generar 7 días (una semana)
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + i);
+      dates.push(date.toISOString().split('T')[0]);
+    }
+    
+    setWeekDates(dates);
+  };
+  
+  // Cargar citas de la semana
+  const loadCitasByWeek = async (baseDate) => {
+    try {
+      // Implementación simulada - en una app real, cargaríamos desde la API
+      const citasSimuladas = [
+        {
+          id: 1,
+          fechaHora: '2023-10-16T10:00:00',
+          paciente: { id: 1, nombre: 'Juan', apellidos: 'Pérez' },
+          fisioterapeuta: { id: 1, nombre: 'Ana', apellidos: 'Silva' },
+          tratamiento: 'Fisioterapia General',
+          duracion: 60,
+          estado: 'CONFIRMADA'
+        },
+        {
+          id: 2,
+          fechaHora: '2023-10-16T11:30:00',
+          paciente: { id: 2, nombre: 'María', apellidos: 'González' },
+          fisioterapeuta: { id: 1, nombre: 'Ana', apellidos: 'Silva' },
+          tratamiento: 'Rehabilitación',
+          duracion: 45,
+          estado: 'CONFIRMADA'
+        },
+        {
+          id: 3,
+          fechaHora: '2023-10-17T09:00:00',
+          paciente: { id: 3, nombre: 'Carlos', apellidos: 'Rodríguez' },
+          fisioterapeuta: { id: 2, nombre: 'Luis', apellidos: 'Martínez' },
+          tratamiento: 'Masaje Terapéutico',
+          duracion: 30,
+          estado: 'CONFIRMADA'
+        }
+      ];
+      
+      setCitas(citasSimuladas);
+    } catch (error) {
+      console.error('Error al cargar citas:', error);
+    }
   };
 
   // Si no hay datos de usuario, no mostrar nada
@@ -238,223 +319,187 @@ const Citas = () => {
   const workingHours = Array.from({ length: 13 }, (_, i) => i + 8);
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5f5f5' }}>
-      {/* Sidebar */}
-      <Sidebar open={sidebarOpen}>
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: sidebarOpen ? 'space-between' : 'center',
-          p: 2
-        }}>
-          {sidebarOpen && (
-            <Typography variant="h6" component="div">
-              FisioAyuda
-            </Typography>
-          )}
-          <IconButton color="inherit" onClick={toggleSidebar}>
-            <MenuIcon />
-          </IconButton>
-        </Box>
+    <SidebarMenu>
+      {/* Header con título y botones */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        mb: 4,
+        flexDirection: { xs: 'column', sm: 'row' },
+        gap: { xs: 2, sm: 0 }
+      }}>
+        <Typography variant="h4" component="h1" fontWeight="bold">
+          Agenda de Citas
+        </Typography>
         
-        <Divider sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
+        <Button 
+          variant="contained" 
+          color="primary" 
+          startIcon={<AddIcon />}
+          onClick={() => navigate('/citas/nueva')}
+        >
+          Nueva Cita
+        </Button>
+      </Box>
+      
+      {/* Control de navegación de semanas */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        mb: 3,
+        bgcolor: '#f5f5f5',
+        p: 2,
+        borderRadius: 2
+      }}>
+        <Button 
+          startIcon={<ChevronLeft />}
+          onClick={goToPreviousWeek}
+        >
+          Semana Anterior
+        </Button>
         
-        <List>
-          <MenuListItem button component={Link} to="/dashboard">
-            <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
-              <DashboardIcon />
-            </ListItemIcon>
-            {sidebarOpen && <ListItemText primary="Inicio" />}
-          </MenuListItem>
-          
-          <MenuListItem button component={Link} to="/pacientes">
-            <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
-              <People />
-            </ListItemIcon>
-            {sidebarOpen && <ListItemText primary="Pacientes" />}
-          </MenuListItem>
-          
-          <MenuListItem button component={Link} to="/citas" selected={true}>
-            <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
-              <Event />
-            </ListItemIcon>
-            {sidebarOpen && <ListItemText primary="Citas" />}
-          </MenuListItem>
-          
-          <MenuListItem button component={Link} to="/informes">
-            <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
-              <AttachMoney />
-            </ListItemIcon>
-            {sidebarOpen && <ListItemText primary="Informes" />}
-          </MenuListItem>
-          
-          <MenuListItem button component={Link} to="/configuracion">
-            <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
-              <Settings />
-            </ListItemIcon>
-            {sidebarOpen && <ListItemText primary="Configuración" />}
-          </MenuListItem>
-        </List>
+        <Typography variant="h6">
+          {weekDates.length > 0 ? (
+            `${formatDate(weekDates[0])} - ${formatDate(weekDates[6])}`
+          ) : 'Cargando...'}
+        </Typography>
         
-        <Box sx={{ position: 'absolute', bottom: 0, width: '100%' }}>
-          <Divider sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
-          <MenuListItem button onClick={handleLogout}>
-            <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
-              <ExitToApp />
-            </ListItemIcon>
-            {sidebarOpen && <ListItemText primary="Cerrar sesión" />}
-          </MenuListItem>
-        </Box>
-      </Sidebar>
-
-      {/* Contenido principal */}
-      <ContentArea sidebarOpen={sidebarOpen}>
-        {/* Header */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          flexWrap: 'wrap',
-          mb: 4
-        }}>
-          <Typography variant="h4" component="h1" fontWeight="bold" sx={{ mb: { xs: 2, md: 0 } }}>
-            Calendario de Citas
-          </Typography>
-          
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            component={Link}
-            to="/citas/nueva"
-          >
-            Nueva Cita
-          </Button>
-        </Box>
-
-        {/* Controles del calendario */}
-        <Card sx={{ mb: 4 }}>
-          <CardContent>
-            <CalendarHeader>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <IconButton onClick={goToPreviousWeek}>
-                  <ChevronLeft />
-                </IconButton>
-                <Typography variant="h6">
-                  {getWeekRangeText()}
-                </Typography>
-                <IconButton onClick={goToNextWeek}>
-                  <ChevronRight />
-                </IconButton>
-                <Button variant="outlined" size="small" onClick={goToCurrentWeek}>
-                  Hoy
-                </Button>
+        <Button 
+          endIcon={<ChevronRight />}
+          onClick={goToNextWeek}
+        >
+          Semana Siguiente
+        </Button>
+      </Box>
+      
+      {/* Vista del calendario por semana */}
+      {!isMobile ? (
+        // Vista de escritorio: calendario semanal
+        <Grid container spacing={1} sx={{ mb: 4 }}>
+          {weekDates.map((date, index) => (
+            <Grid key={date} item xs={12/7}>
+              <Box sx={{ 
+                textAlign: 'center', 
+                p: 1, 
+                bgcolor: isToday(date) ? 'primary.light' : '#f5f5f5',
+                color: isToday(date) ? 'white' : 'inherit',
+                borderRadius: '4px 4px 0 0',
+                fontWeight: 'bold'
+              }}>
+                {formatDate(date).split(',')[0]}
               </Box>
-              
-              <FormControl sx={{ minWidth: 200 }}>
-                <InputLabel>Profesional</InputLabel>
-                <Select
-                  value={selectedProfesional}
-                  onChange={handleProfesionalChange}
-                  label="Profesional"
-                  size="small"
-                >
-                  <MenuItem value="all">Todos</MenuItem>
-                  {profesionales.map((profesional) => (
-                    <MenuItem key={profesional.id} value={profesional.id}>
-                      {profesional.nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </CalendarHeader>
-
-            {/* Vista para pantallas más grandes: Calendario semanal */}
-            {!isMobile && (
-              <Box sx={{ overflowX: 'auto' }}>
-                <Grid container sx={{ minWidth: 700 }}>
-                  {/* Encabezados de los días */}
-                  <Grid item xs={1} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                    <Box p={1} fontWeight="medium" textAlign="center">
-                      Hora
-                    </Box>
-                  </Grid>
-                  
-                  {daysOfWeek.map((day, index) => (
-                    <Grid item xs key={index} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                      <Box p={1} fontWeight="medium" textAlign="center" sx={{ 
-                        bgcolor: isToday(day) ? 'primary.main' : 'grey.100',
-                        color: isToday(day) ? 'white' : 'inherit'
-                      }}>
-                        <Typography variant="subtitle2">
-                          {formatWeekday(day)}
+              <Paper sx={{ 
+                height: 'calc(100vh - 300px)', 
+                overflow: 'auto',
+                p: 1,
+                boxShadow: 'none',
+                border: '1px solid #eee'
+              }}>
+                {loading ? (
+                  <Typography align="center" sx={{ py: 2 }}>Cargando...</Typography>
+                ) : citas.filter(cita => cita.fechaHora.startsWith(date)).length > 0 ? (
+                  citas.filter(cita => cita.fechaHora.startsWith(date)).map(cita => (
+                    <Card 
+                      key={cita.id} 
+                      sx={{ 
+                        mb: 1, 
+                        boxShadow: 2,
+                        '&:hover': {
+                          boxShadow: 4,
+                          cursor: 'pointer'
+                        }
+                      }}
+                      onClick={() => navigate(`/citas/${cita.id}`)}
+                    >
+                      <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                          {new Date(cita.fechaHora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                         </Typography>
                         <Typography variant="body2">
-                          {formatShortDate(day)}
+                          {cita.paciente.nombre} {cita.paciente.apellidos}
                         </Typography>
-                      </Box>
-                    </Grid>
-                  ))}
-                  
-                  {/* Filas de horas */}
-                  {workingHours.map((hour) => (
-                    <React.Fragment key={hour}>
-                      <Grid item xs={1}>
-                        <Box p={1} textAlign="center" sx={{ 
-                          borderBottom: 1, 
-                          borderRight: 1, 
-                          borderColor: 'divider',
-                          height: '80px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          {`${hour}:00`}
-                        </Box>
-                      </Grid>
-                      
-                      {daysOfWeek.map((day, dayIndex) => (
-                        <Grid item xs key={`${hour}-${dayIndex}`}>
-                          <CalendarDay isToday={isToday(day)}>
-                            {/* Aquí se renderizarían las citas para esta hora y día */}
-                          </CalendarDay>
-                        </Grid>
-                      ))}
-                    </React.Fragment>
-                  ))}
-                </Grid>
-              </Box>
-            )}
-            
-            {/* Vista para móviles: Lista de citas del día */}
-            {isMobile && (
-              <Box>
-                <Typography variant="h6" gutterBottom>
-                  Citas del día
-                </Typography>
-                
-                {citas.length > 0 ? (
-                  citas.map((cita) => (
-                    <Paper key={cita.id} sx={{ p: 2, mb: 2 }}>
-                      <Typography variant="subtitle1">
-                        {cita.hora} - {cita.paciente}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {cita.tipoConsulta}
-                      </Typography>
-                    </Paper>
+                        <Typography variant="body2" color="textSecondary" sx={{ fontSize: '0.8rem' }}>
+                          {cita.tratamiento}
+                        </Typography>
+                      </CardContent>
+                    </Card>
                   ))
                 ) : (
-                  <Typography variant="body1" color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>
-                    No hay citas programadas para el día seleccionado.
+                  <Typography align="center" color="textSecondary" sx={{ py: 2 }}>
+                    No hay citas
                   </Typography>
                 )}
-              </Box>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
+      ) : (
+        // Vista móvil: lista de citas por día
+        <Box sx={{ mb: 4 }}>
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel id="day-select-label">Día</InputLabel>
+            <Select
+              labelId="day-select-label"
+              value={weekDates.length > 0 ? weekDates[0] : ''}
+              label="Día"
+            >
+              {weekDates.map(date => (
+                <MenuItem key={date} value={date}>
+                  {formatDate(date)}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          
+          <Paper sx={{ p: 2 }}>
+            {loading ? (
+              <Typography align="center" sx={{ py: 2 }}>Cargando...</Typography>
+            ) : citas.length > 0 ? (
+              citas.map(cita => (
+                <Card 
+                  key={cita.id} 
+                  sx={{ 
+                    mb: 2, 
+                    boxShadow: 2,
+                    '&:hover': {
+                      boxShadow: 4,
+                      cursor: 'pointer'
+                    }
+                  }}
+                  onClick={() => navigate(`/citas/${cita.id}`)}
+                >
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                        {new Date(cita.fechaHora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        {formatDate(cita.fechaHora.split('T')[0])}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body1">
+                      {cita.paciente.nombre} {cita.paciente.apellidos}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      {cita.tratamiento} - {cita.duracion} min
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Fisioterapeuta: {cita.fisioterapeuta.nombre} {cita.fisioterapeuta.apellidos}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Typography align="center" color="textSecondary" sx={{ py: 2 }}>
+                No hay citas programadas para esta semana
+              </Typography>
             )}
-          </CardContent>
-        </Card>
-      </ContentArea>
-    </Box>
+          </Paper>
+        </Box>
+      )}
+    </SidebarMenu>
   );
 };
 
