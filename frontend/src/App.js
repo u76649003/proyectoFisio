@@ -79,6 +79,20 @@ const theme = createTheme({
 
 // Componente para proteger rutas
 const ProtectedRoute = ({ children }) => {
+  console.log("ProtectedRoute - Verificando autenticación...");
+  
+  // Verificar token en localStorage
+  const token = localStorage.getItem('token');
+  console.log("Token en localStorage:", token ? `${token.substring(0, 15)}...` : "No hay token");
+  
+  // Verificar datos de usuario
+  const userStr = localStorage.getItem('user');
+  console.log("Datos de usuario en localStorage:", userStr ? "Presentes" : "Ausentes");
+  
+  // Verificar timestamp de última autenticación
+  const lastAuth = localStorage.getItem('lastAuthentication');
+  console.log("Timestamp de última autenticación:", lastAuth);
+  
   // Verificar autenticación de forma más completa
   const isAuthenticated = authService.isAuthenticated();
   const currentUser = authService.getCurrentUser();

@@ -12,15 +12,21 @@ const api = axios.create({
   },
   // Configuración global para todas las peticiones
   timeout: 15000, // 15 segundos por defecto
+  withCredentials: true, // Añadido para permitir cookies en peticiones CORS
 });
 
 // Añadir interceptor para incluir el token en las solicitudes
 api.interceptors.request.use(
   (config) => {
+    console.log("Interceptor de petición - Preparando configuración");
+    
     // Obtener token y añadirlo a la cabecera
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log("Token añadido a la cabecera de la petición");
+    } else {
+      console.log("No hay token disponible para añadir a la cabecera");
     }
     
     // Optimización para evitar caché en peticiones críticas
@@ -29,18 +35,38 @@ api.interceptors.request.use(
       config.headers['Pragma'] = 'no-cache';
     }
     
+    console.log("Petición configurada:", config.method, config.url);
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    console.error("Error en interceptor de petición:", error);
+    return Promise.reject(error);
+  }
 );
 
 // Manejo de errores global
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log("Respuesta recibida correctamente:", response.status, response.config.url);
+    return response;
+  },
   (error) => {
+    console.error("Error en respuesta:", error.message);
+    
+    // Mostrar detalles del error
+    if (error.response) {
+      console.error("Estado de respuesta:", error.response.status);
+      console.error("Cabeceras de respuesta:", error.response.headers);
+      console.error("Datos de respuesta:", error.response.data);
+    } else if (error.request) {
+      console.error("No se recibió respuesta del servidor");
+      console.error("Detalles de la petición:", error.request);
+    }
+    
     // Capturar errores de autenticación (401)
     if (error.response && error.response.status === 401) {
       // Si el token ha expirado o es inválido, cerrar sesión
+      console.log("Error 401 detectado - Cerrando sesión por token inválido");
       authService.logout();
       window.location.href = '/';
     }
@@ -52,6 +78,8 @@ api.interceptors.response.use(
 export const authService = {
   login: async (email, password) => {
     try {
+      console.log("Iniciando proceso de login para:", email);
+      
       // Configurar timeout y opciones para optimizar la petición
       const config = {
         timeout: 10000, // 10 segundos máximo de espera
@@ -61,10 +89,17 @@ export const authService = {
         }
       };
       
+      console.log("Enviando petición de login al servidor...");
       const response = await api.post('/auth/login', { email, password }, config);
+      
+      console.log("Respuesta del servidor recibida:", response.status);
+      console.log("Datos recibidos:", JSON.stringify(response.data));
       
       if (response.data && response.data.token) {
         // Almacenar token y datos de usuario de forma segura
+        console.log("Token recibido, longitud:", response.data.token.length);
+        console.log("Almacenando token en localStorage...");
+        
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data));
         
@@ -75,9 +110,11 @@ export const authService = {
         // Asegurarnos de que se escribió correctamente
         const storedToken = localStorage.getItem('token');
         console.log("Token almacenado correctamente:", !!storedToken);
+        console.log("Longitud del token almacenado:", storedToken ? storedToken.length : 0);
         
         // Establecer el header de autorización para futuras peticiones
         api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+        console.log("Header de autorización configurado");
       } else {
         console.error("Login: Respuesta sin token", response.data);
       }
@@ -85,6 +122,11 @@ export const authService = {
       return response.data;
     } catch (error) {
       console.error("Error en login:", error);
+      console.error("Detalles del error:", error.message);
+      if (error.response) {
+        console.error("Estado de respuesta:", error.response.status);
+        console.error("Datos de respuesta:", error.response.data);
+      }
       throw error;
     }
   },
@@ -210,9 +252,15 @@ export const authService = {
   },
   
   isAuthenticated: () => {
+    console.log("Verificando autenticación...");
+    
     const token = localStorage.getItem('token');
     const user = localStorage.getItem('user');
     const lastAuth = localStorage.getItem('lastAuthentication');
+    
+    console.log("• Token presente:", !!token);
+    console.log("• Datos de usuario presentes:", !!user);
+    console.log("• Timestamp de autenticación presente:", !!lastAuth);
     
     if (!token || !user || !lastAuth) {
       console.log("No hay token, datos de usuario o fecha de autenticación");
@@ -222,6 +270,10 @@ export const authService = {
     try {
       // Verificar que los datos del usuario son válidos
       const userData = JSON.parse(user);
+      console.log("• Datos de usuario parseados correctamente:", !!userData);
+      console.log("• ID de usuario presente:", !!userData?.id);
+      console.log("• Rol de usuario presente:", !!userData?.rol);
+      
       if (!userData || !userData.id || !userData.rol) {
         console.log("Datos de usuario inválidos");
         return false;
@@ -231,8 +283,12 @@ export const authService = {
       const lastAuthTime = parseInt(lastAuth, 10);
       const now = new Date().getTime();
       const sessionDuration = 24 * 60 * 60 * 1000; // 24 horas en milisegundos
+      const timeElapsed = now - lastAuthTime;
       
-      if (now - lastAuthTime > sessionDuration) {
+      console.log("• Tiempo transcurrido desde la última autenticación:", Math.floor(timeElapsed / 60000), "minutos");
+      console.log("• Tiempo máximo de sesión:", Math.floor(sessionDuration / 60000), "minutos");
+      
+      if (timeElapsed > sessionDuration) {
         console.log("Sesión expirada");
         authService.logout();
         return false;

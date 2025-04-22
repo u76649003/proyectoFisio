@@ -181,16 +181,34 @@ const Landing = () => {
     setLoading(true);
     
     try {
+      console.log("Iniciando proceso de login...");
+      
       // Llamar al servicio de autenticación
       const response = await authService.login(formData.email, formData.password);
+      
+      console.log("Respuesta de login recibida:", response);
       
       // Extraer información relevante de la respuesta
       const { token, id, rol, empresaId } = response;
       
+      console.log("Token recibido:", token ? "Presente" : "Ausente");
+      console.log("ID de usuario:", id);
+      console.log("Rol de usuario:", rol);
+      console.log("ID de empresa:", empresaId);
+      
       // Guardar información adicional si es necesario
       if (empresaId) {
         localStorage.setItem('empresaId', empresaId);
+        console.log("ID de empresa guardado en localStorage");
       }
+      
+      // Verificar que el token se guardó correctamente
+      const storedToken = localStorage.getItem('token');
+      console.log("Token almacenado en localStorage:", storedToken ? "Presente" : "Ausente");
+      
+      // Verificar que los datos de usuario se guardaron correctamente
+      const storedUser = localStorage.getItem('user');
+      console.log("Datos de usuario almacenados en localStorage:", storedUser ? "Presentes" : "Ausentes");
       
       // Log para depuración
       console.log('Login exitoso. Token recibido:', token?.substring(0, 15) + '...');
@@ -210,10 +228,12 @@ const Landing = () => {
       setTimeout(() => {
         try {
           // Intentar usar el hook de navegación 
+          console.log("Navegando a /dashboard usando React Router");
           navigate('/dashboard');
         } catch (navError) {
           console.error('Error en navigate:', navError);
           // Como fallback, usar window.location que siempre funciona
+          console.log("Fallback: Navegando a /dashboard usando window.location");
           window.location.href = '/dashboard';
         }
       }, 0);
@@ -221,26 +241,23 @@ const Landing = () => {
     } catch (error) {
       console.error('Error al iniciar sesión:', error);
       
-      // Mostrar mensaje de error específico según el código de error
-      let errorMessage = 'Credenciales inválidas. Por favor, verifica tu email y contraseña.';
-      
+      // Mostrar detalles del error para diagnóstico
       if (error.response) {
-        if (error.response.status === 401) {
-          errorMessage = 'Email o contraseña incorrectos.';
-        } else if (error.response.status === 403) {
-          errorMessage = 'No tienes permisos para acceder al sistema.';
-        } else if (error.response.status === 500) {
-          errorMessage = 'Error en el servidor. Por favor, inténtalo más tarde.';
-        } else if (error.response.data) {
-          errorMessage = error.response.data;
-        }
+        console.error('Estado de respuesta:', error.response.status);
+        console.error('Datos de respuesta:', error.response.data);
+        
+        setSnackbar({
+          open: true,
+          message: `Error: ${error.response.data || 'Credenciales inválidas'}`,
+          severity: 'error'
+        });
+      } else {
+        setSnackbar({
+          open: true,
+          message: `Error de conexión: ${error.message}`,
+          severity: 'error'
+        });
       }
-      
-      setSnackbar({
-        open: true,
-        message: errorMessage,
-        severity: 'error'
-      });
     } finally {
       setLoading(false);
     }
