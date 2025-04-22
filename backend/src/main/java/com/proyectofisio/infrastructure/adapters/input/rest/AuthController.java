@@ -256,4 +256,20 @@ public class AuthController {
         
         return ResponseEntity.ok(response);
     }
+    
+    /**
+     * Endpoint de prueba para verificar si el servidor está en funcionamiento
+     * Este endpoint es público y no requiere autenticación
+     * 
+     * @return Estado del servidor
+     */
+    @GetMapping("/health-check")
+    public ResponseEntity<?> healthCheck() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "UP");
+        response.put("message", "Servidor funcionando correctamente");
+        response.put("timestamp", System.currentTimeMillis());
+        
+        return ResponseEntity.ok(response);
+    }
 } 

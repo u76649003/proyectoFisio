@@ -100,13 +100,18 @@ const ProtectedRoute = ({ children }) => {
 
 // Precargar recursos críticos
 const preloadResources = () => {
-  // Precargar API
-  fetch('https://proyectofisio.onrender.com/api/health', { 
+  // Precargar API usando un endpoint público que no requiera autenticación
+  fetch('https://proyectofisio.onrender.com/api/auth/health-check', { 
     method: 'GET',
-    mode: 'no-cors',
-    cache: 'no-store'
-  }).catch(() => {
-    // Ignorar errores - solo queremos "despertar" al servidor
+    mode: 'cors',
+    cache: 'no-store',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    }
+  }).catch((error) => {
+    // Ignorar errores pero los registramos para depuración
+    console.log("Preload fetch completado (puede que con errores)");
   });
 };
 
