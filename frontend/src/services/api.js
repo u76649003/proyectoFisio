@@ -10,15 +10,25 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Configuración global para todas las peticiones
+  timeout: 15000, // 15 segundos por defecto
 });
 
 // Añadir interceptor para incluir el token en las solicitudes
 api.interceptors.request.use(
   (config) => {
+    // Obtener token y añadirlo a la cabecera
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Optimización para evitar caché en peticiones críticas
+    if (['post', 'put', 'delete', 'patch'].includes(config.method)) {
+      config.headers['Cache-Control'] = 'no-cache';
+      config.headers['Pragma'] = 'no-cache';
+    }
+    
     return config;
   },
   (error) => Promise.reject(error)
@@ -42,7 +52,16 @@ api.interceptors.response.use(
 export const authService = {
   login: async (email, password) => {
     try {
-      const response = await api.post('/auth/login', { email, password });
+      // Configurar timeout y opciones para optimizar la petición
+      const config = {
+        timeout: 10000, // 10 segundos máximo de espera
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      };
+      
+      const response = await api.post('/auth/login', { email, password }, config);
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data));

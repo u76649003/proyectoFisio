@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -7,6 +7,9 @@ import Register from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import EditarEmpresa from './pages/EditarEmpresa';
+import Dashboard from './pages/Dashboard';
+import Pacientes from './pages/Pacientes';
+import Citas from './pages/Citas';
 import { authService } from './services/api';
 
 // Definir el tema personalizado
@@ -85,28 +88,37 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+// Precargar recursos críticos
+const preloadResources = () => {
+  // Precargar API
+  fetch('https://proyectofisio.onrender.com/api/health', { 
+    method: 'GET',
+    mode: 'no-cors',
+    cache: 'no-store'
+  }).catch(() => {
+    // Ignorar errores - solo queremos "despertar" al servidor
+  });
+};
+
 function App() {
+  useEffect(() => {
+    // Despertar el servidor cuando se carga la aplicación
+    preloadResources();
+  }, []);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-email/:token" element={<VerifyEmail />} />
-          <Route path="/politica-privacidad" element={<PrivacyPolicy />} />
-          
-          {/* Rutas protegidas */}
-          <Route 
-            path="/empresa/:id/editar" 
-            element={
-              <ProtectedRoute>
-                <EditarEmpresa />
-              </ProtectedRoute>
-            } 
-          />
-          
-          {/* Ruta de fallback */}
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/pacientes" element={<ProtectedRoute><Pacientes /></ProtectedRoute>} />
+          <Route path="/citas" element={<ProtectedRoute><Citas /></ProtectedRoute>} />
+          <Route path="/editar-empresa/:id" element={<ProtectedRoute><EditarEmpresa /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>

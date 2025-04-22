@@ -195,29 +195,15 @@ const Landing = () => {
       // Mostrar mensaje de éxito
       setSnackbar({
         open: true,
-        message: '¡Inicio de sesión exitoso! Redirigiendo...',
+        message: '¡Inicio de sesión exitoso!',
         severity: 'success'
       });
       
       // Cerrar el modal
       handleLoginClose();
       
-      // Decidir a dónde redirigir según el rol del usuario
-      let redirectPath = '/dashboard';
-      if (rol === 'ADMINISTRADOR') {
-        redirectPath = '/admin/dashboard';
-      } else if (rol === 'DUENO') {
-        redirectPath = '/dashboard';
-      } else if (rol === 'FISIOTERAPEUTA') {
-        redirectPath = '/fisio/dashboard';
-      } else if (rol === 'RECEPCIONISTA') {
-        redirectPath = '/recepcion/dashboard';
-      }
-      
-      // Redirigir después de 1 segundo
-      setTimeout(() => {
-        navigate(redirectPath);
-      }, 1000);
+      // Redirigir inmediatamente al dashboard para todos los roles
+      navigate('/dashboard');
       
     } catch (error) {
       console.error('Error al iniciar sesión:', error);
