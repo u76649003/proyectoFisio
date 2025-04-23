@@ -9,6 +9,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -41,6 +42,9 @@ public class ServicioEntity {
     
     @Column(name = "empresa_id", nullable = false)
     private UUID empresaId;
+    
+    @OneToMany(mappedBy = "servicio")
+    private List<BonoPacienteEntity> bonos;
     
     @CreationTimestamp
     @Column(name = "fecha_creacion", updatable = false)

@@ -11,6 +11,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -29,11 +31,13 @@ public class BonoPacienteEntity {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
     
-    @Column(name = "paciente_id", nullable = false)
-    private UUID pacienteId;
+    @ManyToOne
+    @JoinColumn(name = "paciente_id", nullable = false)
+    private PacienteEntity paciente;
     
-    @Column(name = "servicio_id", nullable = false)
-    private UUID servicioId;
+    @ManyToOne
+    @JoinColumn(name = "servicio_id", nullable = false)
+    private ServicioEntity servicio;
     
     @Column(name = "fecha_inicio", nullable = false)
     private LocalDate fechaInicio;
