@@ -1,7 +1,6 @@
 package com.proyectofisio.infrastructure.adapters.output.persistence.entity;
 
 import java.time.LocalDate;
-import java.util.UUID;
 
 import com.proyectofisio.domain.model.enums.RolUsuario;
 
@@ -29,8 +28,8 @@ import lombok.NoArgsConstructor;
 public class UsuarioEntity {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     
     @Column(nullable = false)
     private String nombre;

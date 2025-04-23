@@ -9,6 +9,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Pacientes from './pages/Pacientes';
 import DetallesPaciente from './pages/DetallesPaciente';
+import NuevoPaciente from './pages/NuevoPaciente';
 import Citas from './pages/Citas';
 import EditarEmpresa from './pages/EditarEmpresa';
 import OrganizarClinica from './pages/OrganizarClinica';
@@ -67,6 +68,11 @@ function App() {
         <Route path="/pacientes" element={
           <ProtectedRoute>
             <Pacientes />
+          </ProtectedRoute>
+        } />
+        <Route path="/pacientes/nuevo" element={
+          <ProtectedRoute>
+            <NuevoPaciente />
           </ProtectedRoute>
         } />
         <Route path="/pacientes/:id" element={

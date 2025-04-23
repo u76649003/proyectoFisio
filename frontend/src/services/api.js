@@ -705,4 +705,127 @@ export const empresaService = {
   }
 };
 
+// Servicios para bonos de pacientes
+export const bonoPacienteService = {
+  // Obtener todos los bonos de un paciente
+  getBonosByPacienteId: async (pacienteId, estado = null) => {
+    try {
+      let url = `/pacientes/${pacienteId}/bonos`;
+      if (estado) {
+        url += `?estado=${estado}`;
+      }
+      const response = await api.get(url);
+      return response.data;
+    } catch (error) {
+      console.error("Error al obtener bonos del paciente:", error);
+      throw error;
+    }
+  },
+  
+  // Obtener un bono específico
+  getBonoPacienteById: async (pacienteId, bonoId) => {
+    try {
+      const response = await api.get(`/pacientes/${pacienteId}/bonos/${bonoId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error al obtener bono:", error);
+      throw error;
+    }
+  },
+  
+  // Crear un nuevo bono
+  createBonoPaciente: async (pacienteId, bonoData) => {
+    try {
+      const response = await api.post(`/pacientes/${pacienteId}/bonos`, bonoData);
+      return response.data;
+    } catch (error) {
+      console.error("Error al crear bono:", error);
+      throw error;
+    }
+  },
+  
+  // Actualizar un bono existente
+  updateBonoPaciente: async (pacienteId, bonoId, bonoData) => {
+    try {
+      const response = await api.put(`/pacientes/${pacienteId}/bonos/${bonoId}`, bonoData);
+      return response.data;
+    } catch (error) {
+      console.error("Error al actualizar bono:", error);
+      throw error;
+    }
+  },
+  
+  // Eliminar un bono
+  deleteBonoPaciente: async (pacienteId, bonoId) => {
+    try {
+      await api.delete(`/pacientes/${pacienteId}/bonos/${bonoId}`);
+      return true;
+    } catch (error) {
+      console.error("Error al eliminar bono:", error);
+      throw error;
+    }
+  }
+};
+
+// Servicios para productos
+export const productoService = {
+  // Obtener todos los productos
+  getAllProductos: async () => {
+    try {
+      const response = await api.get('/productos');
+      return response.data;
+    } catch (error) {
+      console.error("Error al obtener productos:", error);
+      throw error;
+    }
+  },
+  
+  // Obtener un producto específico
+  getProductoById: async (productoId) => {
+    try {
+      const response = await api.get(`/productos/${productoId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error al obtener producto:", error);
+      throw error;
+    }
+  }
+};
+
+// Servicios para gestión de servicios
+export const servicioService = {
+  // Obtener todos los servicios
+  getAllServicios: async () => {
+    try {
+      const response = await api.get('/servicios');
+      return response.data;
+    } catch (error) {
+      console.error("Error al obtener servicios:", error);
+      throw error;
+    }
+  },
+  
+  // Obtener un servicio específico
+  getServicioById: async (servicioId) => {
+    try {
+      const response = await api.get(`/servicios/${servicioId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error al obtener servicio:", error);
+      throw error;
+    }
+  },
+  
+  // Obtener servicios de tipo bono
+  getServiciosBonos: async (empresaId) => {
+    try {
+      const response = await api.get(`/servicios/empresa/${empresaId}/bonos`);
+      return response.data;
+    } catch (error) {
+      console.error("Error al obtener servicios de bonos:", error);
+      throw error;
+    }
+  }
+};
+
 export default api; 

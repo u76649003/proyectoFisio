@@ -17,6 +17,7 @@ public class BonoPaciente {
     private UUID id;
     private UUID pacienteId;
     private UUID servicioId;
+    private Long productoId;
     private LocalDate fechaInicio;
     private LocalDate fechaFin;
     private Integer sesionesIniciales;
