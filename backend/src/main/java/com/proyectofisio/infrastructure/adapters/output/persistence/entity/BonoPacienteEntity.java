@@ -2,7 +2,6 @@ package com.proyectofisio.infrastructure.adapters.output.persistence.entity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -28,8 +27,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 public class BonoPacienteEntity {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     
     @ManyToOne
     @JoinColumn(name = "paciente_id", nullable = false)

@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class BonoPacienteService implements BonoPacienteServicePort {
@@ -52,7 +51,7 @@ public class BonoPacienteService implements BonoPacienteServicePort {
     }
     
     @Override
-    public BonoPaciente updateBonoPaciente(UUID id, BonoPaciente bonoPaciente) {
+    public BonoPaciente updateBonoPaciente(Long id, BonoPaciente bonoPaciente) {
         // Verificar que el bono existe
         BonoPaciente bonoExistente = bonoPacienteRepositoryPort.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Bono no encontrado con ID: " + id));
@@ -70,7 +69,7 @@ public class BonoPacienteService implements BonoPacienteServicePort {
     }
     
     @Override
-    public BonoPaciente getBonoPacienteById(UUID id) {
+    public BonoPaciente getBonoPacienteById(Long id) {
         return bonoPacienteRepositoryPort.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Bono no encontrado con ID: " + id));
     }
@@ -81,22 +80,22 @@ public class BonoPacienteService implements BonoPacienteServicePort {
     }
     
     @Override
-    public List<BonoPaciente> getBonosByPacienteId(UUID pacienteId) {
+    public List<BonoPaciente> getBonosByPacienteId(Long pacienteId) {
         return bonoPacienteRepositoryPort.findByPacienteId(pacienteId);
     }
     
     @Override
-    public List<BonoPaciente> getBonosByPacienteIdAndEstado(UUID pacienteId, BonoPaciente.EstadoBono estado) {
+    public List<BonoPaciente> getBonosByPacienteIdAndEstado(Long pacienteId, BonoPaciente.EstadoBono estado) {
         return bonoPacienteRepositoryPort.findByPacienteIdAndEstado(pacienteId, estado);
     }
     
     @Override
-    public List<BonoPaciente> getBonosByServicioId(UUID servicioId) {
+    public List<BonoPaciente> getBonosByServicioId(Long servicioId) {
         return bonoPacienteRepositoryPort.findByServicioId(servicioId);
     }
     
     @Override
-    public void deleteBonoPaciente(UUID id) {
+    public void deleteBonoPaciente(Long id) {
         // Verificar que el bono existe antes de eliminarlo
         if (!bonoPacienteRepositoryPort.findById(id).isPresent()) {
             throw new EntityNotFoundException("Bono no encontrado con ID: " + id);
@@ -108,7 +107,7 @@ public class BonoPacienteService implements BonoPacienteServicePort {
     }
     
     @Override
-    public BonoPaciente actualizarSesionesRestantesBono(UUID bonoId) {
+    public BonoPaciente actualizarSesionesRestantesBono(Long bonoId) {
         // Obtener el bono
         BonoPaciente bono = bonoPacienteRepositoryPort.findById(bonoId)
                 .orElseThrow(() -> new EntityNotFoundException("Bono no encontrado con ID: " + bonoId));

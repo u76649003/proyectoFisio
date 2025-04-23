@@ -4,21 +4,20 @@ import com.proyectofisio.domain.model.Servicio;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 public interface ServicioRepositoryPort {
     
     Servicio save(Servicio servicio);
     
-    Optional<Servicio> findById(UUID id);
+    Optional<Servicio> findById(Long id);
     
     List<Servicio> findAll();
     
-    List<Servicio> findByEmpresaId(UUID empresaId);
+    List<Servicio> findByEmpresaId(Long empresaId);
     
-    List<Servicio> findByEmpresaIdAndEsBono(UUID empresaId, Boolean esBono);
+    List<Servicio> findByEmpresaIdAndEsBono(Long empresaId, Boolean esBono);
     
-    void deleteById(UUID id);
+    void deleteById(Long id);
     
-    boolean existsByNombreAndEmpresaId(String nombre, UUID empresaId);
+    boolean existsByNombreAndEmpresaId(String nombre, Long empresaId);
 } 

@@ -4,21 +4,20 @@ import com.proyectofisio.domain.model.BonoPaciente;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 public interface BonoPacienteRepositoryPort {
     
     BonoPaciente save(BonoPaciente bonoPaciente);
     
-    Optional<BonoPaciente> findById(UUID id);
+    Optional<BonoPaciente> findById(Long id);
     
     List<BonoPaciente> findAll();
     
-    List<BonoPaciente> findByPacienteId(UUID pacienteId);
+    List<BonoPaciente> findByPacienteId(Long pacienteId);
     
-    List<BonoPaciente> findByPacienteIdAndEstado(UUID pacienteId, BonoPaciente.EstadoBono estado);
+    List<BonoPaciente> findByPacienteIdAndEstado(Long pacienteId, BonoPaciente.EstadoBono estado);
     
-    List<BonoPaciente> findByServicioId(UUID servicioId);
+    List<BonoPaciente> findByServicioId(Long servicioId);
     
-    void deleteById(UUID id);
+    void deleteById(Long id);
 } 

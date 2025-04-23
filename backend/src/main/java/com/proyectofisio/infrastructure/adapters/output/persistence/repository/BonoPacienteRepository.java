@@ -5,14 +5,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.UUID;
 
 @Repository
-public interface BonoPacienteRepository extends JpaRepository<BonoPacienteEntity, UUID> {
+public interface BonoPacienteRepository extends JpaRepository<BonoPacienteEntity, Long> {
     
-    List<BonoPacienteEntity> findByPacienteId(UUID pacienteId);
+    List<BonoPacienteEntity> findByPacienteId(Long pacienteId);
     
-    List<BonoPacienteEntity> findByPacienteIdAndEstado(UUID pacienteId, BonoPacienteEntity.EstadoBono estado);
+    List<BonoPacienteEntity> findByPacienteIdAndEstado(Long pacienteId, BonoPacienteEntity.EstadoBono estado);
     
-    List<BonoPacienteEntity> findByServicioId(UUID servicioId);
+    List<BonoPacienteEntity> findByServicioId(Long servicioId);
 } 

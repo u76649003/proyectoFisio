@@ -5,14 +5,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.UUID;
 
 @Repository
-public interface ServicioRepository extends JpaRepository<ServicioEntity, UUID> {
+public interface ServicioRepository extends JpaRepository<ServicioEntity, Long> {
     
-    List<ServicioEntity> findByEmpresaId(UUID empresaId);
+    List<ServicioEntity> findByEmpresaId(Long empresaId);
     
-    List<ServicioEntity> findByEmpresaIdAndEsBono(UUID empresaId, Boolean esBono);
+    List<ServicioEntity> findByEmpresaIdAndEsBono(Long empresaId, Boolean esBono);
     
-    boolean existsByNombreAndEmpresaId(String nombre, UUID empresaId);
+    boolean existsByNombreAndEmpresaId(String nombre, Long empresaId);
 } 

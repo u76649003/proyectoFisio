@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
@@ -33,7 +32,7 @@ public class BonoPacienteJpaAdapter implements BonoPacienteRepositoryPort {
     }
     
     @Override
-    public Optional<BonoPaciente> findById(UUID id) {
+    public Optional<BonoPaciente> findById(Long id) {
         return bonoPacienteRepository.findById(id)
                 .map(bonoPacienteMapper::toDomain);
     }
@@ -46,14 +45,14 @@ public class BonoPacienteJpaAdapter implements BonoPacienteRepositoryPort {
     }
     
     @Override
-    public List<BonoPaciente> findByPacienteId(UUID pacienteId) {
+    public List<BonoPaciente> findByPacienteId(Long pacienteId) {
         return bonoPacienteRepository.findByPacienteId(pacienteId).stream()
                 .map(bonoPacienteMapper::toDomain)
                 .collect(Collectors.toList());
     }
     
     @Override
-    public List<BonoPaciente> findByPacienteIdAndEstado(UUID pacienteId, BonoPaciente.EstadoBono estado) {
+    public List<BonoPaciente> findByPacienteIdAndEstado(Long pacienteId, BonoPaciente.EstadoBono estado) {
         BonoPacienteEntity.EstadoBono estadoEntity = BonoPacienteEntity.EstadoBono.valueOf(estado.name());
         return bonoPacienteRepository.findByPacienteIdAndEstado(pacienteId, estadoEntity).stream()
                 .map(bonoPacienteMapper::toDomain)
@@ -61,14 +60,14 @@ public class BonoPacienteJpaAdapter implements BonoPacienteRepositoryPort {
     }
     
     @Override
-    public List<BonoPaciente> findByServicioId(UUID servicioId) {
+    public List<BonoPaciente> findByServicioId(Long servicioId) {
         return bonoPacienteRepository.findByServicioId(servicioId).stream()
                 .map(bonoPacienteMapper::toDomain)
                 .collect(Collectors.toList());
     }
     
     @Override
-    public void deleteById(UUID id) {
+    public void deleteById(Long id) {
         bonoPacienteRepository.deleteById(id);
     }
 } 

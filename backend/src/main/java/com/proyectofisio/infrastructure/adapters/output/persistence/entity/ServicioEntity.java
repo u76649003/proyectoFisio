@@ -10,7 +10,6 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 @Entity
 @Table(name = "servicio")
@@ -20,8 +19,8 @@ import java.util.UUID;
 public class ServicioEntity {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     
     @Column(nullable = false)
     private String nombre;
@@ -41,7 +40,7 @@ public class ServicioEntity {
     private Integer numeroSesiones;
     
     @Column(name = "empresa_id", nullable = false)
-    private UUID empresaId;
+    private Long empresaId;
     
     @OneToMany(mappedBy = "servicio")
     private List<BonoPacienteEntity> bonos;

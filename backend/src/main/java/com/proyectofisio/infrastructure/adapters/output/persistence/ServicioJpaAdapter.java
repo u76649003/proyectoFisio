@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
@@ -33,7 +32,7 @@ public class ServicioJpaAdapter implements ServicioRepositoryPort {
     }
     
     @Override
-    public Optional<Servicio> findById(UUID id) {
+    public Optional<Servicio> findById(Long id) {
         return servicioRepository.findById(id)
                 .map(servicioMapper::toDomain);
     }
@@ -46,26 +45,26 @@ public class ServicioJpaAdapter implements ServicioRepositoryPort {
     }
     
     @Override
-    public List<Servicio> findByEmpresaId(UUID empresaId) {
+    public List<Servicio> findByEmpresaId(Long empresaId) {
         return servicioRepository.findByEmpresaId(empresaId).stream()
                 .map(servicioMapper::toDomain)
                 .collect(Collectors.toList());
     }
     
     @Override
-    public List<Servicio> findByEmpresaIdAndEsBono(UUID empresaId, Boolean esBono) {
+    public List<Servicio> findByEmpresaIdAndEsBono(Long empresaId, Boolean esBono) {
         return servicioRepository.findByEmpresaIdAndEsBono(empresaId, esBono).stream()
                 .map(servicioMapper::toDomain)
                 .collect(Collectors.toList());
     }
     
     @Override
-    public void deleteById(UUID id) {
+    public void deleteById(Long id) {
         servicioRepository.deleteById(id);
     }
     
     @Override
-    public boolean existsByNombreAndEmpresaId(String nombre, UUID empresaId) {
+    public boolean existsByNombreAndEmpresaId(String nombre, Long empresaId) {
         return servicioRepository.existsByNombreAndEmpresaId(nombre, empresaId);
     }
 } 
