@@ -3,7 +3,6 @@ package com.proyectofisio.application.ports.input;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 import com.proyectofisio.domain.model.Agenda;
 import com.proyectofisio.domain.model.Agenda.EstadoCita;
@@ -16,19 +15,19 @@ public interface AgendaServicePort {
     
     List<Agenda> getAllCitas();
     
-    List<Agenda> getCitasByPacienteId(UUID pacienteId);
+    List<Agenda> getCitasByPacienteId(Long pacienteId);
     
-    List<Agenda> getCitasByProfesionalId(UUID usuarioId);
+    List<Agenda> getCitasByProfesionalId(Long usuarioId);
     
     List<Agenda> getCitasByFecha(LocalDate fecha);
     
     List<Agenda> getCitasByRangoFechas(LocalDateTime fechaInicio, LocalDateTime fechaFin);
     
-    List<Agenda> getCitasByEmpresaId(UUID empresaId);
+    List<Agenda> getCitasByEmpresaId(Long empresaId);
     
-    List<Agenda> getCitasBySalaId(UUID salaId);
+    List<Agenda> getCitasBySalaId(Long salaId);
     
-    List<Agenda> getCitasByServicioId(UUID servicioId);
+    List<Agenda> getCitasByServicioId(Long servicioId);
     
     List<Agenda> getCitasByEstado(EstadoCita estado);
     

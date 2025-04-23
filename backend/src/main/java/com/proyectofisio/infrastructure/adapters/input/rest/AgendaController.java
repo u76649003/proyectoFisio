@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -42,13 +41,13 @@ public class AgendaController implements AgendaControllerDocs {
     @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
     public ResponseEntity<Agenda> crearCita(@RequestBody AgendaRequest agendaRequest) {
         Agenda agenda = Agenda.builder()
-                .pacienteId(UUID.fromString(agendaRequest.getPacienteId()))
-                .usuarioId(UUID.fromString(agendaRequest.getProfesionalId()))
+                .pacienteId(Long.valueOf(agendaRequest.getPacienteId()))
+                .usuarioId(Long.valueOf(agendaRequest.getProfesionalId()))
                 .fecha(LocalDate.parse(agendaRequest.getFechaHoraInicio().split("T")[0]))
                 .hora(LocalDateTime.parse(agendaRequest.getFechaHoraInicio(), DateTimeFormatter.ISO_DATE_TIME).toLocalTime())
                 .duracion(calcularDuracion(agendaRequest.getFechaHoraInicio(), agendaRequest.getFechaHoraFin()))
-                .salaId(UUID.fromString(agendaRequest.getSalaId()))
-                .servicioId(UUID.fromString(agendaRequest.getServicioId()))
+                .salaId(Long.valueOf(agendaRequest.getSalaId()))
+                .servicioId(Long.valueOf(agendaRequest.getServicioId()))
                 .notas(agendaRequest.getObservaciones())
                 .estado(agendaRequest.getEstado() != null ? agendaRequest.getEstado() : EstadoCita.PENDIENTE.name())
                 .build();
@@ -73,15 +72,15 @@ public class AgendaController implements AgendaControllerDocs {
     @Override
     @GetMapping("/paciente/{pacienteId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA', 'PACIENTE')")
-    public ResponseEntity<List<Agenda>> getCitasByPacienteId(@PathVariable String pacienteId) {
-        return ResponseEntity.ok(agendaServicePort.getCitasByPacienteId(UUID.fromString(pacienteId)));
+    public ResponseEntity<List<Agenda>> getCitasByPacienteId(@PathVariable Long pacienteId) {
+        return ResponseEntity.ok(agendaServicePort.getCitasByPacienteId(pacienteId));
     }
 
     @Override
     @GetMapping("/profesional/{profesionalId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
-    public ResponseEntity<List<Agenda>> getCitasByProfesionalId(@PathVariable String profesionalId) {
-        return ResponseEntity.ok(agendaServicePort.getCitasByProfesionalId(UUID.fromString(profesionalId)));
+    public ResponseEntity<List<Agenda>> getCitasByProfesionalId(@PathVariable Long profesionalId) {
+        return ResponseEntity.ok(agendaServicePort.getCitasByProfesionalId(profesionalId));
     }
 
     @Override
@@ -104,22 +103,22 @@ public class AgendaController implements AgendaControllerDocs {
     @Override
     @GetMapping("/empresa/{empresaId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
-    public ResponseEntity<List<Agenda>> getCitasByEmpresaId(@PathVariable String empresaId) {
-        return ResponseEntity.ok(agendaServicePort.getCitasByEmpresaId(UUID.fromString(empresaId)));
+    public ResponseEntity<List<Agenda>> getCitasByEmpresaId(@PathVariable Long empresaId) {
+        return ResponseEntity.ok(agendaServicePort.getCitasByEmpresaId(empresaId));
     }
 
     @Override
     @GetMapping("/sala/{salaId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
-    public ResponseEntity<List<Agenda>> getCitasBySalaId(@PathVariable String salaId) {
-        return ResponseEntity.ok(agendaServicePort.getCitasBySalaId(UUID.fromString(salaId)));
+    public ResponseEntity<List<Agenda>> getCitasBySalaId(@PathVariable Long salaId) {
+        return ResponseEntity.ok(agendaServicePort.getCitasBySalaId(salaId));
     }
 
     @Override
     @GetMapping("/servicio/{servicioId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
-    public ResponseEntity<List<Agenda>> getCitasByServicioId(@PathVariable String servicioId) {
-        return ResponseEntity.ok(agendaServicePort.getCitasByServicioId(UUID.fromString(servicioId)));
+    public ResponseEntity<List<Agenda>> getCitasByServicioId(@PathVariable Long servicioId) {
+        return ResponseEntity.ok(agendaServicePort.getCitasByServicioId(servicioId));
     }
 
     @Override
@@ -135,13 +134,13 @@ public class AgendaController implements AgendaControllerDocs {
     public ResponseEntity<Agenda> updateCita(@PathVariable Long id, @RequestBody AgendaRequest agendaRequest) {
         Agenda agenda = Agenda.builder()
                 .id(id)
-                .pacienteId(UUID.fromString(agendaRequest.getPacienteId()))
-                .usuarioId(UUID.fromString(agendaRequest.getProfesionalId()))
+                .pacienteId(Long.valueOf(agendaRequest.getPacienteId()))
+                .usuarioId(Long.valueOf(agendaRequest.getProfesionalId()))
                 .fecha(LocalDate.parse(agendaRequest.getFechaHoraInicio().split("T")[0]))
                 .hora(LocalDateTime.parse(agendaRequest.getFechaHoraInicio(), DateTimeFormatter.ISO_DATE_TIME).toLocalTime())
                 .duracion(calcularDuracion(agendaRequest.getFechaHoraInicio(), agendaRequest.getFechaHoraFin()))
-                .salaId(UUID.fromString(agendaRequest.getSalaId()))
-                .servicioId(UUID.fromString(agendaRequest.getServicioId()))
+                .salaId(Long.valueOf(agendaRequest.getSalaId()))
+                .servicioId(Long.valueOf(agendaRequest.getServicioId()))
                 .notas(agendaRequest.getObservaciones())
                 .estado(agendaRequest.getEstado() != null ? agendaRequest.getEstado() : EstadoCita.PENDIENTE.name())
                 .build();

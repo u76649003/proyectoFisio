@@ -8,7 +8,6 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "sala")
@@ -18,8 +17,8 @@ import java.util.UUID;
 public class SalaEntity {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     
     @Column(nullable = false)
     private String nombre;
@@ -34,7 +33,7 @@ public class SalaEntity {
     private EstadoSala estado;
     
     @Column(name = "empresa_id", nullable = false)
-    private UUID empresaId;
+    private Long empresaId;
     
     @CreationTimestamp
     @Column(name = "fecha_creacion", updatable = false)

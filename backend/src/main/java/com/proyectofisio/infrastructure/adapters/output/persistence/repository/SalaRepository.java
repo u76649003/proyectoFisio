@@ -5,12 +5,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.UUID;
 
 @Repository
-public interface SalaRepository extends JpaRepository<SalaEntity, UUID> {
+public interface SalaRepository extends JpaRepository<SalaEntity, Long> {
     
-    List<SalaEntity> findByEmpresaId(UUID empresaId);
+    List<SalaEntity> findByEmpresaId(Long empresaId);
     
-    boolean existsByNombreAndEmpresaId(String nombre, UUID empresaId);
+    boolean existsByNombreAndEmpresaId(String nombre, Long empresaId);
 } 

@@ -4,19 +4,18 @@ import com.proyectofisio.domain.model.Sala;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 public interface SalaRepositoryPort {
     
     Sala save(Sala sala);
     
-    Optional<Sala> findById(UUID id);
+    Optional<Sala> findById(Long id);
     
     List<Sala> findAll();
     
-    List<Sala> findByEmpresaId(UUID empresaId);
+    List<Sala> findByEmpresaId(Long empresaId);
     
-    void deleteById(UUID id);
+    void deleteById(Long id);
     
-    boolean existsByNombreAndEmpresaId(String nombre, UUID empresaId);
+    boolean existsByNombreAndEmpresaId(String nombre, Long empresaId);
 } 

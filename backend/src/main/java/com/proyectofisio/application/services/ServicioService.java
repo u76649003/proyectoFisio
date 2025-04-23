@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class ServicioService implements ServicioServicePort {
@@ -41,7 +40,7 @@ public class ServicioService implements ServicioServicePort {
     }
     
     @Override
-    public Servicio updateServicio(UUID id, Servicio servicio) {
+    public Servicio updateServicio(Long id, Servicio servicio) {
         // Verificar que el servicio existe
         Servicio servicioExistente = servicioRepositoryPort.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Servicio no encontrado con ID: " + id));
@@ -69,7 +68,7 @@ public class ServicioService implements ServicioServicePort {
     }
     
     @Override
-    public Servicio getServicioById(UUID id) {
+    public Servicio getServicioById(Long id) {
         return servicioRepositoryPort.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Servicio no encontrado con ID: " + id));
     }
@@ -80,17 +79,17 @@ public class ServicioService implements ServicioServicePort {
     }
     
     @Override
-    public List<Servicio> getServiciosByEmpresaId(UUID empresaId) {
+    public List<Servicio> getServiciosByEmpresaId(Long empresaId) {
         return servicioRepositoryPort.findByEmpresaId(empresaId);
     }
     
     @Override
-    public List<Servicio> getServiciosByEmpresaIdAndEsBono(UUID empresaId, Boolean esBono) {
+    public List<Servicio> getServiciosByEmpresaIdAndEsBono(Long empresaId, Boolean esBono) {
         return servicioRepositoryPort.findByEmpresaIdAndEsBono(empresaId, esBono);
     }
     
     @Override
-    public void deleteServicio(UUID id) {
+    public void deleteServicio(Long id) {
         // Verificar que el servicio existe antes de eliminarlo
         if (!servicioRepositoryPort.findById(id).isPresent()) {
             throw new EntityNotFoundException("Servicio no encontrado con ID: " + id);

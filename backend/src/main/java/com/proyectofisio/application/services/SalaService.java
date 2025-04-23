@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class SalaService implements SalaServicePort {
@@ -36,7 +35,7 @@ public class SalaService implements SalaServicePort {
     }
     
     @Override
-    public Sala updateSala(UUID id, Sala sala) {
+    public Sala updateSala(Long id, Sala sala) {
         // Verificar que la sala existe
         Sala salaExistente = salaRepositoryPort.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Sala no encontrada con ID: " + id));
@@ -54,7 +53,7 @@ public class SalaService implements SalaServicePort {
     }
     
     @Override
-    public Sala getSalaById(UUID id) {
+    public Sala getSalaById(Long id) {
         return salaRepositoryPort.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Sala no encontrada con ID: " + id));
     }
@@ -65,12 +64,12 @@ public class SalaService implements SalaServicePort {
     }
     
     @Override
-    public List<Sala> getSalasByEmpresaId(UUID empresaId) {
+    public List<Sala> getSalasByEmpresaId(Long empresaId) {
         return salaRepositoryPort.findByEmpresaId(empresaId);
     }
     
     @Override
-    public void deleteSala(UUID id) {
+    public void deleteSala(Long id) {
         // Verificar que la sala existe antes de eliminarla
         if (!salaRepositoryPort.findById(id).isPresent()) {
             throw new EntityNotFoundException("Sala no encontrada con ID: " + id);

@@ -16,8 +16,6 @@ import com.proyectofisio.infrastructure.adapters.output.persistence.repository.S
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.ServicioRepository;
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.UsuarioRepository;
 
-import java.util.UUID;
-
 @Component
 public class AgendaMapper {
     

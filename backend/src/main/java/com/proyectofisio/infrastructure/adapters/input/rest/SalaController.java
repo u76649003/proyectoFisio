@@ -9,7 +9,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/salas")
@@ -31,7 +30,7 @@ public class SalaController {
     
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR', 'RECEPCIONISTA', 'FISIOTERAPEUTA')")
-    public ResponseEntity<Sala> getSalaPorId(@PathVariable UUID id) {
+    public ResponseEntity<Sala> getSalaPorId(@PathVariable Long id) {
         try {
             Sala sala = salaServicePort.getSalaById(id);
             return new ResponseEntity<>(sala, HttpStatus.OK);
@@ -49,14 +48,14 @@ public class SalaController {
     
     @GetMapping("/empresa/{empresaId}")
     @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR', 'RECEPCIONISTA', 'FISIOTERAPEUTA')")
-    public ResponseEntity<List<Sala>> getSalasByEmpresaId(@PathVariable UUID empresaId) {
+    public ResponseEntity<List<Sala>> getSalasByEmpresaId(@PathVariable Long empresaId) {
         List<Sala> salas = salaServicePort.getSalasByEmpresaId(empresaId);
         return new ResponseEntity<>(salas, HttpStatus.OK);
     }
     
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR', 'RECEPCIONISTA')")
-    public ResponseEntity<Sala> actualizarSala(@PathVariable UUID id, @RequestBody Sala sala) {
+    public ResponseEntity<Sala> actualizarSala(@PathVariable Long id, @RequestBody Sala sala) {
         try {
             Sala salaActualizada = salaServicePort.updateSala(id, sala);
             return new ResponseEntity<>(salaActualizada, HttpStatus.OK);
@@ -67,7 +66,7 @@ public class SalaController {
     
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR')")
-    public ResponseEntity<Void> eliminarSala(@PathVariable UUID id) {
+    public ResponseEntity<Void> eliminarSala(@PathVariable Long id) {
         try {
             salaServicePort.deleteSala(id);
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);

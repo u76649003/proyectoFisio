@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -61,13 +60,13 @@ public class AgendaService implements AgendaServicePort {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Agenda> getCitasByPacienteId(UUID pacienteId) {
+    public List<Agenda> getCitasByPacienteId(Long pacienteId) {
         return agendaRepository.findByPacienteId(pacienteId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Agenda> getCitasByProfesionalId(UUID usuarioId) {
+    public List<Agenda> getCitasByProfesionalId(Long usuarioId) {
         return agendaRepository.findByUsuarioId(usuarioId);
     }
 
@@ -87,19 +86,19 @@ public class AgendaService implements AgendaServicePort {
     
     @Override
     @Transactional(readOnly = true)
-    public List<Agenda> getCitasByEmpresaId(UUID empresaId) {
+    public List<Agenda> getCitasByEmpresaId(Long empresaId) {
         return agendaRepository.findByEmpresaId(empresaId);
     }
     
     @Override
     @Transactional(readOnly = true)
-    public List<Agenda> getCitasBySalaId(UUID salaId) {
+    public List<Agenda> getCitasBySalaId(Long salaId) {
         return agendaRepository.findBySalaId(salaId);
     }
     
     @Override
     @Transactional(readOnly = true)
-    public List<Agenda> getCitasByServicioId(UUID servicioId) {
+    public List<Agenda> getCitasByServicioId(Long servicioId) {
         return agendaRepository.findByServicioId(servicioId);
     }
     

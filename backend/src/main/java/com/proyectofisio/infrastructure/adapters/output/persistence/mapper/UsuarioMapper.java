@@ -7,9 +7,6 @@ import com.proyectofisio.domain.model.Usuario;
 import com.proyectofisio.infrastructure.adapters.output.persistence.entity.EmpresaEntity;
 import com.proyectofisio.infrastructure.adapters.output.persistence.entity.UsuarioEntity;
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.EmpresaRepository;
-import com.proyectofisio.infrastructure.adapters.output.persistence.util.IdTypeConverter;
-
-import java.util.UUID;
 
 @Component
 public class UsuarioMapper {
@@ -27,7 +24,7 @@ public class UsuarioMapper {
         }
 
         return Usuario.builder()
-                .id(IdTypeConverter.uuidToLong(entity.getId()))
+                .id(entity.getId())
                 .nombre(entity.getNombre())
                 .apellidos(entity.getApellidos())
                 .email(entity.getEmail())
@@ -49,7 +46,7 @@ public class UsuarioMapper {
         }
 
         UsuarioEntity.UsuarioEntityBuilder builder = UsuarioEntity.builder()
-                .id(IdTypeConverter.longToUuid(domain.getId()))
+                .id(domain.getId())
                 .nombre(domain.getNombre())
                 .apellidos(domain.getApellidos())
                 .email(domain.getEmail())

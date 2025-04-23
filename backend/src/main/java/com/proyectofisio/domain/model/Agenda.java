@@ -2,7 +2,6 @@ package com.proyectofisio.domain.model;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.UUID;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,11 +14,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class Agenda {
     private Long id;
-    private UUID pacienteId;
-    private UUID usuarioId;
-    private UUID salaId;
-    private UUID servicioId;
-    private UUID bonoId;
+    private Long pacienteId;
+    private Long usuarioId;
+    private Long salaId;
+    private Long servicioId;
+    private Long bonoId;
     private LocalDate fecha;
     private LocalTime hora;
     private Integer duracion;

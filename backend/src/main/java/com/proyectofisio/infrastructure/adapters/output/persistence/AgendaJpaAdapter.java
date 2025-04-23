@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,14 +48,14 @@ public class AgendaJpaAdapter implements AgendaRepositoryPort {
     }
 
     @Override
-    public List<Agenda> findByPacienteId(UUID pacienteId) {
+    public List<Agenda> findByPacienteId(Long pacienteId) {
         return agendaRepository.findByPacienteId(pacienteId).stream()
                 .map(agendaMapper::toModel)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<Agenda> findByUsuarioId(UUID usuarioId) {
+    public List<Agenda> findByUsuarioId(Long usuarioId) {
         return agendaRepository.findByUsuarioId(usuarioId).stream()
                 .map(agendaMapper::toModel)
                 .collect(Collectors.toList());
@@ -77,21 +76,21 @@ public class AgendaJpaAdapter implements AgendaRepositoryPort {
     }
 
     @Override
-    public List<Agenda> findByEmpresaId(UUID empresaId) {
+    public List<Agenda> findByEmpresaId(Long empresaId) {
         return agendaRepository.findByEmpresaId(empresaId).stream()
                 .map(agendaMapper::toModel)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<Agenda> findBySalaId(UUID salaId) {
+    public List<Agenda> findBySalaId(Long salaId) {
         return agendaRepository.findBySalaId(salaId).stream()
                 .map(agendaMapper::toModel)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<Agenda> findByServicioId(UUID servicioId) {
+    public List<Agenda> findByServicioId(Long servicioId) {
         return agendaRepository.findByServicioId(servicioId).stream()
                 .map(agendaMapper::toModel)
                 .collect(Collectors.toList());
@@ -105,7 +104,7 @@ public class AgendaJpaAdapter implements AgendaRepositoryPort {
     }
 
     @Override
-    public List<Agenda> findByUsuarioIdAndFecha(UUID usuarioId, LocalDate fecha) {
+    public List<Agenda> findByUsuarioIdAndFecha(Long usuarioId, LocalDate fecha) {
         return agendaRepository.findByUsuarioIdAndFecha(usuarioId, fecha).stream()
                 .map(agendaMapper::toModel)
                 .collect(Collectors.toList());
@@ -122,7 +121,7 @@ public class AgendaJpaAdapter implements AgendaRepositoryPort {
     }
 
     @Override
-    public List<Agenda> findConflictingAppointments(UUID usuarioId, LocalDate fecha, 
+    public List<Agenda> findConflictingAppointments(Long usuarioId, LocalDate fecha, 
                                                   LocalTime horaInicio, LocalTime horaFin, Long idCitaExcluir) {
         // Obtenemos todas las citas del profesional en esa fecha (excluyendo la cita actual)
         List<AgendaEntity> citas = agendaRepository.findAppointmentsByUsuarioAndFecha(usuarioId, fecha, idCitaExcluir);

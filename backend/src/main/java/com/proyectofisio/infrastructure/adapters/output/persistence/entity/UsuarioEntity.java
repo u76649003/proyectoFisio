@@ -64,6 +64,7 @@ public class UsuarioEntity {
     @Column(name = "fecha_alta")
     private LocalDate fechaAlta;
     
+    @Builder.Default
     @Column(name = "email_verificado", nullable = false, columnDefinition = "boolean default false")
     private boolean emailVerificado = false;
 } 

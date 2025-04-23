@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
@@ -33,7 +32,7 @@ public class SalaJpaAdapter implements SalaRepositoryPort {
     }
     
     @Override
-    public Optional<Sala> findById(UUID id) {
+    public Optional<Sala> findById(Long id) {
         return salaRepository.findById(id)
                 .map(salaMapper::toDomain);
     }
@@ -46,19 +45,19 @@ public class SalaJpaAdapter implements SalaRepositoryPort {
     }
     
     @Override
-    public List<Sala> findByEmpresaId(UUID empresaId) {
+    public List<Sala> findByEmpresaId(Long empresaId) {
         return salaRepository.findByEmpresaId(empresaId).stream()
                 .map(salaMapper::toDomain)
                 .collect(Collectors.toList());
     }
     
     @Override
-    public void deleteById(UUID id) {
+    public void deleteById(Long id) {
         salaRepository.deleteById(id);
     }
     
     @Override
-    public boolean existsByNombreAndEmpresaId(String nombre, UUID empresaId) {
+    public boolean existsByNombreAndEmpresaId(String nombre, Long empresaId) {
         return salaRepository.existsByNombreAndEmpresaId(nombre, empresaId);
     }
 } 

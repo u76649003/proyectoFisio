@@ -9,7 +9,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/servicios")
@@ -31,7 +30,7 @@ public class ServicioController {
     
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR', 'RECEPCIONISTA', 'FISIOTERAPEUTA')")
-    public ResponseEntity<Servicio> getServicioPorId(@PathVariable UUID id) {
+    public ResponseEntity<Servicio> getServicioPorId(@PathVariable Long id) {
         try {
             Servicio servicio = servicioServicePort.getServicioById(id);
             return new ResponseEntity<>(servicio, HttpStatus.OK);
@@ -49,7 +48,7 @@ public class ServicioController {
     
     @GetMapping("/empresa/{empresaId}")
     @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR', 'RECEPCIONISTA', 'FISIOTERAPEUTA')")
-    public ResponseEntity<List<Servicio>> getServiciosByEmpresaId(@PathVariable UUID empresaId) {
+    public ResponseEntity<List<Servicio>> getServiciosByEmpresaId(@PathVariable Long empresaId) {
         List<Servicio> servicios = servicioServicePort.getServiciosByEmpresaId(empresaId);
         return new ResponseEntity<>(servicios, HttpStatus.OK);
     }
@@ -57,7 +56,7 @@ public class ServicioController {
     @GetMapping("/empresa/{empresaId}/bonos")
     @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR', 'RECEPCIONISTA', 'FISIOTERAPEUTA')")
     public ResponseEntity<List<Servicio>> getServiciosByEmpresaIdAndEsBono(
-            @PathVariable UUID empresaId,
+            @PathVariable Long empresaId,
             @RequestParam Boolean esBono) {
         List<Servicio> servicios = servicioServicePort.getServiciosByEmpresaIdAndEsBono(empresaId, esBono);
         return new ResponseEntity<>(servicios, HttpStatus.OK);
@@ -65,7 +64,7 @@ public class ServicioController {
     
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR')")
-    public ResponseEntity<Servicio> actualizarServicio(@PathVariable UUID id, @RequestBody Servicio servicio) {
+    public ResponseEntity<Servicio> actualizarServicio(@PathVariable Long id, @RequestBody Servicio servicio) {
         try {
             Servicio servicioActualizado = servicioServicePort.updateServicio(id, servicio);
             return new ResponseEntity<>(servicioActualizado, HttpStatus.OK);
@@ -76,7 +75,7 @@ public class ServicioController {
     
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR')")
-    public ResponseEntity<Void> eliminarServicio(@PathVariable UUID id) {
+    public ResponseEntity<Void> eliminarServicio(@PathVariable Long id) {
         try {
             servicioServicePort.deleteServicio(id);
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);

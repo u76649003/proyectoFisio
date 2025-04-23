@@ -9,7 +9,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/pacientes")
@@ -25,7 +24,7 @@ public class BonoPacienteController {
     @PostMapping("/{pacienteId}/bonos")
     @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR', 'RECEPCIONISTA')")
     public ResponseEntity<BonoPaciente> crearBonoPaciente(
-            @PathVariable UUID pacienteId,
+            @PathVariable Long pacienteId,
             @RequestBody BonoPaciente bonoPaciente) {
         // Asegurar que el ID del paciente en el path y en el body coinciden
         bonoPaciente.setPacienteId(pacienteId);
@@ -36,8 +35,8 @@ public class BonoPacienteController {
     @GetMapping("/{pacienteId}/bonos/{bonoId}")
     @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR', 'RECEPCIONISTA', 'FISIOTERAPEUTA')")
     public ResponseEntity<BonoPaciente> getBonoPorId(
-            @PathVariable UUID pacienteId,
-            @PathVariable UUID bonoId) {
+            @PathVariable Long pacienteId,
+            @PathVariable Long bonoId) {
         try {
             BonoPaciente bono = bonoPacienteServicePort.getBonoPacienteById(bonoId);
             
@@ -55,7 +54,7 @@ public class BonoPacienteController {
     @GetMapping("/{pacienteId}/bonos")
     @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR', 'RECEPCIONISTA', 'FISIOTERAPEUTA')")
     public ResponseEntity<List<BonoPaciente>> getBonosByPacienteId(
-            @PathVariable UUID pacienteId,
+            @PathVariable Long pacienteId,
             @RequestParam(required = false) String estado) {
         
         List<BonoPaciente> bonos;
@@ -78,8 +77,8 @@ public class BonoPacienteController {
     @PutMapping("/{pacienteId}/bonos/{bonoId}")
     @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR', 'RECEPCIONISTA')")
     public ResponseEntity<BonoPaciente> actualizarBonoPaciente(
-            @PathVariable UUID pacienteId,
-            @PathVariable UUID bonoId,
+            @PathVariable Long pacienteId,
+            @PathVariable Long bonoId,
             @RequestBody BonoPaciente bonoPaciente) {
         try {
             // Verificar que el bono existe y pertenece al paciente
@@ -101,8 +100,8 @@ public class BonoPacienteController {
     @DeleteMapping("/{pacienteId}/bonos/{bonoId}")
     @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR')")
     public ResponseEntity<Void> eliminarBonoPaciente(
-            @PathVariable UUID pacienteId,
-            @PathVariable UUID bonoId) {
+            @PathVariable Long pacienteId,
+            @PathVariable Long bonoId) {
         try {
             // Verificar que el bono existe y pertenece al paciente
             BonoPaciente bonoExistente = bonoPacienteServicePort.getBonoPacienteById(bonoId);

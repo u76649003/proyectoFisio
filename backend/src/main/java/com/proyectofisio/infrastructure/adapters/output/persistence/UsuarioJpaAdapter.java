@@ -2,7 +2,6 @@ package com.proyectofisio.infrastructure.adapters.output.persistence;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +13,6 @@ import com.proyectofisio.domain.model.enums.RolUsuario;
 import com.proyectofisio.infrastructure.adapters.output.persistence.entity.UsuarioEntity;
 import com.proyectofisio.infrastructure.adapters.output.persistence.mapper.UsuarioMapper;
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.UsuarioRepository;
-import com.proyectofisio.infrastructure.adapters.output.persistence.util.IdTypeConverter;
 
 @Component
 public class UsuarioJpaAdapter implements UsuarioRepositoryPort {
@@ -37,8 +35,7 @@ public class UsuarioJpaAdapter implements UsuarioRepositoryPort {
 
     @Override
     public Optional<Usuario> findById(Long id) {
-        UUID uuid = IdTypeConverter.longToUuid(id);
-        return usuarioRepository.findById(uuid)
+        return usuarioRepository.findById(id)
                 .map(usuarioMapper::toDomain);
     }
 
@@ -51,8 +48,7 @@ public class UsuarioJpaAdapter implements UsuarioRepositoryPort {
 
     @Override
     public List<Usuario> findByEmpresaId(Long empresaId) {
-        UUID uuid = IdTypeConverter.longToUuid(empresaId);
-        return usuarioRepository.findByEmpresaId(uuid).stream()
+        return usuarioRepository.findByEmpresaId(empresaId).stream()
                 .map(usuarioMapper::toDomain)
                 .collect(Collectors.toList());
     }
@@ -78,8 +74,7 @@ public class UsuarioJpaAdapter implements UsuarioRepositoryPort {
 
     @Override
     public void deleteById(Long id) {
-        UUID uuid = IdTypeConverter.longToUuid(id);
-        usuarioRepository.deleteById(uuid);
+        usuarioRepository.deleteById(id);
     }
 
     @Override

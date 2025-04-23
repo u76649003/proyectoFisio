@@ -2,7 +2,6 @@ package com.proyectofisio.infrastructure.adapters.output.persistence;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +12,6 @@ import com.proyectofisio.domain.model.Paciente;
 import com.proyectofisio.infrastructure.adapters.output.persistence.entity.PacienteEntity;
 import com.proyectofisio.infrastructure.adapters.output.persistence.mapper.PacienteMapper;
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.PacienteRepository;
-import com.proyectofisio.infrastructure.adapters.output.persistence.util.IdTypeConverter;
 
 @Component
 public class PacienteJpaAdapter implements PacienteRepositoryPort {
@@ -36,8 +34,7 @@ public class PacienteJpaAdapter implements PacienteRepositoryPort {
 
     @Override
     public Optional<Paciente> findById(Long id) {
-        UUID uuid = IdTypeConverter.longToUuid(id);
-        return pacienteRepository.findById(uuid)
+        return pacienteRepository.findById(id)
                 .map(pacienteMapper::toDomain);
     }
 
@@ -75,8 +72,7 @@ public class PacienteJpaAdapter implements PacienteRepositoryPort {
 
     @Override
     public void deleteById(Long id) {
-        UUID uuid = IdTypeConverter.longToUuid(id);
-        pacienteRepository.deleteById(uuid);
+        pacienteRepository.deleteById(id);
     }
 
     @Override

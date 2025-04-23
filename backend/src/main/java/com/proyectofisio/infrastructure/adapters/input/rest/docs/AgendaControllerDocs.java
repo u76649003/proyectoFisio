@@ -63,7 +63,7 @@ public interface AgendaControllerDocs {
             @ApiResponse(responseCode = "403", description = "Acceso denegado", 
                     content = @Content)
     })
-    ResponseEntity<List<Agenda>> getCitasByPacienteId(@PathVariable String pacienteId);
+    ResponseEntity<List<Agenda>> getCitasByPacienteId(@PathVariable Long pacienteId);
 
     @Operation(summary = "Obtener citas por ID de profesional", description = "Devuelve las citas de un profesional específico")
     @ApiResponses(value = {
@@ -72,7 +72,7 @@ public interface AgendaControllerDocs {
             @ApiResponse(responseCode = "403", description = "Acceso denegado", 
                     content = @Content)
     })
-    ResponseEntity<List<Agenda>> getCitasByProfesionalId(@PathVariable String profesionalId);
+    ResponseEntity<List<Agenda>> getCitasByProfesionalId(@PathVariable Long profesionalId);
 
     @Operation(summary = "Obtener citas por fecha", description = "Devuelve las citas programadas para una fecha específica")
     @ApiResponses(value = {
@@ -102,7 +102,7 @@ public interface AgendaControllerDocs {
             @ApiResponse(responseCode = "403", description = "Acceso denegado", 
                     content = @Content)
     })
-    ResponseEntity<List<Agenda>> getCitasByEmpresaId(@PathVariable String empresaId);
+    ResponseEntity<List<Agenda>> getCitasByEmpresaId(@PathVariable Long empresaId);
 
     @Operation(summary = "Obtener citas por ID de sala", description = "Devuelve las citas programadas en una sala específica")
     @ApiResponses(value = {
@@ -111,7 +111,7 @@ public interface AgendaControllerDocs {
             @ApiResponse(responseCode = "403", description = "Acceso denegado", 
                     content = @Content)
     })
-    ResponseEntity<List<Agenda>> getCitasBySalaId(@PathVariable String salaId);
+    ResponseEntity<List<Agenda>> getCitasBySalaId(@PathVariable Long salaId);
 
     @Operation(summary = "Obtener citas por ID de servicio", description = "Devuelve las citas asociadas a un servicio específico")
     @ApiResponses(value = {
@@ -120,7 +120,7 @@ public interface AgendaControllerDocs {
             @ApiResponse(responseCode = "403", description = "Acceso denegado", 
                     content = @Content)
     })
-    ResponseEntity<List<Agenda>> getCitasByServicioId(@PathVariable String servicioId);
+    ResponseEntity<List<Agenda>> getCitasByServicioId(@PathVariable Long servicioId);
 
     @Operation(summary = "Obtener citas por estado", description = "Devuelve las citas que tienen un estado específico")
     @ApiResponses(value = {

@@ -6,19 +6,18 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Sala {
-    private UUID id;
+    private Long id;
     private String nombre;
     private Integer capacidad;
     private String equipamiento;
     private EstadoSala estado;
-    private UUID empresaId;
+    private Long empresaId;
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaActualizacion;
 
