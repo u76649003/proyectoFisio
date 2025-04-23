@@ -828,4 +828,131 @@ export const servicioService = {
   }
 };
 
+// Programas personalizados
+export const programasPersonalizadosService = {
+  getProgramas: async (empresaId) => {
+    try {
+      const response = await fetchWithAuth(`${API_URL}/programas-personalizados/empresa/${empresaId}`);
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Error al obtener programas personalizados:', error);
+      throw error;
+    }
+  },
+  
+  getProgramaById: async (id) => {
+    try {
+      const response = await fetchWithAuth(`${API_URL}/programas-personalizados/${id}`);
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Error al obtener programa personalizado:', error);
+      throw error;
+    }
+  },
+  
+  createPrograma: async (programaData) => {
+    try {
+      const response = await fetchWithAuth(
+        `${API_URL}/programas-personalizados`, 
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(programaData),
+        }
+      );
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Error al crear programa personalizado:', error);
+      throw error;
+    }
+  },
+  
+  updatePrograma: async (id, programaData) => {
+    try {
+      const response = await fetchWithAuth(
+        `${API_URL}/programas-personalizados/${id}`, 
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(programaData),
+        }
+      );
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Error al actualizar programa personalizado:', error);
+      throw error;
+    }
+  },
+  
+  deletePrograma: async (id) => {
+    try {
+      const response = await fetchWithAuth(
+        `${API_URL}/programas-personalizados/${id}`,
+        {
+          method: 'DELETE',
+        }
+      );
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Error al eliminar programa personalizado:', error);
+      throw error;
+    }
+  },
+  
+  generarTokensAcceso: async (programaId, pacienteIds) => {
+    try {
+      const response = await fetchWithAuth(
+        `${API_URL}/programas-personalizados/${programaId}/generar-tokens`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ pacienteIds }),
+        }
+      );
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Error al generar tokens de acceso:', error);
+      throw error;
+    }
+  },
+  
+  getTokensByProgramaId: async (programaId) => {
+    try {
+      const response = await fetchWithAuth(`${API_URL}/programas-personalizados/${programaId}/tokens`);
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Error al obtener tokens de programa:', error);
+      throw error;
+    }
+  },
+  
+  verificarToken: async (token) => {
+    try {
+      const response = await fetch(`${API_URL}/programas-personalizados/verificar-token/${token}`);
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Error al verificar token:', error);
+      throw error;
+    }
+  },
+};
+
+export {
+  authService,
+  userService,
+  pacienteService,
+  agendaService,
+  salaService,
+  servicioService,
+  empresaService,
+  productoBonificadoService,
+  programasPersonalizadosService
+};
+
 export default api; 

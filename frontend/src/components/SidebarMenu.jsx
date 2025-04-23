@@ -19,7 +19,8 @@ import {
   Settings,
   ExitToApp,
   Menu as MenuIcon,
-  MedicalServices
+  MedicalServices,
+  FitnessCenter
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -250,6 +251,16 @@ const SidebarMenu = ({ children }) => {
             </ListItemIcon>
             {sidebarOpen && <ListItemText primary="Organizar Clínica" />}
           </MenuListItem>
+          
+          {/* Nueva opción de Programas Personalizados - Solo para DUEÑO y FISIOTERAPEUTA */}
+          {userData && (userData.rol === 'DUENO' || userData.rol === 'FISIOTERAPEUTA') && (
+            <MenuListItem button component={Link} to="/programas-personalizados" selected={isActive('/programas-personalizados')}>
+              <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
+                <FitnessCenter />
+              </ListItemIcon>
+              {sidebarOpen && <ListItemText primary="Programas Personalizados" />}
+            </MenuListItem>
+          )}
           
           <MenuListItem button component={Link} to="/informes" selected={isActive('/informes')}>
             <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
