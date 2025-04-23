@@ -1,32 +1,44 @@
 package com.proyectofisio.application.ports.input;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
+import java.util.UUID;
 
 import com.proyectofisio.domain.model.Agenda;
+import com.proyectofisio.domain.model.Agenda.EstadoCita;
 
 public interface AgendaServicePort {
     
     Agenda crearCita(Agenda agenda);
     
-    Optional<Agenda> obtenerCitaPorId(Long id);
+    Agenda getCitaById(Long id);
     
-    List<Agenda> obtenerTodasLasCitas();
+    List<Agenda> getAllCitas();
     
-    List<Agenda> obtenerCitasPorPaciente(Long pacienteId);
+    List<Agenda> getCitasByPacienteId(UUID pacienteId);
     
-    List<Agenda> obtenerCitasPorProfesional(Long usuarioId);
+    List<Agenda> getCitasByProfesionalId(UUID usuarioId);
     
-    List<Agenda> obtenerCitasPorFecha(LocalDate fecha);
+    List<Agenda> getCitasByFecha(LocalDate fecha);
     
-    List<Agenda> obtenerCitasPorProfesionalYFecha(Long usuarioId, LocalDate fecha);
+    List<Agenda> getCitasByRangoFechas(LocalDateTime fechaInicio, LocalDateTime fechaFin);
     
-    Agenda actualizarCita(Agenda agenda);
+    List<Agenda> getCitasByEmpresaId(UUID empresaId);
+    
+    List<Agenda> getCitasBySalaId(UUID salaId);
+    
+    List<Agenda> getCitasByServicioId(UUID servicioId);
+    
+    List<Agenda> getCitasByEstado(EstadoCita estado);
+    
+    Agenda updateCita(Long id, Agenda agenda);
     
     Agenda cancelarCita(Long id);
     
-    void eliminarCita(Long id);
+    Agenda completarCita(Long id);
+    
+    void deleteCita(Long id);
     
     boolean existeCitaConflictiva(Agenda agenda);
 } 

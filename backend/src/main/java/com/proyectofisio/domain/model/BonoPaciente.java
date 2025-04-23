@@ -1,6 +1,8 @@
 package com.proyectofisio.domain.model;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,11 +14,18 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BonoPaciente {
-    private Long id;
-    private Long pacienteId;
-    private Long productoId;
+    private UUID id;
+    private UUID pacienteId;
+    private UUID servicioId;
     private LocalDate fechaInicio;
-    private Integer totalSesiones;
-    private Integer sesionesUtilizadas;
-    private Boolean activo;
+    private LocalDate fechaFin;
+    private Integer sesionesIniciales;
+    private Integer sesionesRestantes;
+    private EstadoBono estado;
+    private LocalDateTime fechaCreacion;
+    private LocalDateTime fechaActualizacion;
+
+    public enum EstadoBono {
+        ACTIVO, COMPLETADO, CANCELADO
+    }
 } 

@@ -1,7 +1,10 @@
 package com.proyectofisio.infrastructure.adapters.input.rest;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -15,139 +18,168 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.proyectofisio.application.ports.input.AgendaServicePort;
 import com.proyectofisio.domain.model.Agenda;
+import com.proyectofisio.domain.model.Agenda.EstadoCita;
+import com.proyectofisio.infrastructure.adapters.input.rest.dto.AgendaRequest;
+import com.proyectofisio.infrastructure.adapters.input.rest.dto.MessageResponse;
 import com.proyectofisio.infrastructure.adapters.input.rest.docs.AgendaControllerDocs;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/agenda")
+@RequiredArgsConstructor
 public class AgendaController implements AgendaControllerDocs {
 
-    // Cuando se implemente la capa de servicio, deberías inyectar el puerto de servicio correspondiente
-    // private final AgendaServicePort agendaService;
-
-    @Autowired
-    public AgendaController(/* AgendaServicePort agendaService */) {
-        // this.agendaService = agendaService;
-    }
+    private final AgendaServicePort agendaServicePort;
 
     @Override
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'RECEPCIONISTA', 'DUENO', 'FISIOTERAPEUTA')")
-    public ResponseEntity<?> crearCita(@RequestBody Agenda agenda) {
-        // Implementación pendiente
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
-        
-        // try {
-        //     Agenda nuevaCita = agendaService.crearCita(agenda);
-        //     return new ResponseEntity<>(nuevaCita, HttpStatus.CREATED);
-        // } catch (IllegalArgumentException e) {
-        //     return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
-        // }
+    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    public ResponseEntity<Agenda> crearCita(@RequestBody AgendaRequest agendaRequest) {
+        Agenda agenda = Agenda.builder()
+                .pacienteId(UUID.fromString(agendaRequest.getPacienteId()))
+                .usuarioId(UUID.fromString(agendaRequest.getProfesionalId()))
+                .fecha(LocalDate.parse(agendaRequest.getFechaHoraInicio().split("T")[0]))
+                .hora(LocalDateTime.parse(agendaRequest.getFechaHoraInicio(), DateTimeFormatter.ISO_DATE_TIME).toLocalTime())
+                .duracion(calcularDuracion(agendaRequest.getFechaHoraInicio(), agendaRequest.getFechaHoraFin()))
+                .salaId(UUID.fromString(agendaRequest.getSalaId()))
+                .servicioId(UUID.fromString(agendaRequest.getServicioId()))
+                .notas(agendaRequest.getObservaciones())
+                .estado(agendaRequest.getEstado() != null ? agendaRequest.getEstado() : EstadoCita.PENDIENTE.name())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(agendaServicePort.crearCita(agenda));
     }
 
     @Override
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'RECEPCIONISTA', 'DUENO', 'FISIOTERAPEUTA')")
-    public ResponseEntity<?> obtenerCitaPorId(@PathVariable Long id) {
-        // Implementación pendiente
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
-        
-        // return agendaService.obtenerCitaPorId(id)
-        //         .map(cita -> new ResponseEntity<>(cita, HttpStatus.OK))
-        //         .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA', 'PACIENTE')")
+    public ResponseEntity<Agenda> getCitaById(@PathVariable Long id) {
+        return ResponseEntity.ok(agendaServicePort.getCitaById(id));
     }
 
     @Override
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'RECEPCIONISTA', 'DUENO', 'FISIOTERAPEUTA')")
-    public ResponseEntity<List<Agenda>> obtenerTodasLasCitas() {
-        // Implementación pendiente
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
-        
-        // return new ResponseEntity<>(agendaService.obtenerTodasLasCitas(), HttpStatus.OK);
+    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    public ResponseEntity<List<Agenda>> getAllCitas() {
+        return ResponseEntity.ok(agendaServicePort.getAllCitas());
     }
 
     @Override
     @GetMapping("/paciente/{pacienteId}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'RECEPCIONISTA', 'DUENO', 'FISIOTERAPEUTA')")
-    public ResponseEntity<List<Agenda>> obtenerCitasPorPaciente(@PathVariable Long pacienteId) {
-        // Implementación pendiente
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
-        
-        // return new ResponseEntity<>(agendaService.obtenerCitasPorPaciente(pacienteId), HttpStatus.OK);
+    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA', 'PACIENTE')")
+    public ResponseEntity<List<Agenda>> getCitasByPacienteId(@PathVariable String pacienteId) {
+        return ResponseEntity.ok(agendaServicePort.getCitasByPacienteId(UUID.fromString(pacienteId)));
     }
 
     @Override
-    @GetMapping("/profesional/{usuarioId}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'RECEPCIONISTA', 'DUENO', 'FISIOTERAPEUTA')")
-    public ResponseEntity<List<Agenda>> obtenerCitasPorProfesional(@PathVariable Long usuarioId) {
-        // Implementación pendiente
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
-        
-        // return new ResponseEntity<>(agendaService.obtenerCitasPorProfesional(usuarioId), HttpStatus.OK);
+    @GetMapping("/profesional/{profesionalId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    public ResponseEntity<List<Agenda>> getCitasByProfesionalId(@PathVariable String profesionalId) {
+        return ResponseEntity.ok(agendaServicePort.getCitasByProfesionalId(UUID.fromString(profesionalId)));
     }
 
     @Override
-    @GetMapping("/fecha/{fecha}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'RECEPCIONISTA', 'DUENO', 'FISIOTERAPEUTA')")
-    public ResponseEntity<List<Agenda>> obtenerCitasPorFecha(
-            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) String fecha) {
-        // Implementación pendiente
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
-        
-        // LocalDate fechaLocal = LocalDate.parse(fecha);
-        // return new ResponseEntity<>(agendaService.obtenerCitasPorFecha(fechaLocal), HttpStatus.OK);
+    @GetMapping("/fecha")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    public ResponseEntity<List<Agenda>> getCitasByFecha(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+        return ResponseEntity.ok(agendaServicePort.getCitasByFecha(fecha));
+    }
+
+    @Override
+    @GetMapping("/rango")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    public ResponseEntity<List<Agenda>> getCitasByRangoFechas(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin) {
+        return ResponseEntity.ok(agendaServicePort.getCitasByRangoFechas(fechaInicio, fechaFin));
+    }
+
+    @Override
+    @GetMapping("/empresa/{empresaId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    public ResponseEntity<List<Agenda>> getCitasByEmpresaId(@PathVariable String empresaId) {
+        return ResponseEntity.ok(agendaServicePort.getCitasByEmpresaId(UUID.fromString(empresaId)));
+    }
+
+    @Override
+    @GetMapping("/sala/{salaId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    public ResponseEntity<List<Agenda>> getCitasBySalaId(@PathVariable String salaId) {
+        return ResponseEntity.ok(agendaServicePort.getCitasBySalaId(UUID.fromString(salaId)));
+    }
+
+    @Override
+    @GetMapping("/servicio/{servicioId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    public ResponseEntity<List<Agenda>> getCitasByServicioId(@PathVariable String servicioId) {
+        return ResponseEntity.ok(agendaServicePort.getCitasByServicioId(UUID.fromString(servicioId)));
+    }
+
+    @Override
+    @GetMapping("/estado/{estado}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    public ResponseEntity<List<Agenda>> getCitasByEstado(@PathVariable String estado) {
+        return ResponseEntity.ok(agendaServicePort.getCitasByEstado(EstadoCita.valueOf(estado)));
     }
 
     @Override
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'RECEPCIONISTA', 'DUENO', 'FISIOTERAPEUTA')")
-    public ResponseEntity<?> actualizarCita(@PathVariable Long id, @RequestBody Agenda agenda) {
-        // Implementación pendiente
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
-        
-        // try {
-        //     agenda.setId(id);
-        //     Agenda citaActualizada = agendaService.actualizarCita(agenda);
-        //     return new ResponseEntity<>(citaActualizada, HttpStatus.OK);
-        // } catch (IllegalArgumentException e) {
-        //     return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
-        // } catch (Exception e) {
-        //     return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        // }
+    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    public ResponseEntity<Agenda> updateCita(@PathVariable Long id, @RequestBody AgendaRequest agendaRequest) {
+        Agenda agenda = Agenda.builder()
+                .id(id)
+                .pacienteId(UUID.fromString(agendaRequest.getPacienteId()))
+                .usuarioId(UUID.fromString(agendaRequest.getProfesionalId()))
+                .fecha(LocalDate.parse(agendaRequest.getFechaHoraInicio().split("T")[0]))
+                .hora(LocalDateTime.parse(agendaRequest.getFechaHoraInicio(), DateTimeFormatter.ISO_DATE_TIME).toLocalTime())
+                .duracion(calcularDuracion(agendaRequest.getFechaHoraInicio(), agendaRequest.getFechaHoraFin()))
+                .salaId(UUID.fromString(agendaRequest.getSalaId()))
+                .servicioId(UUID.fromString(agendaRequest.getServicioId()))
+                .notas(agendaRequest.getObservaciones())
+                .estado(agendaRequest.getEstado() != null ? agendaRequest.getEstado() : EstadoCita.PENDIENTE.name())
+                .build();
+
+        return ResponseEntity.ok(agendaServicePort.updateCita(id, agenda));
     }
 
     @Override
     @PutMapping("/{id}/cancelar")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'RECEPCIONISTA', 'DUENO', 'FISIOTERAPEUTA')")
-    public ResponseEntity<?> cancelarCita(@PathVariable Long id) {
-        // Implementación pendiente
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
-        
-        // try {
-        //     Agenda citaCancelada = agendaService.cancelarCita(id);
-        //     return new ResponseEntity<>(citaCancelada, HttpStatus.OK);
-        // } catch (IllegalArgumentException e) {
-        //     return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
-        // } catch (Exception e) {
-        //     return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        // }
+    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA', 'PACIENTE')")
+    public ResponseEntity<Agenda> cancelarCita(@PathVariable Long id) {
+        return ResponseEntity.ok(agendaServicePort.cancelarCita(id));
+    }
+
+    @Override
+    @PutMapping("/{id}/completar")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA')")
+    public ResponseEntity<Agenda> completarCita(@PathVariable Long id) {
+        return ResponseEntity.ok(agendaServicePort.completarCita(id));
     }
 
     @Override
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'DUENO')")
-    public ResponseEntity<Void> eliminarCita(@PathVariable Long id) {
-        // Implementación pendiente
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
-        
-        // try {
-        //     agendaService.eliminarCita(id);
-        //     return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        // } catch (Exception e) {
-        //     return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        // }
+    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    public ResponseEntity<MessageResponse> deleteCita(@PathVariable Long id) {
+        agendaServicePort.deleteCita(id);
+        return ResponseEntity.ok(new MessageResponse("Cita eliminada correctamente"));
+    }
+    
+    /**
+     * Calcula la duración en minutos entre dos fechas-hora
+     * @param fechaHoraInicio Fecha y hora de inicio en formato ISO
+     * @param fechaHoraFin Fecha y hora de fin en formato ISO
+     * @return Duración en minutos
+     */
+    private Integer calcularDuracion(String fechaHoraInicio, String fechaHoraFin) {
+        LocalDateTime inicio = LocalDateTime.parse(fechaHoraInicio, DateTimeFormatter.ISO_DATE_TIME);
+        LocalDateTime fin = LocalDateTime.parse(fechaHoraFin, DateTimeFormatter.ISO_DATE_TIME);
+        return (int) java.time.Duration.between(inicio, fin).toMinutes();
     }
 } 

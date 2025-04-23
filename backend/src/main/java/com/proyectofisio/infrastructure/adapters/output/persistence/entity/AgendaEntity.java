@@ -36,6 +36,18 @@ public class AgendaEntity {
     @JoinColumn(name = "usuario_id", nullable = false)
     private UsuarioEntity usuario;
     
+    @ManyToOne
+    @JoinColumn(name = "sala_id")
+    private SalaEntity sala;
+    
+    @ManyToOne
+    @JoinColumn(name = "servicio_id")
+    private ServicioEntity servicio;
+    
+    @ManyToOne
+    @JoinColumn(name = "bono_id")
+    private BonoPacienteEntity bono;
+    
     @Column(nullable = false)
     private LocalDate fecha;
     

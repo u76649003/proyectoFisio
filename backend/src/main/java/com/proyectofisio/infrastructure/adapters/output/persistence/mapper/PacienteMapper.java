@@ -7,6 +7,7 @@ import com.proyectofisio.domain.model.Paciente;
 import com.proyectofisio.infrastructure.adapters.output.persistence.entity.EmpresaEntity;
 import com.proyectofisio.infrastructure.adapters.output.persistence.entity.PacienteEntity;
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.EmpresaRepository;
+import com.proyectofisio.infrastructure.adapters.output.persistence.util.IdTypeConverter;
 
 @Component
 public class PacienteMapper {
@@ -24,7 +25,7 @@ public class PacienteMapper {
         }
 
         return Paciente.builder()
-                .id(entity.getId())
+                .id(IdTypeConverter.uuidToLong(entity.getId()))
                 .nombre(entity.getNombre())
                 .apellidos(entity.getApellidos())
                 .email(entity.getEmail())
@@ -44,7 +45,7 @@ public class PacienteMapper {
         }
 
         PacienteEntity.PacienteEntityBuilder builder = PacienteEntity.builder()
-                .id(domain.getId())
+                .id(IdTypeConverter.longToUuid(domain.getId()))
                 .nombre(domain.getNombre())
                 .apellidos(domain.getApellidos())
                 .email(domain.getEmail())

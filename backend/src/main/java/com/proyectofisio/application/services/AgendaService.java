@@ -1,26 +1,34 @@
 package com.proyectofisio.application.services;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.proyectofisio.application.ports.input.AgendaServicePort;
+import com.proyectofisio.application.ports.input.BonoPacienteServicePort;
 import com.proyectofisio.application.ports.output.AgendaRepositoryPort;
 import com.proyectofisio.domain.model.Agenda;
+import com.proyectofisio.domain.model.Agenda.EstadoCita;
+
+import jakarta.persistence.EntityNotFoundException;
 
 @Service
 public class AgendaService implements AgendaServicePort {
 
     private final AgendaRepositoryPort agendaRepository;
+    private final BonoPacienteServicePort bonoPacienteService;
     
     @Autowired
-    public AgendaService(AgendaRepositoryPort agendaRepository) {
+    public AgendaService(AgendaRepositoryPort agendaRepository, BonoPacienteServicePort bonoPacienteService) {
         this.agendaRepository = agendaRepository;
+        this.bonoPacienteService = bonoPacienteService;
     }
     
     @Override
@@ -29,51 +37,88 @@ public class AgendaService implements AgendaServicePort {
         if (existeCitaConflictiva(agenda)) {
             throw new IllegalArgumentException("Ya existe una cita programada para ese profesional en el horario indicado");
         }
+        
+        // Establecer estado por defecto si no viene especificado
+        if (agenda.getEstado() == null) {
+            agenda.setEstado(EstadoCita.PENDIENTE.name());
+        }
+        
         return agendaRepository.save(agenda);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<Agenda> obtenerCitaPorId(Long id) {
-        return agendaRepository.findById(id);
+    public Agenda getCitaById(Long id) {
+        return agendaRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Cita no encontrada con ID: " + id));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Agenda> obtenerTodasLasCitas() {
+    public List<Agenda> getAllCitas() {
         return agendaRepository.findAll();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Agenda> obtenerCitasPorPaciente(Long pacienteId) {
+    public List<Agenda> getCitasByPacienteId(UUID pacienteId) {
         return agendaRepository.findByPacienteId(pacienteId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Agenda> obtenerCitasPorProfesional(Long usuarioId) {
+    public List<Agenda> getCitasByProfesionalId(UUID usuarioId) {
         return agendaRepository.findByUsuarioId(usuarioId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Agenda> obtenerCitasPorFecha(LocalDate fecha) {
+    public List<Agenda> getCitasByFecha(LocalDate fecha) {
         return agendaRepository.findByFecha(fecha);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Agenda> obtenerCitasPorProfesionalYFecha(Long usuarioId, LocalDate fecha) {
-        return agendaRepository.findByUsuarioIdAndFecha(usuarioId, fecha);
+    public List<Agenda> getCitasByRangoFechas(LocalDateTime fechaInicio, LocalDateTime fechaFin) {
+        LocalDate inicio = fechaInicio.toLocalDate();
+        LocalDate fin = fechaFin.toLocalDate();
+        return agendaRepository.findByFechaBetween(inicio, fin);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<Agenda> getCitasByEmpresaId(UUID empresaId) {
+        return agendaRepository.findByEmpresaId(empresaId);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<Agenda> getCitasBySalaId(UUID salaId) {
+        return agendaRepository.findBySalaId(salaId);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<Agenda> getCitasByServicioId(UUID servicioId) {
+        return agendaRepository.findByServicioId(servicioId);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<Agenda> getCitasByEstado(EstadoCita estado) {
+        return agendaRepository.findByEstado(estado.name());
     }
 
     @Override
     @Transactional
-    public Agenda actualizarCita(Agenda agenda) {
-        if (!agendaRepository.existsById(agenda.getId())) {
-            throw new IllegalArgumentException("La cita no existe");
+    public Agenda updateCita(Long id, Agenda agenda) {
+        // Verificar que la cita existe
+        if (!agendaRepository.existsById(id)) {
+            throw new EntityNotFoundException("La cita no existe");
         }
+        
+        // Asegurar que el ID de la cita no se modifique
+        agenda.setId(id);
         
         // Si la fecha, hora o duración han cambiado, verificar conflictos
         if (existeCitaConflictiva(agenda)) {
@@ -86,21 +131,46 @@ public class AgendaService implements AgendaServicePort {
     @Override
     @Transactional
     public Agenda cancelarCita(Long id) {
-        Optional<Agenda> citaOpt = agendaRepository.findById(id);
-        if (citaOpt.isEmpty()) {
-            throw new IllegalArgumentException("La cita no existe");
+        Agenda cita = getCitaById(id);
+        
+        // Verificar que la cita no esté ya cancelada o completada
+        if (EstadoCita.CANCELADA.name().equals(cita.getEstado()) || 
+            EstadoCita.COMPLETADA.name().equals(cita.getEstado())) {
+            throw new IllegalStateException("No se puede cancelar una cita que ya está " + cita.getEstado());
         }
         
-        Agenda cita = citaOpt.get();
-        cita.setEstado("CANCELADA");
+        cita.setEstado(EstadoCita.CANCELADA.name());
+        return agendaRepository.save(cita);
+    }
+    
+    @Override
+    @Transactional
+    public Agenda completarCita(Long id) {
+        Agenda cita = getCitaById(id);
+        
+        // Verificar que la cita no esté ya completada o cancelada
+        if (EstadoCita.COMPLETADA.name().equals(cita.getEstado()) || 
+            EstadoCita.CANCELADA.name().equals(cita.getEstado())) {
+            throw new IllegalStateException("No se puede completar una cita que ya está " + cita.getEstado());
+        }
+        
+        // Actualizar el estado de la cita
+        cita.setEstado(EstadoCita.COMPLETADA.name());
+        
+        // Si hay un bono asociado, actualizar sus sesiones restantes
+        if (cita.getBonoId() != null) {
+            bonoPacienteService.actualizarSesionesRestantesBono(cita.getBonoId());
+        }
+        
+        // Guardar y devolver la cita actualizada
         return agendaRepository.save(cita);
     }
 
     @Override
     @Transactional
-    public void eliminarCita(Long id) {
+    public void deleteCita(Long id) {
         if (!agendaRepository.existsById(id)) {
-            throw new IllegalArgumentException("La cita no existe");
+            throw new EntityNotFoundException("La cita no existe");
         }
         agendaRepository.deleteById(id);
     }

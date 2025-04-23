@@ -17,11 +17,15 @@ public interface PacienteRepositoryPort {
     
     void deleteById(Long id);
     
-    boolean existsByDni(String dni);
-    
     boolean existsByEmail(String email);
     
-    Optional<Paciente> findByDni(String dni);
+    boolean existsByTelefono(String telefono);
+    
+    boolean existsByDni(String dni);
     
     Optional<Paciente> findByEmail(String email);
+    
+    Optional<Paciente> findByTelefono(String telefono);
+    
+    Optional<Paciente> findByDni(String dni);
 } 

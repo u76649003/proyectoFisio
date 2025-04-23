@@ -2,6 +2,7 @@ package com.proyectofisio.infrastructure.adapters.output.persistence;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import com.proyectofisio.domain.model.Paciente;
 import com.proyectofisio.infrastructure.adapters.output.persistence.entity.PacienteEntity;
 import com.proyectofisio.infrastructure.adapters.output.persistence.mapper.PacienteMapper;
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.PacienteRepository;
+import com.proyectofisio.infrastructure.adapters.output.persistence.util.IdTypeConverter;
 
 @Component
 public class PacienteJpaAdapter implements PacienteRepositoryPort {
@@ -27,14 +29,15 @@ public class PacienteJpaAdapter implements PacienteRepositoryPort {
 
     @Override
     public Paciente save(Paciente paciente) {
-        PacienteEntity entity = pacienteMapper.toEntity(paciente);
-        PacienteEntity savedEntity = pacienteRepository.save(entity);
-        return pacienteMapper.toDomain(savedEntity);
+        PacienteEntity pacienteEntity = pacienteMapper.toEntity(paciente);
+        PacienteEntity savedPaciente = pacienteRepository.save(pacienteEntity);
+        return pacienteMapper.toDomain(savedPaciente);
     }
 
     @Override
     public Optional<Paciente> findById(Long id) {
-        return pacienteRepository.findById(id)
+        UUID uuid = IdTypeConverter.longToUuid(id);
+        return pacienteRepository.findById(uuid)
                 .map(pacienteMapper::toDomain);
     }
 
@@ -53,18 +56,15 @@ public class PacienteJpaAdapter implements PacienteRepositoryPort {
     }
 
     @Override
-    public void deleteById(Long id) {
-        pacienteRepository.deleteById(id);
+    public Optional<Paciente> findByEmail(String email) {
+        return pacienteRepository.findByEmail(email)
+                .map(pacienteMapper::toDomain);
     }
 
     @Override
-    public boolean existsByDni(String dni) {
-        return pacienteRepository.existsByDni(dni);
-    }
-
-    @Override
-    public boolean existsByEmail(String email) {
-        return pacienteRepository.existsByEmail(email);
+    public Optional<Paciente> findByTelefono(String telefono) {
+        return pacienteRepository.findByTelefono(telefono)
+                .map(pacienteMapper::toDomain);
     }
 
     @Override
@@ -74,8 +74,23 @@ public class PacienteJpaAdapter implements PacienteRepositoryPort {
     }
 
     @Override
-    public Optional<Paciente> findByEmail(String email) {
-        return pacienteRepository.findByEmail(email)
-                .map(pacienteMapper::toDomain);
+    public void deleteById(Long id) {
+        UUID uuid = IdTypeConverter.longToUuid(id);
+        pacienteRepository.deleteById(uuid);
+    }
+
+    @Override
+    public boolean existsByEmail(String email) {
+        return pacienteRepository.existsByEmail(email);
+    }
+
+    @Override
+    public boolean existsByTelefono(String telefono) {
+        return pacienteRepository.existsByTelefono(telefono);
+    }
+
+    @Override
+    public boolean existsByDni(String dni) {
+        return pacienteRepository.existsByDni(dni);
     }
 } 

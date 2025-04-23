@@ -5,29 +5,40 @@ import org.springframework.stereotype.Component;
 
 import com.proyectofisio.domain.model.Agenda;
 import com.proyectofisio.infrastructure.adapters.output.persistence.entity.AgendaEntity;
+import com.proyectofisio.infrastructure.adapters.output.persistence.entity.BonoPacienteEntity;
 import com.proyectofisio.infrastructure.adapters.output.persistence.entity.PacienteEntity;
+import com.proyectofisio.infrastructure.adapters.output.persistence.entity.SalaEntity;
+import com.proyectofisio.infrastructure.adapters.output.persistence.entity.ServicioEntity;
 import com.proyectofisio.infrastructure.adapters.output.persistence.entity.UsuarioEntity;
+import com.proyectofisio.infrastructure.adapters.output.persistence.repository.BonoPacienteRepository;
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.PacienteRepository;
+import com.proyectofisio.infrastructure.adapters.output.persistence.repository.SalaRepository;
+import com.proyectofisio.infrastructure.adapters.output.persistence.repository.ServicioRepository;
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.UsuarioRepository;
+
+import java.util.UUID;
 
 @Component
 public class AgendaMapper {
     
     private final PacienteRepository pacienteRepository;
     private final UsuarioRepository usuarioRepository;
-    private final PacienteMapper pacienteMapper;
-    private final UsuarioMapper usuarioMapper;
+    private final SalaRepository salaRepository;
+    private final ServicioRepository servicioRepository;
+    private final BonoPacienteRepository bonoPacienteRepository;
     
     @Autowired
     public AgendaMapper(
             PacienteRepository pacienteRepository, 
             UsuarioRepository usuarioRepository,
-            PacienteMapper pacienteMapper,
-            UsuarioMapper usuarioMapper) {
+            SalaRepository salaRepository,
+            ServicioRepository servicioRepository,
+            BonoPacienteRepository bonoPacienteRepository) {
         this.pacienteRepository = pacienteRepository;
         this.usuarioRepository = usuarioRepository;
-        this.pacienteMapper = pacienteMapper;
-        this.usuarioMapper = usuarioMapper;
+        this.salaRepository = salaRepository;
+        this.servicioRepository = servicioRepository;
+        this.bonoPacienteRepository = bonoPacienteRepository;
     }
     
     public Agenda toModel(AgendaEntity entity) {
@@ -38,7 +49,10 @@ public class AgendaMapper {
         return Agenda.builder()
                 .id(entity.getId())
                 .pacienteId(entity.getPaciente() != null ? entity.getPaciente().getId() : null)
-                .usuarioId(entity.getUsuario().getId())
+                .usuarioId(entity.getUsuario() != null ? entity.getUsuario().getId() : null)
+                .salaId(entity.getSala() != null ? entity.getSala().getId() : null)
+                .servicioId(entity.getServicio() != null ? entity.getServicio().getId() : null)
+                .bonoId(entity.getBono() != null ? entity.getBono().getId() : null)
                 .fecha(entity.getFecha())
                 .hora(entity.getHora())
                 .duracion(entity.getDuracion())
@@ -59,13 +73,34 @@ public class AgendaMapper {
             pacienteEntity = pacienteRepository.findById(model.getPacienteId()).orElse(null);
         }
         
-        UsuarioEntity usuarioEntity = usuarioRepository.findById(model.getUsuarioId())
-                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        UsuarioEntity usuarioEntity = null;
+        if (model.getUsuarioId() != null) {
+            usuarioEntity = usuarioRepository.findById(model.getUsuarioId())
+                    .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con ID: " + model.getUsuarioId()));
+        }
+        
+        SalaEntity salaEntity = null;
+        if (model.getSalaId() != null) {
+            salaEntity = salaRepository.findById(model.getSalaId()).orElse(null);
+        }
+        
+        ServicioEntity servicioEntity = null;
+        if (model.getServicioId() != null) {
+            servicioEntity = servicioRepository.findById(model.getServicioId()).orElse(null);
+        }
+        
+        BonoPacienteEntity bonoEntity = null;
+        if (model.getBonoId() != null) {
+            bonoEntity = bonoPacienteRepository.findById(model.getBonoId()).orElse(null);
+        }
         
         return AgendaEntity.builder()
                 .id(model.getId())
                 .paciente(pacienteEntity)
                 .usuario(usuarioEntity)
+                .sala(salaEntity)
+                .servicio(servicioEntity)
+                .bono(bonoEntity)
                 .fecha(model.getFecha())
                 .hora(model.getHora())
                 .duracion(model.getDuracion())

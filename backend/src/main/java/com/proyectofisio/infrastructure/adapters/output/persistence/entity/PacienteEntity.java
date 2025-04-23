@@ -2,6 +2,7 @@ package com.proyectofisio.infrastructure.adapters.output.persistence.entity;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -27,8 +28,8 @@ import lombok.NoArgsConstructor;
 public class PacienteEntity {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private UUID id;
     
     @Column(nullable = false)
     private String nombre;
