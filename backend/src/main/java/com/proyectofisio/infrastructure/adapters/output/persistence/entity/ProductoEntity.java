@@ -44,4 +44,7 @@ public class ProductoEntity {
     
     @OneToMany(mappedBy = "producto")
     private List<FacturaProductoEntity> lineasFactura;
+    
+    @OneToMany(mappedBy = "producto")
+    private List<BonoPacienteEntity> bonos;
 } 

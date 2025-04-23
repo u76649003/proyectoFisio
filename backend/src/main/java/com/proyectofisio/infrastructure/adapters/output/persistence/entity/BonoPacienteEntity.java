@@ -39,6 +39,10 @@ public class BonoPacienteEntity {
     @JoinColumn(name = "servicio_id", nullable = false)
     private ServicioEntity servicio;
     
+    @ManyToOne
+    @JoinColumn(name = "producto_id")
+    private ProductoEntity producto;
+    
     @Column(name = "fecha_inicio", nullable = false)
     private LocalDate fechaInicio;
     
