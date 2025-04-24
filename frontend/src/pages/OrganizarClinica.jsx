@@ -42,7 +42,8 @@ import {
   Alert,
   Container,
   AppBar,
-  Toolbar
+  Toolbar,
+  Snackbar
 } from '@mui/material';
 import { 
   Person, 
@@ -66,11 +67,15 @@ import {
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { Link, useNavigate } from 'react-router-dom';
-import { authService, empresaService, usuarioService } from '../services/api';
+import { authService, empresaService, usuarioService, salaService } from '../services/api';
 import { EmpresaLogo } from '../components';
 import SidebarMenu from '../components/SidebarMenu';
 import { CircularProgress } from '@mui/material';
-import { Tabs } from '@mui/material';
+import { Tabs, Tab } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { es } from 'date-fns/locale';
 
 // Componentes estilizados (reutilizados del Dashboard)
 const Sidebar = styled(Box)(({ theme, open }) => ({
@@ -152,16 +157,32 @@ const ESPECIALIDADES = [
   'Otro'
 ];
 
+// Datos dummy para salas
+const SALAS_DUMMY = [
+  { id: 1, nombre: 'Sala 1', capacidad: 2 },
+  { id: 2, nombre: 'Sala 2', capacidad: 1 },
+  { id: 3, nombre: 'Sala 3', capacidad: 3 }
+];
+
+// Datos dummy para servicios
+const SERVICIOS_DUMMY = [
+  { id: 1, nombre: 'Fisioterapia General', duracion: 60, precio: 50 },
+  { id: 2, nombre: 'Fisioterapia Deportiva', duracion: 45, precio: 60 },
+  { id: 3, nombre: 'Masaje Terapéutico', duracion: 30, precio: 40 }
+];
+
 const OrganizarClinica = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
   const [userData, setUserData] = useState(null);
-  const [empresaData, setEmpresaData] = useState(null);
+  const [selectedFecha, setSelectedFecha] = useState(new Date());
+  const [selectedSala, setSelectedSala] = useState('');
+  const [salas, setSalas] = useState([]);
   const [profesionales, setProfesionales] = useState([]);
   const [filteredProfesionales, setFilteredProfesionales] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedProfesional, setSelectedProfesional] = useState(null);
@@ -175,201 +196,178 @@ const OrganizarClinica = () => {
     dni: '',
     rol: 'FISIOTERAPEUTA',
     numeroColegiado: '',
-    especialidad: ''
+    especialidad: '',
+    disponibilidadHoraria: [],
+    activo: true
   });
   const [isEditing, setIsEditing] = useState(false);
   const [errors, setErrors] = useState({});
   const [filtroRol, setFiltroRol] = useState('TODOS');
+  const [tabValue, setTabValue] = useState(0);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
   
   // Estados para los diferentes tipos de datos
-  const [salas, setSalas] = useState([]);
   const [servicios, setServicios] = useState([]);
-  const [activeTab, setActiveTab] = useState(0);
-  
-  // Datos simulados para la demostración
-  const salasDummy = [
-    { id: 1, nombre: 'Sala de Fisioterapia 1', capacidad: 2, equipamiento: 'Camilla, Máquina de ultrasonido', estado: 'DISPONIBLE' },
-    { id: 2, nombre: 'Sala de Rehabilitación', capacidad: 4, equipamiento: 'Barras paralelas, Pesas, Colchonetas', estado: 'DISPONIBLE' },
-    { id: 3, nombre: 'Consulta 1', capacidad: 1, equipamiento: 'Camilla, Escritorio, Sillas', estado: 'OCUPADA' }
-  ];
-  
-  const serviciosDummy = [
-    { id: 1, nombre: 'Fisioterapia General', duracion: 60, precio: 50, descripcion: 'Sesión de fisioterapia general para tratamiento de dolencias musculares.' },
-    { id: 2, nombre: 'Masaje Terapéutico', duracion: 45, precio: 40, descripcion: 'Masaje para aliviar tensiones y mejorar la circulación.' },
-    { id: 3, nombre: 'Rehabilitación Deportiva', duracion: 90, precio: 70, descripcion: 'Rehabilitación especializada para deportistas.' }
-  ];
 
-  // Cargar datos iniciales
+  // Verificar si el usuario puede gestionar personal
+  const puedeGestionarPersonal = 
+    userData?.rol === 'ADMINISTRADOR' || 
+    userData?.rol === 'DUEÑO';
+  
+  // Verificar si el usuario puede gestionar recepcionistas
+  const puedeGestionarRecepcionistas = 
+    userData?.rol === 'DUEÑO';
+
+  // Cargar datos del usuario al iniciar
   useEffect(() => {
-    console.log("OrganizarClinica - Componente montado");
-    
-    // Comprobar si el usuario está autenticado
-    if (!authService.isAuthenticated()) {
-      console.log("OrganizarClinica - Usuario no autenticado, redirigiendo a inicio");
+    const currentUser = authService.getCurrentUser();
+    if (currentUser) {
+      setUserData(currentUser);
+    } else {
       navigate('/');
-      return;
-    }
-    
-    // Obtener datos del usuario
-    const user = authService.getCurrentUser();
-    console.log("OrganizarClinica - Usuario actual:", user);
-    
-    if (!user) {
-      console.log("OrganizarClinica - No se pudo obtener datos del usuario");
-      authService.logout();
-      navigate('/');
-      return;
-    }
-    
-    setUserData(user);
-    
-    // Obtener datos de la empresa
-    if (user.empresaId) {
-      fetchEmpresaData(user.empresaId);
-      // Cargar profesionales (fisioterapeutas) de la empresa
-      fetchProfesionales(user.empresaId);
-      // Cargar salas (simulado por ahora)
-      setSalas(salasDummy);
-      // Cargar servicios (simulado por ahora)
-      setServicios(serviciosDummy);
     }
   }, [navigate]);
-
-  const fetchEmpresaData = async (empresaId) => {
-    try {
-      const data = await empresaService.getEmpresaById(empresaId);
-      console.log("OrganizarClinica - Datos de empresa recibidos:", data);
-      setEmpresaData(data);
-    } catch (error) {
-      console.error("Error al obtener datos de la empresa:", error);
+  
+  // Cargar profesionales al iniciar
+  useEffect(() => {
+    if (userData && userData.empresaId) {
+      loadProfesionales();
+      loadSalas();
     }
-  };
+  }, [userData]);
 
-  const fetchProfesionales = async (empresaId) => {
+  // Función para cargar profesionales
+  const loadProfesionales = async () => {
     try {
-      console.log("Obteniendo profesionales para empresa:", empresaId);
-      const response = await usuarioService.getUsuariosByEmpresa(empresaId);
-      
-      // Filtrar solo fisioterapeutas y recepcionistas
-      const filteredUsers = response.filter(user => 
+      setLoading(true);
+      const response = await usuarioService.getUsuariosByEmpresa(userData.empresaId);
+      const profesionalesFiltrados = response.filter(user => 
         user.rol === 'FISIOTERAPEUTA' || user.rol === 'RECEPCIONISTA'
       );
-      
-      console.log("Profesionales obtenidos:", filteredUsers);
-      setProfesionales(filteredUsers);
-      setFilteredProfesionales(filteredUsers);
-      setLoading(false);
+      setProfesionales(profesionalesFiltrados);
+      setFilteredProfesionales(profesionalesFiltrados);
     } catch (error) {
-      console.error("Error al obtener profesionales:", error);
+      console.error('Error al cargar profesionales:', error);
+      showSnackbar('Error al cargar profesionales', 'error');
+    } finally {
       setLoading(false);
     }
   };
 
-  // Efecto para filtrar profesionales según búsqueda y filtro de rol
-  useEffect(() => {
-    if (!profesionales) return;
-    
-    let filtered = [...profesionales];
-    
-    // Filtrar por rol si no es "TODOS"
-    if (filtroRol !== 'TODOS') {
-      filtered = filtered.filter(prof => prof.rol === filtroRol);
+  // Función para cargar salas
+  const loadSalas = async () => {
+    try {
+      setLoading(true);
+      const response = await salaService.getSalasByEmpresa(userData.empresaId);
+      setSalas(response);
+    } catch (error) {
+      console.error('Error al cargar salas:', error);
+      showSnackbar('Error al cargar salas', 'error');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // Aplicar filtros de búsqueda y rol
+  const applyFilters = (data, term, rol) => {
+    let filtered = data;
     
     // Filtrar por término de búsqueda
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      filtered = filtered.filter(prof => 
-        prof.nombre?.toLowerCase().includes(search) || 
-        prof.apellidos?.toLowerCase().includes(search) ||
-        prof.email?.toLowerCase().includes(search) ||
-        (prof.especialidad && prof.especialidad.toLowerCase().includes(search))
+    if (term.trim()) {
+      const searchTermLower = term.toLowerCase();
+      filtered = filtered.filter(
+        prof => 
+          prof.nombre?.toLowerCase().includes(searchTermLower) ||
+          prof.apellidos?.toLowerCase().includes(searchTermLower) ||
+          prof.email?.toLowerCase().includes(searchTermLower) ||
+          prof.numeroColegiado?.toLowerCase().includes(searchTermLower)
       );
+    }
+    
+    // Filtrar por rol
+    if (rol !== 'TODOS') {
+      filtered = filtered.filter(prof => prof.rol === rol);
     }
     
     setFilteredProfesionales(filtered);
-  }, [searchTerm, filtroRol, profesionales]);
-
-  // Determinar si el usuario actual puede añadir fisioterapeutas
-  const puedeAñadirFisioterapeutas = userData?.rol === 'DUENO' || userData?.rol === 'ADMINISTRADOR' || userData?.rol === 'RECEPCIONISTA';
-  
-  // Determinar si el usuario actual puede gestionar recepcionistas
-  // Solo DUEÑO o ADMINISTRADOR pueden gestionar recepcionistas
-  const puedeGestionarRecepcionistas = userData?.rol === 'DUENO' || userData?.rol === 'ADMINISTRADOR';
-
-  // Determinar si el usuario actual puede añadir/editar/eliminar cualquier tipo de personal
-  const puedeGestionarPersonal = puedeAñadirFisioterapeutas || puedeGestionarRecepcionistas;
-
-  const handleToggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
   };
 
-  const handleLogout = () => {
-    authService.logout();
-    navigate('/');
-  };
-
+  // Manejar cambios en la búsqueda
   const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
+    const newSearchTerm = e.target.value;
+    setSearchTerm(newSearchTerm);
+    applyFilters(profesionales, newSearchTerm, filtroRol);
   };
 
-  const handleOpenDialog = (profesional = null) => {
-    if (profesional) {
-      // Edición de un profesional existente
-      
-      // Verificar si el usuario actual puede editar este tipo de profesional
-      if (profesional.rol === 'RECEPCIONISTA' && !puedeGestionarRecepcionistas) {
-        alert("No tienes permisos para editar recepcionistas. Solo el dueño de la clínica puede gestionar recepcionistas.");
-        return;
-      }
+  // Manejar cambios en el filtro de rol
+  const handleRolFilterChange = (e) => {
+    const newRol = e.target.value;
+    setFiltroRol(newRol);
+    applyFilters(profesionales, searchTerm, newRol);
+  };
 
-      // Si es FISIOTERAPEUTA quien intenta editar, no permitirlo
-      if (userData?.rol === 'FISIOTERAPEUTA') {
-        alert("No tienes permisos para editar personal de la clínica.");
-        return;
-      }
-      
-      setFormData({
-        id: profesional.id,
-        nombre: profesional.nombre || '',
-        apellidos: profesional.apellidos || '',
-        email: profesional.email || '',
-        password: '', // No mostrar contraseña por seguridad
-        telefono: profesional.telefono || '',
-        dni: profesional.dni || '',
-        rol: profesional.rol || 'FISIOTERAPEUTA',
-        numeroColegiado: profesional.numeroColegiado || '',
-        especialidad: profesional.especialidad || ''
-      });
-      setSelectedProfesional(profesional);
-      setIsEditing(true);
-    } else {
-      // Creación de un nuevo profesional
+  // Mostrar snackbar con mensaje
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({
+      open: true,
+      message,
+      severity
+    });
+  };
 
-      // Si es FISIOTERAPEUTA quien intenta crear, no permitirlo
-      if (userData?.rol === 'FISIOTERAPEUTA') {
-        alert("No tienes permisos para añadir personal a la clínica.");
-        return;
-      }
-      
-      // Para recepcionistas, solo pueden crear fisioterapeutas
-      const defaultRol = 'FISIOTERAPEUTA';
-      
-      setFormData({
-        id: null,
-        nombre: '',
-        apellidos: '',
-        email: '',
-        password: '',
-        telefono: '',
-        dni: '',
-        rol: defaultRol,
-        numeroColegiado: '',
-        especialidad: ''
-      });
-      setSelectedProfesional(null);
-      setIsEditing(false);
-    }
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  // Cambiar de tab
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
+
+  // Abrir diálogo para nuevo profesional
+  const handleOpenNewDialog = () => {
+    setFormData({
+      id: null,
+      nombre: '',
+      apellidos: '',
+      email: '',
+      password: '',
+      telefono: '',
+      dni: '',
+      rol: 'FISIOTERAPEUTA',
+      numeroColegiado: '',
+      especialidad: '',
+      disponibilidadHoraria: [],
+      activo: true
+    });
+    setErrors({});
+    setIsEditing(false);
+    setOpenDialog(true);
+  };
+
+  // Abrir diálogo para editar profesional
+  const handleOpenEditDialog = (profesional) => {
+    setFormData({
+      id: profesional.id,
+      nombre: profesional.nombre || '',
+      apellidos: profesional.apellidos || '',
+      email: profesional.email || '',
+      password: '', // No mostramos la contraseña existente
+      telefono: profesional.telefono || '',
+      dni: profesional.dni || '',
+      rol: profesional.rol || 'FISIOTERAPEUTA',
+      numeroColegiado: profesional.numeroColegiado || '',
+      especialidad: profesional.especialidad || '',
+      disponibilidadHoraria: profesional.disponibilidadHoraria || [],
+      activo: profesional.activo !== false // true por defecto si no viene especificado
+    });
+    setSelectedProfesional(profesional);
+    setErrors({});
+    setIsEditing(true);
     setOpenDialog(true);
   };
 
@@ -378,129 +376,101 @@ const OrganizarClinica = () => {
     setErrors({});
   };
 
-  const handleFormChange = (e) => {
+  // Manejar cambios en el formulario
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
     
-    // Limpiar error cuando el usuario corrige el campo
+    // Limpiar error si el usuario está corrigiendo el campo
     if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: null
-      }));
+      setErrors(prev => ({ ...prev, [name]: null }));
     }
   };
 
+  // Validar el formulario
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.nombre.trim()) {
-      newErrors.nombre = "El nombre es obligatorio";
-    }
-    
-    if (!formData.apellidos.trim()) {
-      newErrors.apellidos = "Los apellidos son obligatorios";
-    }
+    if (!formData.nombre.trim()) newErrors.nombre = 'El nombre es obligatorio';
+    if (!formData.apellidos.trim()) newErrors.apellidos = 'Los apellidos son obligatorios';
     
     if (!formData.email.trim()) {
-      newErrors.email = "El email es obligatorio";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "El formato del email no es válido";
+      newErrors.email = 'El email es obligatorio';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'El email no es válido';
     }
     
     if (!isEditing && !formData.password.trim()) {
-      newErrors.password = "La contraseña es obligatoria para nuevos usuarios";
+      newErrors.password = 'La contraseña es obligatoria para nuevos usuarios';
     }
     
-    // Validación condicional según el rol
-    if (formData.rol === 'FISIOTERAPEUTA') {
-      if (!formData.numeroColegiado.trim()) {
-        newErrors.numeroColegiado = "El número de colegiado es obligatorio para fisioterapeutas";
-      }
-      
-      if (!formData.especialidad) {
-        newErrors.especialidad = "La especialidad es obligatoria para fisioterapeutas";
-      }
+    if (!formData.rol) {
+      newErrors.rol = 'El rol es obligatorio';
+    } else if (formData.rol === 'FISIOTERAPEUTA' && !formData.numeroColegiado.trim()) {
+      newErrors.numeroColegiado = 'El número de colegiado es obligatorio para fisioterapeutas';
     }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  // Enviar formulario
   const handleSubmit = async () => {
-    if (!validateForm()) {
-      return;
-    }
-    
-    // Preparar datos para envío
-    const profesionalData = {
-      ...formData,
-      empresaId: userData.empresaId
-    };
+    if (!validateForm()) return;
     
     try {
-      if (isEditing && selectedProfesional) {
-        // Actualizar profesional existente
-        await usuarioService.updateUsuario(selectedProfesional.id, profesionalData);
-      } else {
-        // Crear nuevo profesional
-        await usuarioService.createUsuario(profesionalData);
+      setLoading(true);
+      const usuarioData = {
+        ...formData,
+        empresaId: userData.empresaId
+      };
+      
+      // Si estamos editando, no enviamos la contraseña a menos que se haya cambiado
+      if (isEditing && !formData.password) {
+        delete usuarioData.password;
       }
       
-      // Cerrar diálogo y recargar datos
+      if (isEditing) {
+        await usuarioService.updateUsuario(formData.id, usuarioData);
+        setProfesionales(prev => 
+          prev.map(p => p.id === formData.id ? { ...p, ...usuarioData } : p)
+        );
+        showSnackbar('Profesional actualizado correctamente');
+      } else {
+        const newUser = await usuarioService.createUsuario(usuarioData);
+        setProfesionales(prev => [...prev, newUser]);
+        showSnackbar('Profesional creado correctamente');
+      }
+      
       handleCloseDialog();
-      fetchProfesionales(userData.empresaId);
+      // Aplicar filtros después de actualizar la lista
+      applyFilters(profesionales, searchTerm, filtroRol);
     } catch (error) {
-      console.error("Error al guardar profesional:", error);
-      // Mostrar error general
-      setErrors(prev => ({
-        ...prev,
-        general: "Error al guardar: " + (error.message || "Inténtelo de nuevo")
-      }));
+      console.error('Error al guardar el profesional:', error);
+      showSnackbar('Error al guardar el profesional', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDeleteProfesional = async (id, rol) => {
-    // Verificar si el usuario puede eliminar este tipo de profesional
-    if (rol === 'RECEPCIONISTA' && !puedeGestionarRecepcionistas) {
-      alert("No tienes permisos para eliminar recepcionistas. Solo el dueño de la clínica puede gestionar recepcionistas.");
-      return;
-    }
-    
-    // Si es FISIOTERAPEUTA quien intenta eliminar, no permitirlo
-    if (userData?.rol === 'FISIOTERAPEUTA') {
-      alert("No tienes permisos para eliminar personal de la clínica.");
-      return;
-    }
-    
-    // Confirmar antes de eliminar
-    if (window.confirm(`¿Está seguro que desea eliminar a este ${rol === 'FISIOTERAPEUTA' ? 'fisioterapeuta' : 'recepcionista'}?`)) {
+  // Eliminar profesional
+  const handleDeleteProfesional = async (id) => {
+    if (window.confirm('¿Está seguro de que desea eliminar este profesional?')) {
       try {
+        setLoading(true);
         await usuarioService.deleteUsuario(id);
-        // Recargar la lista
-        fetchProfesionales(userData.empresaId);
+        setProfesionales(prev => prev.filter(p => p.id !== id));
+        // Aplicar filtros después de actualizar la lista
+        applyFilters(profesionales.filter(p => p.id !== id), searchTerm, filtroRol);
+        showSnackbar('Profesional eliminado correctamente');
       } catch (error) {
-        console.error("Error al eliminar profesional:", error);
-        alert("No se pudo eliminar el profesional. Inténtelo de nuevo.");
+        console.error('Error al eliminar el profesional:', error);
+        showSnackbar('Error al eliminar el profesional', 'error');
+      } finally {
+        setLoading(false);
       }
     }
   };
-
-  const handleFiltroRolChange = (event) => {
-    setFiltroRol(event.target.value);
-  };
-
-  // Si no hay datos de usuario, mostrar mensaje de carga
-  if (!userData) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <Typography variant="h5">Cargando...</Typography>
-      </Box>
-    );
-  }
 
   return (
     <SidebarMenu>
@@ -523,7 +493,7 @@ const OrganizarClinica = () => {
               variant="contained" 
               color="secondary" 
               startIcon={<PersonAdd />}
-              onClick={() => handleOpenDialog()}
+              onClick={handleOpenNewDialog}
             >
               Añadir Personal
             </Button>
@@ -551,22 +521,22 @@ const OrganizarClinica = () => {
       <Box sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}>
         <Stack direction="row" spacing={2}>
           <Button 
-            variant={activeTab === 0 ? 'contained' : 'text'} 
-            onClick={() => setActiveTab(0)}
+            variant={tabValue === 0 ? 'contained' : 'text'} 
+            onClick={() => setTabValue(0)}
             startIcon={<People />}
           >
             Personal
           </Button>
           <Button 
-            variant={activeTab === 1 ? 'contained' : 'text'} 
-            onClick={() => setActiveTab(1)}
+            variant={tabValue === 1 ? 'contained' : 'text'} 
+            onClick={() => setTabValue(1)}
             startIcon={<Room />}
           >
             Salas
           </Button>
           <Button 
-            variant={activeTab === 2 ? 'contained' : 'text'} 
-            onClick={() => setActiveTab(2)}
+            variant={tabValue === 2 ? 'contained' : 'text'} 
+            onClick={() => setTabValue(2)}
             startIcon={<MedicalServices />}
           >
             Servicios
@@ -574,286 +544,162 @@ const OrganizarClinica = () => {
         </Stack>
       </Box>
       
-      {/* Buscador */}
-      <Box sx={{ mb: 4 }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          placeholder={activeTab === 0 ? "Buscar personal..." : activeTab === 1 ? "Buscar salas..." : "Buscar servicios..."}
-          value={searchTerm}
-          onChange={handleSearchChange}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-            endAdornment: activeTab === 0 && (
-              <InputAdornment position="end">
-                <FormControl sx={{ minWidth: 120 }}>
-                  <Select
-                    value={filtroRol}
-                    onChange={handleFiltroRolChange}
-                    displayEmpty
-                    size="small"
-                  >
-                    <MenuItem value="TODOS">Todos</MenuItem>
-                    <MenuItem value="FISIOTERAPEUTA">Fisioterapeutas</MenuItem>
-                    <MenuItem value="RECEPCIONISTA">Recepcionistas</MenuItem>
-                  </Select>
-                </FormControl>
-              </InputAdornment>
-            )
-          }}
-        />
-      </Box>
-      
-      {/* Contenido según la pestaña seleccionada */}
-      {activeTab === 0 ? (
-        <Card sx={{ 
-          borderRadius: 3, 
-          boxShadow: 3,
-          overflow: 'hidden'
-        }}>
-          <Box sx={{ 
-            p: 2, 
-            bgcolor: 'info.main', 
-            color: 'white',
-            display: 'flex',
-            alignItems: 'center'
-          }}>
-            <People sx={{ mr: 1 }} />
-            <Typography variant="h6">Personal de la Clínica</Typography>
-          </Box>
-          <Divider />
-          <CardContent sx={{ p: 0 }}>
+      {/* Contenido de las pestañas */}
+      <Box sx={{ mt: 3 }}>
+        {/* Pestaña: PERSONAL */}
+        {tabValue === 0 && (
+          <>
+            {/* Filtros y búsqueda */}
+            <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <TextField
+                placeholder="Buscar por nombre, email, nº colegiado..."
+                variant="outlined"
+                value={searchTerm}
+                onChange={handleSearchChange}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ flexGrow: 1, minWidth: '250px' }}
+              />
+              <FormControl sx={{ minWidth: '200px' }}>
+                <InputLabel>Filtrar por rol</InputLabel>
+                <Select
+                  value={filtroRol}
+                  onChange={handleRolFilterChange}
+                  label="Filtrar por rol"
+                >
+                  <MenuItem value="TODOS">Todos</MenuItem>
+                  <MenuItem value="FISIOTERAPEUTA">Fisioterapeutas</MenuItem>
+                  <MenuItem value="RECEPCIONISTA">Recepcionistas</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+            
+            {/* Lista de profesionales */}
             {loading ? (
-              <Box sx={{ p: 2, textAlign: 'center' }}>
-                <Typography>Cargando personal...</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                <CircularProgress />
               </Box>
-            ) : filteredProfesionales.length > 0 ? (
-              <List>
-                {filteredProfesionales.map((profesional) => (
-                  <React.Fragment key={profesional.id}>
-                    <ListItem
-                      secondaryAction={
-                        <Box>
-                          <IconButton 
-                            color="primary"
-                            onClick={() => handleOpenDialog(profesional)}
-                            disabled={profesional.rol === 'RECEPCIONISTA' && !puedeGestionarRecepcionistas}
-                          >
+            ) : (
+              <TableContainer component={Paper} elevation={2}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Nombre</TableCell>
+                      <TableCell>Email</TableCell>
+                      <TableCell>Rol</TableCell>
+                      <TableCell>Nº Colegiado</TableCell>
+                      <TableCell align="right">Acciones</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredProfesionales.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center">
+                          No se encontraron profesionales
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredProfesionales.map((prof) => (
+                        <TableRow key={prof.id}>
+                          <TableCell>
+                            {prof.nombre} {prof.apellidos}
+                          </TableCell>
+                          <TableCell>{prof.email}</TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={prof.rol === 'FISIOTERAPEUTA' ? 'Fisioterapeuta' : 'Recepcionista'} 
+                              color={prof.rol === 'FISIOTERAPEUTA' ? 'primary' : 'default'}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>{prof.numeroColegiado || '-'}</TableCell>
+                          <TableCell align="right">
+                            <IconButton 
+                              color="primary" 
+                              onClick={() => handleOpenEditDialog(prof)}
+                              title="Editar"
+                            >
+                              <EditIcon />
+                            </IconButton>
+                            <IconButton 
+                              color="error" 
+                              onClick={() => handleDeleteProfesional(prof.id)}
+                              title="Eliminar"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </>
+        )}
+        
+        {/* Pestaña: SALAS */}
+        {tabValue === 1 && (
+          <Box>
+            {/* Aquí iría el contenido de la pestaña de salas */}
+            <Typography variant="h6">Gestión de Salas</Typography>
+            
+            {/* Lista de salas */}
+            {salas.length > 0 ? (
+              <Grid container spacing={3} sx={{ mt: 2 }}>
+                {salas.map(sala => (
+                  <Grid item xs={12} sm={6} md={4} key={sala.id}>
+                    <Card>
+                      <CardHeader 
+                        title={sala.nombre}
+                        subheader={`Capacidad: ${sala.capacidad || 1} personas`}
+                        action={
+                          <IconButton onClick={() => navigate(`/organizar-clinica/salas/editar/${sala.id}`)}>
                             <EditIcon />
                           </IconButton>
-                          <IconButton 
-                            color="error"
-                            onClick={() => handleDeleteProfesional(profesional.id, profesional.rol)}
-                            disabled={profesional.rol === 'RECEPCIONISTA' && !puedeGestionarRecepcionistas}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Box>
-                      }
-                    >
-                      <ListItemAvatar>
-                        <Avatar sx={{ 
-                          bgcolor: profesional.rol === 'FISIOTERAPEUTA' ? 'secondary.main' : 'info.main'
-                        }}>
-                          <Person />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={`${profesional.nombre} ${profesional.apellidos}`}
-                        secondary={
-                          <>
-                            <Typography variant="body2" component="span">
-                              {profesional.rol === 'FISIOTERAPEUTA' 
-                                ? `Fisioterapeuta${profesional.especialidad ? ` - ${profesional.especialidad}` : ''}`
-                                : 'Recepcionista'}
-                            </Typography>
-                            <br />
-                            <Typography variant="body2" component="span" sx={{ color: 'text.secondary' }}>
-                              {profesional.email}
-                            </Typography>
-                          </>
                         }
                       />
-                    </ListItem>
-                    <Divider variant="inset" component="li" />
-                  </React.Fragment>
+                      <CardContent>
+                        <Typography variant="body2" color="text.secondary">
+                          {sala.descripcion || 'Sin descripción'}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
                 ))}
-              </List>
+              </Grid>
             ) : (
-              <Box sx={{ p: 4, textAlign: 'center' }}>
-                <Typography>No se encontró personal con los criterios de búsqueda</Typography>
-              </Box>
+              <Alert severity="info" sx={{ mt: 2 }}>
+                No hay salas configuradas. Crea una nueva sala para empezar.
+              </Alert>
             )}
-          </CardContent>
-        </Card>
-      ) : (
-        <Grid container spacing={3}>
-          {/* Sección de Salas - visible solo si la pestaña es 'salas' */}
-          {activeTab === 1 && (
-            <Grid item xs={12}>
-              <Card sx={{ 
-                borderRadius: 3, 
-                boxShadow: 3,
-                overflow: 'hidden',
-                height: '100%'
-              }}>
-                <Box sx={{ 
-                  p: 2, 
-                  bgcolor: 'primary.main', 
-                  color: 'white',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  <Room sx={{ mr: 1 }} />
-                  <Typography variant="h6">Salas Disponibles</Typography>
-                </Box>
-                <Divider />
-                <CardContent sx={{ p: 0 }}>
-                  {loading ? (
-                    <Box sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography>Cargando salas...</Typography>
-                    </Box>
-                  ) : salas.length > 0 ? (
-                    <List>
-                      {salas.map((sala) => (
-                        <React.Fragment key={sala.id}>
-                          <ListItem
-                            secondaryAction={
-                              <Box>
-                                <Button 
-                                  size="small"
-                                  startIcon={<EditIcon />}
-                                  onClick={() => navigate(`/organizar-clinica/salas/${sala.id}`)}
-                                >
-                                  Editar
-                                </Button>
-                              </Box>
-                            }
-                          >
-                            <ListItemAvatar>
-                              <Avatar
-                                sx={{ 
-                                  bgcolor: sala.estado === 'DISPONIBLE' ? 'success.main' : 'error.main'
-                                }}
-                              >
-                                <Room />
-                              </Avatar>
-                            </ListItemAvatar>
-                            <ListItemText
-                              primary={sala.nombre}
-                              secondary={
-                                <>
-                                  <Typography variant="body2" component="span">
-                                    Capacidad: {sala.capacidad} personas
-                                  </Typography>
-                                  <br />
-                                  <Typography 
-                                    variant="body2" 
-                                    component="span"
-                                    color={sala.estado === 'DISPONIBLE' ? 'success.main' : 'error.main'}
-                                    sx={{ fontWeight: 'bold' }}
-                                  >
-                                    {sala.estado}
-                                  </Typography>
-                                </>
-                              }
-                            />
-                          </ListItem>
-                          <Divider variant="inset" component="li" />
-                        </React.Fragment>
-                      ))}
-                    </List>
-                  ) : (
-                    <Box sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography>No se encontraron salas</Typography>
-                    </Box>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-          )}
-          
-          {/* Sección de Servicios - visible solo si la pestaña es 'servicios' */}
-          {activeTab === 2 && (
-            <Grid item xs={12}>
-              <Card sx={{ 
-                borderRadius: 3, 
-                boxShadow: 3,
-                overflow: 'hidden',
-                height: '100%'
-              }}>
-                <Box sx={{ 
-                  p: 2, 
-                  bgcolor: 'secondary.main', 
-                  color: 'white',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  <MedicalServices sx={{ mr: 1 }} />
-                  <Typography variant="h6">Servicios Ofrecidos</Typography>
-                </Box>
-                <Divider />
-                <CardContent sx={{ p: 0 }}>
-                  {loading ? (
-                    <Box sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography>Cargando servicios...</Typography>
-                    </Box>
-                  ) : servicios.length > 0 ? (
-                    <List>
-                      {servicios.map((servicio) => (
-                        <React.Fragment key={servicio.id}>
-                          <ListItem
-                            secondaryAction={
-                              <Box>
-                                <Button 
-                                  size="small"
-                                  startIcon={<EditIcon />}
-                                  onClick={() => navigate(`/organizar-clinica/servicios/${servicio.id}`)}
-                                >
-                                  Editar
-                                </Button>
-                              </Box>
-                            }
-                          >
-                            <ListItemAvatar>
-                              <Avatar sx={{ bgcolor: 'secondary.main' }}>
-                                <MedicalServices />
-                              </Avatar>
-                            </ListItemAvatar>
-                            <ListItemText
-                              primary={servicio.nombre}
-                              secondary={
-                                <>
-                                  <Typography variant="body2" component="span">
-                                    Duración: {servicio.duracion} min
-                                  </Typography>
-                                  <br />
-                                  <Typography variant="body2" component="span">
-                                    Precio: {servicio.precio} €
-                                  </Typography>
-                                </>
-                              }
-                            />
-                          </ListItem>
-                          <Divider variant="inset" component="li" />
-                        </React.Fragment>
-                      ))}
-                    </List>
-                  ) : (
-                    <Box sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography>No se encontraron servicios</Typography>
-                    </Box>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-          )}
-        </Grid>
-      )}
+          </Box>
+        )}
+        
+        {/* Pestaña: SERVICIOS */}
+        {tabValue === 2 && (
+          <Box>
+            {/* Aquí iría el contenido de la pestaña de servicios */}
+            <Typography variant="h6">Gestión de Servicios</Typography>
+            
+            {servicios.length > 0 ? (
+              <Grid container spacing={3} sx={{ mt: 2 }}>
+                {/* Mapeo de servicios */}
+              </Grid>
+            ) : (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                No hay servicios configurados. Crea un nuevo servicio para empezar.
+              </Alert>
+            )}
+          </Box>
+        )}
+      </Box>
       
       {/* Diálogo para añadir/editar personal */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
@@ -874,7 +720,7 @@ const OrganizarClinica = () => {
                 label="Nombre"
                 name="nombre"
                 value={formData.nombre}
-                onChange={handleFormChange}
+                onChange={handleInputChange}
                 error={Boolean(errors.nombre)}
                 helperText={errors.nombre}
               />
@@ -885,7 +731,7 @@ const OrganizarClinica = () => {
                 label="Apellidos"
                 name="apellidos"
                 value={formData.apellidos}
-                onChange={handleFormChange}
+                onChange={handleInputChange}
                 error={Boolean(errors.apellidos)}
                 helperText={errors.apellidos}
               />
@@ -897,7 +743,7 @@ const OrganizarClinica = () => {
                 name="email"
                 type="email"
                 value={formData.email}
-                onChange={handleFormChange}
+                onChange={handleInputChange}
                 error={Boolean(errors.email)}
                 helperText={errors.email}
               />
@@ -910,7 +756,7 @@ const OrganizarClinica = () => {
                   name="password"
                   type="password"
                   value={formData.password}
-                  onChange={handleFormChange}
+                  onChange={handleInputChange}
                   error={Boolean(errors.password)}
                   helperText={errors.password || "La contraseña para el nuevo usuario"}
                 />
@@ -922,7 +768,7 @@ const OrganizarClinica = () => {
                 label="Teléfono"
                 name="telefono"
                 value={formData.telefono}
-                onChange={handleFormChange}
+                onChange={handleInputChange}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -931,7 +777,7 @@ const OrganizarClinica = () => {
                 label="DNI/NIE"
                 name="dni"
                 value={formData.dni}
-                onChange={handleFormChange}
+                onChange={handleInputChange}
               />
             </Grid>
             <Grid item xs={12}>
@@ -940,7 +786,7 @@ const OrganizarClinica = () => {
                 <Select
                   name="rol"
                   value={formData.rol}
-                  onChange={handleFormChange}
+                  onChange={handleInputChange}
                   label="Rol"
                   disabled={!puedeGestionarRecepcionistas} // Solo dueños y admins pueden cambiar a recepcionista
                 >
@@ -961,7 +807,7 @@ const OrganizarClinica = () => {
                     label="Número de Colegiado"
                     name="numeroColegiado"
                     value={formData.numeroColegiado}
-                    onChange={handleFormChange}
+                    onChange={handleInputChange}
                     error={Boolean(errors.numeroColegiado)}
                     helperText={errors.numeroColegiado}
                   />
@@ -972,7 +818,7 @@ const OrganizarClinica = () => {
                     <Select
                       name="especialidad"
                       value={formData.especialidad}
-                      onChange={handleFormChange}
+                      onChange={handleInputChange}
                       label="Especialidad"
                     >
                       {ESPECIALIDADES.map((esp) => (
@@ -998,44 +844,16 @@ const OrganizarClinica = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Sección Informativa - solo visible en las pestañas de salas y servicios */}
-      {activeTab !== 0 && (
-        <Grid item xs={12}>
-          <Card sx={{ 
-            borderRadius: 3, 
-            boxShadow: 3,
-            p: 2,
-            mt: 2
-          }}>
-            <Typography variant="h6" gutterBottom>
-              Organización de la Clínica
-            </Typography>
-            <Typography variant="body1" paragraph>
-              En esta sección puedes gestionar los aspectos organizativos de tu clínica, incluyendo salas disponibles y servicios ofrecidos.
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Room color="primary" sx={{ mr: 1 }} />
-                  <Typography variant="subtitle1">Gestión de Salas</Typography>
-                </Box>
-                <Typography variant="body2">
-                  Añade, edita o elimina salas de tu clínica. Puedes especificar su capacidad, equipamiento y disponibilidad.
-                </Typography>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <MedicalServices color="secondary" sx={{ mr: 1 }} />
-                  <Typography variant="subtitle1">Gestión de Servicios</Typography>
-                </Box>
-                <Typography variant="body2">
-                  Gestiona los servicios que ofrece tu clínica. Define precios, duración y descripción de cada servicio.
-                </Typography>
-              </Grid>
-            </Grid>
-          </Card>
-        </Grid>
-      )}
+      {/* Snackbar para mostrar mensajes */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </SidebarMenu>
   );
 };

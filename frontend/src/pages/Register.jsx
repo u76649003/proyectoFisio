@@ -80,6 +80,17 @@ const TEMP_EMAIL_DOMAINS = [
   'dispostable.com'
 ];
 
+// Lista de provincias españolas
+const PROVINCIAS_ESPANA = [
+  'Álava', 'Albacete', 'Alicante', 'Almería', 'Asturias', 'Ávila', 'Badajoz', 'Barcelona', 
+  'Burgos', 'Cáceres', 'Cádiz', 'Cantabria', 'Castellón', 'Ciudad Real', 'Córdoba', 'Cuenca', 
+  'Gerona', 'Granada', 'Guadalajara', 'Guipúzcoa', 'Huelva', 'Huesca', 'Islas Baleares', 
+  'Jaén', 'La Coruña', 'La Rioja', 'Las Palmas', 'León', 'Lérida', 'Lugo', 'Madrid', 'Málaga', 
+  'Murcia', 'Navarra', 'Orense', 'Palencia', 'Pontevedra', 'Salamanca', 'Santa Cruz de Tenerife', 
+  'Segovia', 'Sevilla', 'Soria', 'Tarragona', 'Teruel', 'Toledo', 'Valencia', 'Valladolid', 
+  'Vizcaya', 'Zamora', 'Zaragoza'
+];
+
 // Tamaño máximo de logo en bytes (2MB)
 const MAX_LOGO_SIZE = 2 * 1024 * 1024;
 // Tipos de archivo permitidos
@@ -109,6 +120,7 @@ const Register = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [availableCities, setAvailableCities] = useState([]);
+  const [provinciasOptions, setProvinciasOptions] = useState([]);
   const [formData, setFormData] = useState({
     // Datos personales
     nombre: '',
@@ -120,6 +132,7 @@ const Register = () => {
     numeroColegiado: '',
     especialidad: '',
     rol: 'FISIOTERAPEUTA',
+    esFisioterapeuta: false,
     // Datos de empresa
     nombreEmpresa: '',
     cifNif: '',
@@ -157,6 +170,22 @@ const Register = () => {
       }
     }
   }, [formData.provincia]);
+
+  // Efecto para actualizar las provincias cuando cambia el país
+  useEffect(() => {
+    if (formData.pais === 'España') {
+      // Si el país es España, cargar las provincias de España
+      setProvinciasOptions(PROVINCIAS_ESPANA);
+      
+      // Verificar si la ciudad necesita actualizarse basada en la provincia
+      if (formData.provincia && formData.ciudad) {
+        // Lógica adicional si es necesaria
+      }
+    } else {
+      // Si es otro país, resetear las provincias o cargar otras según el país
+      setProvinciasOptions([]);
+    }
+  }, [formData.pais, formData.provincia, formData.ciudad]);
 
   const handleChange = (e) => {
     const { name, value, checked, type, files } = e.target;
@@ -256,7 +285,7 @@ const Register = () => {
       } else if (formData.password.length < 8) {
         newErrors.password = 'La contraseña debe tener al menos 8 caracteres';
         isValid = false;
-      } else if (!/(?=.*[0-9])(?=.*[a-zA-Z])(?=.*[@#$%^&+=!,\.])/.test(formData.password)) {
+      } else if (!/(?=.*[0-9])(?=.*[a-zA-Z])(?=.*[@#$%^&+=!,.])/.test(formData.password)) {
         newErrors.password = 'La contraseña debe contener al menos un número, una letra y un carácter especial';
         isValid = false;
       }
@@ -285,6 +314,18 @@ const Register = () => {
       if (formData.rol === 'FISIOTERAPEUTA' && !formData.especialidad) {
         newErrors.especialidad = 'La especialidad es obligatoria para fisioterapeutas';
         isValid = false;
+      }
+
+      if (formData.rol === 'DUENO' && formData.esFisioterapeuta) {
+        if (!formData.numeroColegiado.trim()) {
+          newErrors.numeroColegiado = 'El número de colegiado es obligatorio para fisioterapeutas';
+          isValid = false;
+        }
+        
+        if (!formData.especialidad) {
+          newErrors.especialidad = 'La especialidad es obligatoria para fisioterapeutas';
+          isValid = false;
+        }
       }
     } else if (step === 1) {
       // Validar datos de empresa
@@ -395,8 +436,12 @@ const Register = () => {
         password: formData.password,
         telefono: formData.telefono,
         dni: formData.dni,
-        numeroColegiado: formData.numeroColegiado || '',
-        especialidad: formData.especialidad || '',
+        numeroColegiado: (formData.rol === 'FISIOTERAPEUTA' || (formData.rol === 'DUENO' && formData.esFisioterapeuta)) 
+          ? formData.numeroColegiado 
+          : '',
+        especialidad: (formData.rol === 'FISIOTERAPEUTA' || (formData.rol === 'DUENO' && formData.esFisioterapeuta)) 
+          ? formData.especialidad 
+          : '',
         rol: formData.rol || 'DUENO',
         
         // Datos de la empresa
@@ -416,7 +461,7 @@ const Register = () => {
       console.log('Enviando datos de registro:', registerData);
       
       // Enviar los datos a través del servicio de autenticación
-      const response = await authService.registerComplete(registerData);
+      await authService.registerComplete(registerData);
       
       // Mostrar mensaje de éxito con instrucciones para verificar el email
       setSnackbar({
@@ -578,7 +623,22 @@ const Register = () => {
               </FormControl>
             </Grid>
             
-            {formData.rol === 'FISIOTERAPEUTA' && (
+            {formData.rol === 'DUENO' && (
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={formData.esFisioterapeuta}
+                      onChange={handleChange}
+                      name="esFisioterapeuta"
+                    />
+                  }
+                  label="También soy fisioterapeuta"
+                />
+              </Grid>
+            )}
+            
+            {(formData.rol === 'FISIOTERAPEUTA' || (formData.rol === 'DUENO' && formData.esFisioterapeuta)) && (
               <>
                 <Grid item xs={12} sm={6}>
                   <TextField
@@ -709,7 +769,7 @@ const Register = () => {
                   onChange={handleChange}
                   label="Provincia"
                 >
-                  {provinces.map((provincia) => (
+                  {provinciasOptions.map((provincia) => (
                     <MenuItem key={provincia} value={provincia}>
                       {provincia}
                     </MenuItem>
@@ -791,7 +851,7 @@ const Register = () => {
           </Grid>
         );
       case 2:
-        // Confirmación (añadiendo nuevos campos)
+        // Confirmación
         return (
           <Box>
             <Typography variant="h6" gutterBottom>
@@ -840,9 +900,11 @@ const Register = () => {
                 </Typography>
                 <Typography variant="body1">
                   {formData.rol}
+                  {formData.rol === 'DUENO' && formData.esFisioterapeuta && " (También fisioterapeuta)"}
                 </Typography>
               </Grid>
-              {formData.rol === 'FISIOTERAPEUTA' && (
+              
+              {(formData.rol === 'FISIOTERAPEUTA' || (formData.rol === 'DUENO' && formData.esFisioterapeuta)) && (
                 <>
                   <Grid item xs={12} sm={6}>
                     <Typography variant="body2" color="text.secondary">

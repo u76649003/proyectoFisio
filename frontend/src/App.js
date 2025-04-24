@@ -12,6 +12,7 @@ import Pacientes from './pages/Pacientes';
 import Citas from './pages/Citas';
 import OrganizarClinica from './pages/OrganizarClinica';
 import { authService } from './services/api';
+import { AuthProvider } from './contexts/AuthContext';
 
 // Definir el tema personalizado
 const theme = createTheme({
@@ -69,9 +70,51 @@ const theme = createTheme({
     MuiTextField: {
       styleOverrides: {
         root: {
+          width: '100%',
+          minWidth: '200px',
           '& .MuiOutlinedInput-root': {
             borderRadius: 8,
+            width: '100%',
+            minWidth: '200px',
           },
+          '& .MuiInputBase-input': {
+            width: '100%',
+            minWidth: '200px',
+          },
+          '& .MuiOutlinedInput-notchedOutline': {
+            borderRadius: 8,
+          },
+        },
+      },
+    },
+    MuiSelect: {
+      styleOverrides: {
+        root: {
+          minWidth: '200px',
+          width: '100%',
+        },
+        select: {
+          width: '100%',
+          boxSizing: 'border-box',
+        },
+      },
+    },
+    MuiFormControl: {
+      styleOverrides: {
+        root: {
+          minWidth: '200px',
+          width: '100%',
+        },
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          width: '100%',
+          minWidth: '200px',
+        },
+        input: {
+          width: '100%',
         },
       },
     },
@@ -80,36 +123,16 @@ const theme = createTheme({
 
 // Componente para proteger rutas
 const ProtectedRoute = ({ children }) => {
-  console.log("ProtectedRoute - Verificando autenticación...");
-  
-  // Verificar token en localStorage
-  const token = localStorage.getItem('token');
-  console.log("Token en localStorage:", token ? `${token.substring(0, 15)}...` : "No hay token");
-  
-  // Verificar datos de usuario
-  const userStr = localStorage.getItem('user');
-  console.log("Datos de usuario en localStorage:", userStr ? "Presentes" : "Ausentes");
-  
-  // Verificar timestamp de última autenticación
-  const lastAuth = localStorage.getItem('lastAuthentication');
-  console.log("Timestamp de última autenticación:", lastAuth);
-  
   // Verificar autenticación de forma más completa
   const isAuthenticated = authService.isAuthenticated();
   const currentUser = authService.getCurrentUser();
   
-  // Log para depuración
-  console.log("ProtectedRoute - Estado de autenticación:", isAuthenticated);
-  console.log("ProtectedRoute - Usuario actual:", currentUser ? `ID: ${currentUser.id}, Rol: ${currentUser.rol}` : "No hay usuario");
-  
   // Si no está autenticado, redirigir al inicio
   if (!isAuthenticated || !currentUser) {
-    console.log("Acceso denegado a ruta protegida - Redirigiendo a inicio");
     return <Navigate to="/" replace />;
   }
   
   // Si está autenticado, permitir acceso a la ruta
-  console.log("Acceso permitido a ruta protegida");
   return children;
 };
 
@@ -124,9 +147,8 @@ const preloadResources = () => {
       'Accept': 'application/json',
       'Content-Type': 'application/json'
     }
-  }).catch((error) => {
-    // Ignorar errores pero los registramos para depuración
-    console.log("Preload fetch completado (puede que con errores)");
+  }).catch(() => {
+    // Ignorar errores silenciosamente
   });
 };
 
@@ -139,65 +161,44 @@ function App() {
     preloadResources();
     
     // Verificar si hay una sesión activa al cargar la app
-    const checkInitialSession = async () => {
-      if (authService.isAuthenticated()) {
-        // Refrescar la sesión para extender su validez
-        authService.refreshSession();
-        console.log("Sesión existente refrescada al iniciar la aplicación");
-      }
-    };
-    
-    checkInitialSession();
+    if (authService.isAuthenticated()) {
+      // Actualizar timestamp para extender su validez
+      authService.refreshSession();
+    }
     
     // Configurar verificación periódica de la sesión
     const sessionCheckInterval = setInterval(() => {
       if (authService.isAuthenticated()) {
-        // Refrescar la sesión para mantenerla activa mientras el usuario usa la app
+        // Refrescar la sesión para mantenerla activa
         authService.refreshSession();
-        console.log("Sesión refrescada periódicamente");
       }
     }, SESSION_CHECK_INTERVAL);
     
-    // Configurar detección de actividad del usuario
-    const handleUserActivity = () => {
-      if (authService.isAuthenticated()) {
-        authService.refreshSession();
-      }
-    };
-    
-    // Eventos para detectar actividad del usuario
-    window.addEventListener('click', handleUserActivity);
-    window.addEventListener('keypress', handleUserActivity);
-    window.addEventListener('scroll', handleUserActivity);
-    window.addEventListener('mousemove', handleUserActivity);
-    
-    // Limpiar intervalos y event listeners al desmontar
+    // Limpiar intervalo al desmontar
     return () => {
       clearInterval(sessionCheckInterval);
-      window.removeEventListener('click', handleUserActivity);
-      window.removeEventListener('keypress', handleUserActivity);
-      window.removeEventListener('scroll', handleUserActivity);
-      window.removeEventListener('mousemove', handleUserActivity);
     };
   }, []);
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/verify-email/:token" element={<VerifyEmail />} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/pacientes" element={<ProtectedRoute><Pacientes /></ProtectedRoute>} />
-          <Route path="/citas" element={<ProtectedRoute><Citas /></ProtectedRoute>} />
-          <Route path="/organizar-clinica" element={<ProtectedRoute><OrganizarClinica /></ProtectedRoute>} />
-          <Route path="/editar-empresa/:id" element={<ProtectedRoute><EditarEmpresa /></ProtectedRoute>} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
+      <AuthProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/verify-email/:token" element={<VerifyEmail />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/pacientes" element={<ProtectedRoute><Pacientes /></ProtectedRoute>} />
+            <Route path="/citas" element={<ProtectedRoute><Citas /></ProtectedRoute>} />
+            <Route path="/organizar-clinica" element={<ProtectedRoute><OrganizarClinica /></ProtectedRoute>} />
+            <Route path="/editar-empresa/:id" element={<ProtectedRoute><EditarEmpresa /></ProtectedRoute>} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Router>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

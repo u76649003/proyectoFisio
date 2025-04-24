@@ -1,0 +1,85 @@
+/* Estilos para elementos Select de Material UI */
+
+/* Establece un ancho fijo para los elementos FormControl que contienen Select */
+.MuiFormControl-root {
+  width: 100% !important;
+  min-width: 200px !important;
+}
+
+/* Asegura que el Select tenga un ancho fijo */
+.MuiSelect-select,
+.MuiSelect-outlined,
+.MuiOutlinedInput-input,
+.MuiInputBase-root {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  min-width: 200px !important;
+}
+
+/* Estilo específico para los inputs de texto */
+.MuiTextField-root {
+  width: 100% !important;
+  min-width: 200px !important;
+}
+
+/* Estilo para el input del TextField */
+.MuiTextField-root .MuiOutlinedInput-root {
+  width: 100% !important;
+  min-width: 200px !important;
+}
+
+/* Asegura que todos los campos de texto tengan tamaño y altura consistentes */
+.MuiInputBase-root {
+  min-height: 56px !important;
+}
+
+/* Estilo específico para el contenedor del label y select */
+.MuiInputLabel-root,
+.MuiInputLabel-formControl,
+.MuiInputLabel-animated,
+.MuiInputLabel-outlined {
+  width: auto !important;
+}
+
+/* Estilos para el menu de opciones desplegable */
+.MuiMenu-paper,
+.MuiPopover-paper {
+  min-width: 200px !important;
+}
+
+/* Estilos específicos para cada select por ID */
+#rol-label,
+#rol,
+#especialidad-label,
+#especialidad,
+#pais-label,
+#pais,
+#provincia-label,
+#provincia,
+#ciudad-label,
+#ciudad {
+  width: 100% !important;
+  min-width: 200px !important;
+}
+
+/* Contenedor del menú desplegable de opciones */
+.MuiMenu-list,
+.MuiList-root {
+  width: 100% !important;
+  min-width: 200px !important;
+}
+
+/* Asegura que el texto no haga que el select cambie de tamaño */
+.MuiMenuItem-root {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Media query para pantallas más pequeñas */
+@media (max-width: 768px) {
+  .MuiFormControl-root,
+  .MuiTextField-root {
+    width: 100% !important;
+  }
+} 

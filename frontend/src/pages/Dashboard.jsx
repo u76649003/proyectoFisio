@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Box, 
   Typography, 
@@ -19,7 +19,7 @@ import {
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
-import { authService, pacienteService, empresaService, agendaService, usuarioService } from '../services/api';
+import { authService, pacienteService, agendaService, usuarioService } from '../services/api';
 import SidebarMenu from '../components/SidebarMenu';
 
 // Componentes estilizados para las tarjetas del dashboard
@@ -86,7 +86,7 @@ const Dashboard = () => {
   }, [navigate]);
   
   // Función para cargar los datos del dashboard
-  const loadDashboardData = async (user) => {
+  const loadDashboardData = useCallback(async (user) => {
     try {
       // Contador de pacientes
       let pacientesCount = 0;
@@ -101,7 +101,7 @@ const Dashboard = () => {
       let citasHoyCount = 0;
       try {
         const today = new Date().toISOString().split('T')[0];
-        const citas = await agendaService.getCitasByFecha(today);
+        const citas = await agendaService.getAgenda(today);
         citasHoyCount = citas.length;
       } catch (e) {
         console.error('Error al cargar citas:', e);
@@ -128,7 +128,7 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error obteniendo datos del dashboard:', error);
     }
-  };
+  }, []);
 
   return (
     <SidebarMenu>

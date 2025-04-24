@@ -20,6 +20,7 @@ import { Visibility, VisibilityOff, CalendarMonth, Description, People, BarChart
 import logoImg from '../assets/logo.svg';
 import heroImg from '../assets/fisio-hero.jpg';
 import { authService } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const Logo = styled('img')({
   height: '50px',
@@ -82,19 +83,25 @@ const LoginForm = styled(Paper)(({ theme }) => ({
 
 const Landing = () => {
   const navigate = useNavigate();
-  const [openLogin, setOpenLogin] = useState(false);
+  const { toggleLoginModal, loginModalOpen, handleLogin, isAuthenticated, loading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: localStorage.getItem('verifiedEmail') || '',
     password: ''
   });
   const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
     severity: 'success'
   });
+
+  // Redireccionar si ya está autenticado
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   useEffect(() => {
     const verifiedEmail = localStorage.getItem('verifiedEmail');
@@ -111,17 +118,9 @@ const Landing = () => {
       });
       
       localStorage.removeItem('verifiedEmail');
+      toggleLoginModal(); // Abrir el modal de login automáticamente
     }
-  }, []);
-
-  const handleLoginOpen = () => {
-    setOpenLogin(true);
-  };
-
-  const handleLoginClose = () => {
-    setOpenLogin(false);
-    setErrors({});
-  };
+  }, [toggleLoginModal]);
 
   const handleLoginChange = (e) => {
     const { name, value } = e.target;
@@ -178,8 +177,6 @@ const Landing = () => {
       return;
     }
     
-    setLoading(true);
-    
     // Mostrar mensaje de que se está intentando conectar
     setSnackbar({
       open: true,
@@ -188,38 +185,11 @@ const Landing = () => {
     });
     
     try {
-      console.log("Iniciando proceso de login...");
-      
-      // Llamar al servicio de autenticación
-      const response = await authService.login(formData.email, formData.password);
-      
-      console.log("Respuesta de login recibida:", response);
-      
-      // Extraer información relevante de la respuesta
-      const { token, id, rol, empresaId } = response;
-      
-      console.log("Token recibido:", token ? "Presente" : "Ausente");
-      console.log("ID de usuario:", id);
-      console.log("Rol de usuario:", rol);
-      console.log("ID de empresa:", empresaId);
-      
-      // Guardar información adicional si es necesario
-      if (empresaId) {
-        localStorage.setItem('empresaId', empresaId);
-        console.log("ID de empresa guardado en localStorage");
-      }
-      
-      // Verificar que el token se guardó correctamente
-      const storedToken = localStorage.getItem('token');
-      console.log("Token almacenado en localStorage:", storedToken ? "Presente" : "Ausente");
-      
-      // Verificar que los datos de usuario se guardaron correctamente
-      const storedUser = localStorage.getItem('user');
-      console.log("Datos de usuario almacenados en localStorage:", storedUser ? "Presentes" : "Ausentes");
-      
-      // Log para depuración
-      console.log('Login exitoso. Token recibido:', token?.substring(0, 15) + '...');
-      console.log('Redirigiendo a Dashboard...');
+      // Llamar al servicio de autenticación usando el contexto
+      await handleLogin({
+        email: formData.email,
+        password: formData.password
+      });
       
       // Mostrar mensaje de éxito
       setSnackbar({
@@ -228,87 +198,15 @@ const Landing = () => {
         severity: 'success'
       });
       
-      // Cerrar el modal
-      handleLoginClose();
-      
-      // Usar setTimeout con 0ms para asegurar que otros procesos terminen primero
-      setTimeout(() => {
-        try {
-          // Intentar usar el hook de navegación 
-          console.log("Navegando a /dashboard usando React Router");
-          navigate('/dashboard');
-        } catch (navError) {
-          console.error('Error en navigate:', navError);
-          // Como fallback, usar window.location que siempre funciona
-          console.log("Fallback: Navegando a /dashboard usando window.location");
-          window.location.href = '/dashboard';
-        }
-      }, 0);
-      
     } catch (error) {
       console.error('Error al iniciar sesión:', error);
       
-      // Determinar el mensaje apropiado para mostrar al usuario
-      let errorMessage = 'Error al iniciar sesión. Por favor, inténtalo de nuevo.';
-      let errorDetails = '';
-      
-      if (error.message.includes('timeout') || error.code === 'ECONNABORTED') {
-        errorMessage = 'El servidor está tardando en responder.';
-        errorDetails = 'Esto puede deberse a que el servidor está iniciando o sobrecargado. Por favor, espera unos minutos e inténtalo de nuevo.';
-      } else if (error.message.includes('Network Error')) {
-        errorMessage = 'No se pudo conectar con el servidor.';
-        errorDetails = 'Verifica tu conexión a internet o si el servicio está disponible.';
-      } else if (error.response) {
-        // Error con respuesta del servidor
-        console.error('Estado de respuesta:', error.response.status);
-        console.error('Datos de respuesta:', error.response.data);
-        
-        switch (error.response.status) {
-          case 401:
-            errorMessage = 'Credenciales incorrectas.';
-            errorDetails = 'Verifica tu email y contraseña.';
-            break;
-          case 403:
-            errorMessage = 'Acceso denegado.';
-            errorDetails = 'No tienes permisos para acceder.';
-            break;
-          case 404:
-            errorMessage = 'Servicio no encontrado.';
-            errorDetails = 'La URL del servicio puede haber cambiado.';
-            break;
-          case 500:
-          case 502:
-          case 503:
-            errorMessage = 'Error en el servidor.';
-            errorDetails = 'El servidor está experimentando problemas. Inténtalo más tarde.';
-            break;
-          default:
-            errorMessage = `Error: ${error.response.status}`;
-            errorDetails = error.response.data || 'Error desconocido';
-        }
-      }
-      
-      // Mostrar mensaje de error con más detalles
+      // Mostrar mensaje de error
       setSnackbar({
         open: true,
-        message: errorMessage + (errorDetails ? ' ' + errorDetails : ''),
-        severity: 'error',
-        autoHideDuration: 8000 // Dar más tiempo para leer el mensaje de error
+        message: error.response?.data?.message || 'Error al iniciar sesión. Por favor, inténtalo de nuevo.',
+        severity: 'error'
       });
-      
-      // Si el error se debe a un timeout, sugiere intentarlo de nuevo
-      if (error.message.includes('timeout') || error.code === 'ECONNABORTED') {
-        setTimeout(() => {
-          setSnackbar({
-            open: true,
-            message: 'Tip: El servidor alojado en Render puede tardar en iniciar si ha estado inactivo. Inténtalo de nuevo en unos minutos.',
-            severity: 'info',
-            autoHideDuration: 10000
-          });
-        }, 5000);
-      }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -359,7 +257,7 @@ const Landing = () => {
           <Button 
             variant="outlined" 
             color="primary" 
-            onClick={handleLoginOpen} 
+            onClick={toggleLoginModal} 
             sx={{ mr: 2 }}
           >
             Iniciar sesión
@@ -440,8 +338,8 @@ const Landing = () => {
 
       {/* Login Modal */}
       <LoginModal
-        open={openLogin}
-        onClose={handleLoginClose}
+        open={loginModalOpen}
+        onClose={toggleLoginModal}
         aria-labelledby="login-modal-title"
       >
         <LoginForm elevation={4}>
@@ -504,10 +402,10 @@ const Landing = () => {
             </Button>
             <Box sx={{ textAlign: 'center', mt: 2 }}>
               <Typography variant="body2">
-                ¿No tienes una cuenta? <Link to="/register" style={{ textDecoration: 'none', color: 'primary.main' }} onClick={handleLoginClose}>Regístrate</Link>
+                ¿No tienes una cuenta? <Link to="/register" style={{ textDecoration: 'none', color: 'primary.main' }} onClick={toggleLoginModal}>Regístrate</Link>
               </Typography>
               <Typography variant="body2" sx={{ mt: 1 }}>
-                <Link to="/recuperar-password" style={{ textDecoration: 'none', color: 'primary.main' }} onClick={handleLoginClose}>
+                <Link to="/recuperar-password" style={{ textDecoration: 'none', color: 'primary.main' }} onClick={toggleLoginModal}>
                   ¿Olvidaste tu contraseña?
                 </Link>
               </Typography>

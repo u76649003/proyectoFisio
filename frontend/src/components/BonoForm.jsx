@@ -168,13 +168,18 @@ const BonoForm = ({ pacienteId, bono, productos, onSave }) => {
       
       <Grid container spacing={2}>
         <Grid item xs={12}>
-          <FormControl fullWidth error={Boolean(errors.productoId)}>
+          <FormControl 
+            fullWidth 
+            error={Boolean(errors.productoId)}
+            sx={{ minWidth: '200px', width: '100%' }}
+          >
             <InputLabel>Producto</InputLabel>
             <Select
               name="productoId"
               value={formData.productoId}
               onChange={handleChange}
               label="Producto"
+              sx={{ width: '100%' }}
             >
               <MenuItem value="">Selecciona un producto</MenuItem>
               {productos.map((producto) => (
@@ -192,13 +197,18 @@ const BonoForm = ({ pacienteId, bono, productos, onSave }) => {
         </Grid>
         
         <Grid item xs={12}>
-          <FormControl fullWidth error={Boolean(errors.servicioId)}>
+          <FormControl 
+            fullWidth 
+            error={Boolean(errors.servicioId)}
+            sx={{ minWidth: '200px', width: '100%' }}
+          >
             <InputLabel>Servicio</InputLabel>
             <Select
               name="servicioId"
               value={formData.servicioId}
               onChange={handleChange}
               label="Servicio"
+              sx={{ width: '100%' }}
             >
               <MenuItem value="">Selecciona un servicio</MenuItem>
               {/* Aquí deberías cargar los servicios disponibles */}
@@ -278,13 +288,18 @@ const BonoForm = ({ pacienteId, bono, productos, onSave }) => {
         </Grid>
         
         <Grid item xs={12}>
-          <FormControl fullWidth error={Boolean(errors.estado)}>
+          <FormControl 
+            fullWidth 
+            error={Boolean(errors.estado)}
+            sx={{ minWidth: '200px', width: '100%' }}
+          >
             <InputLabel>Estado</InputLabel>
             <Select
               name="estado"
               value={formData.estado}
               onChange={handleChange}
               label="Estado"
+              sx={{ width: '100%' }}
             >
               <MenuItem value="ACTIVO">Activo</MenuItem>
               <MenuItem value="COMPLETADO">Completado</MenuItem>

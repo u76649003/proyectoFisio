@@ -7,7 +7,6 @@ import {
   FormHelperText,
   IconButton
 } from '@mui/material';
-import PhotoCamera from '@mui/icons-material/PhotoCamera';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { styled } from '@mui/material/styles';

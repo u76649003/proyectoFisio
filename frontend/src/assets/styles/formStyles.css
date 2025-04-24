@@ -1,0 +1,60 @@
+/* Estilos generales para todos los componentes de formulario */
+
+/* Todos los componentes de formulario de Material UI */
+.MuiFormControl-root,
+.MuiTextField-root,
+.MuiSelect-root,
+.MuiOutlinedInput-root,
+.MuiInputBase-root {
+  width: 100% !important;
+  min-width: 200px !important;
+  box-sizing: border-box !important;
+}
+
+/* Estilo común para todos los inputs */
+.MuiInputBase-input {
+  width: 100% !important;
+  min-width: 200px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Estilos específicos para DatePicker */
+.MuiPickersLayout-root,
+.MuiDateCalendar-root,
+.MuiDateField-root,
+.MuiDateTimeField-root {
+  width: 100% !important;
+  min-width: 200px !important;
+}
+
+/* Asegurar que los inputs tengan una altura consistente */
+.MuiInputBase-root {
+  min-height: 56px !important;
+}
+
+/* Estilos para campos multilinea */
+.MuiInputBase-multiline {
+  min-height: 100px !important;
+}
+
+/* Estilos para campos select */
+.MuiInputLabel-outlined,
+.MuiMenuItem-root {
+  width: auto !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Media query para pantallas más pequeñas */
+@media (max-width: 768px) {
+  .MuiFormControl-root,
+  .MuiTextField-root,
+  .MuiSelect-root,
+  .MuiOutlinedInput-root,
+  .MuiInputBase-root {
+    width: 100% !important;
+  }
+} 

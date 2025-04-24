@@ -225,6 +225,7 @@ const NuevoPaciente = () => {
                 error={!!errors.nombre}
                 helperText={errors.nombre}
                 required
+                sx={{ minWidth: '200px', width: '100%' }}
               />
             </Grid>
             
@@ -238,6 +239,7 @@ const NuevoPaciente = () => {
                 error={!!errors.apellidos}
                 helperText={errors.apellidos}
                 required
+                sx={{ minWidth: '200px', width: '100%' }}
               />
             </Grid>
             
@@ -251,6 +253,7 @@ const NuevoPaciente = () => {
                 onChange={handleChange}
                 error={!!errors.email}
                 helperText={errors.email}
+                sx={{ minWidth: '200px', width: '100%' }}
               />
             </Grid>
             
@@ -266,6 +269,7 @@ const NuevoPaciente = () => {
                 InputProps={{
                   startAdornment: <InputAdornment position="start">+34</InputAdornment>,
                 }}
+                sx={{ minWidth: '200px', width: '100%' }}
               />
             </Grid>
             
@@ -278,6 +282,7 @@ const NuevoPaciente = () => {
                 onChange={handleChange}
                 error={!!errors.dni}
                 helperText={errors.dni}
+                sx={{ minWidth: '200px', width: '100%' }}
               />
             </Grid>
             
@@ -292,6 +297,7 @@ const NuevoPaciente = () => {
                       fullWidth: true,
                       error: !!errors.fechaNacimiento,
                       helperText: errors.fechaNacimiento,
+                      sx: { minWidth: '200px', width: '100%' }
                     },
                   }}
                   format="dd/MM/yyyy"
@@ -307,6 +313,7 @@ const NuevoPaciente = () => {
                 name="sexo"
                 value={formData.sexo}
                 onChange={handleChange}
+                sx={{ minWidth: '200px', width: '100%' }}
               >
                 <MenuItem value="">
                   <em>Seleccionar</em>
@@ -326,6 +333,7 @@ const NuevoPaciente = () => {
                 onChange={handleChange}
                 multiline
                 rows={2}
+                sx={{ minWidth: '200px', width: '100%' }}
               />
             </Grid>
             

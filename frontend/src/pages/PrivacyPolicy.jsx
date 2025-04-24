@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Container, Typography, Paper, Button } from '@mui/material';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ArrowBack } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import logoImg from '../assets/logo.svg';
