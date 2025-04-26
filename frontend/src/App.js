@@ -11,8 +11,16 @@ import Dashboard from './pages/Dashboard';
 import Pacientes from './pages/Pacientes';
 import Citas from './pages/Citas';
 import OrganizarClinica from './pages/OrganizarClinica';
+import ProgramasPersonalizados from './pages/ProgramasPersonalizados';
+import NuevoPrograma from './pages/NuevoPrograma';
+import DetalleProgramaPersonalizado from './pages/DetalleProgramaPersonalizado';
+import EditarPrograma from './pages/EditarPrograma';
+import CompartirPrograma from './pages/CompartirPrograma';
+import VisualizarPrograma from './pages/VisualizarPrograma';
+import Perfil from './pages/Perfil';
 import { authService } from './services/api';
 import { AuthProvider } from './contexts/AuthContext';
+import { Box, Typography } from '@mui/material';
 
 // Definir el tema personalizado
 const theme = createTheme({
@@ -123,16 +131,73 @@ const theme = createTheme({
 
 // Componente para proteger rutas
 const ProtectedRoute = ({ children }) => {
-  // Verificar autenticación de forma más completa
-  const isAuthenticated = authService.isAuthenticated();
-  const currentUser = authService.getCurrentUser();
+  const [checking, setChecking] = React.useState(true);
+  const [isAuth, setIsAuth] = React.useState(false);
+
+  // Efecto para verificar autenticación de forma asíncrona
+  React.useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        // Si acabamos de iniciar sesión (tokenValidated está presente),
+        // asumimos que la autenticación es correcta sin más validaciones
+        const tokenValidated = localStorage.getItem('tokenValidated');
+        if (tokenValidated === 'true') {
+          console.log('Sesión reciente detectada, permitiendo acceso');
+          setIsAuth(true);
+          setChecking(false);
+          return;
+        }
+        
+        // Verificar existencia de token y datos de usuario
+        const token = localStorage.getItem('token');
+        const userStr = localStorage.getItem('user');
+        
+        if (!token || !userStr) {
+          console.log('No hay token o datos de usuario');
+          setIsAuth(false);
+          setChecking(false);
+          return;
+        }
+        
+        try {
+          // Verificar que los datos de usuario son JSON válido
+          JSON.parse(userStr);
+        } catch (e) {
+          console.error('Error en datos de usuario almacenados:', e);
+          localStorage.removeItem('user');
+          setIsAuth(false);
+          setChecking(false);
+          return;
+        }
+        
+        // Si hay token y datos de usuario válidos, permitimos el acceso
+        setIsAuth(true);
+        setChecking(false);
+      } catch (error) {
+        console.error('Error en ProtectedRoute:', error);
+        setIsAuth(false);
+        setChecking(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  // Mostrar indicador mientras se verifica la autenticación
+  if (checking) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography>Verificando acceso...</Typography>
+      </Box>
+    );
+  }
   
-  // Si no está autenticado, redirigir al inicio
-  if (!isAuthenticated || !currentUser) {
+  // Redirigir si no está autenticado
+  if (!isAuth) {
     return <Navigate to="/" replace />;
   }
   
-  // Si está autenticado, permitir acceso a la ruta
+  // Si está autenticado, permitir acceso
   return children;
 };
 
@@ -156,21 +221,48 @@ const preloadResources = () => {
 const SESSION_CHECK_INTERVAL = 5 * 60 * 1000;
 
 function App() {
+  const [sessionState, setSessionState] = React.useState('valid'); // 'checking', 'valid', 'invalid'
+
   useEffect(() => {
     // Despertar el servidor cuando se carga la aplicación
     preloadResources();
     
-    // Verificar si hay una sesión activa al cargar la app
-    if (authService.isAuthenticated()) {
-      // Actualizar timestamp para extender su validez
-      authService.refreshSession();
+    // Si acabamos de iniciar sesión (tokenValidated está presente),
+    // asumimos que la autenticación es correcta sin más validaciones
+    const tokenValidated = localStorage.getItem('tokenValidated');
+    if (tokenValidated === 'true') {
+      console.log('Sesión reciente detectada en App, omitiendo validaciones iniciales');
+      setSessionState('valid');
+      return;
     }
     
-    // Configurar verificación periódica de la sesión
+    // Verificar si hay una sesión activa al cargar la app
+    if (authService.isAuthenticated()) {
+      console.log('Sesión existente detectada, actualizando timestamp');
+      // Actualizar timestamp para extender su validez
+      localStorage.setItem('lastAuthentication', Date.now().toString());
+      setSessionState('valid');
+    } else {
+      console.log('No hay sesión válida detectada');
+      setSessionState('invalid');
+    }
+    
+    // Configurar verificación periódica de la sesión (cada 5 minutos)
     const sessionCheckInterval = setInterval(() => {
-      if (authService.isAuthenticated()) {
-        // Refrescar la sesión para mantenerla activa
-        authService.refreshSession();
+      // Solo refrescamos si NO acabamos de iniciar sesión
+      if (localStorage.getItem('tokenValidated') !== 'true' && authService.isAuthenticated()) {
+        console.log('Verificación periódica de sesión');
+        // Refrescar la sesión para mantenerla activa, pero sin redirecciones automáticas
+        authService.refreshSession()
+          .then(refreshed => {
+            if (!refreshed) {
+              console.log('Sesión no refrescada, pero continuamos');
+            }
+          })
+          .catch(error => {
+            console.error('Error en verificación periódica:', error);
+            // No hacemos nada adicional aquí para evitar cerrar sesión por errores temporales
+          });
       }
     }, SESSION_CHECK_INTERVAL);
     
@@ -179,6 +271,9 @@ function App() {
       clearInterval(sessionCheckInterval);
     };
   }, []);
+
+  // Ya no mostramos pantalla de carga, pues asumimos validez por defecto
+  // para evitar bloquear la interfaz innecesariamente
 
   return (
     <ThemeProvider theme={theme}>
@@ -195,6 +290,18 @@ function App() {
             <Route path="/citas" element={<ProtectedRoute><Citas /></ProtectedRoute>} />
             <Route path="/organizar-clinica" element={<ProtectedRoute><OrganizarClinica /></ProtectedRoute>} />
             <Route path="/editar-empresa/:id" element={<ProtectedRoute><EditarEmpresa /></ProtectedRoute>} />
+            
+            {/* Rutas para Programas Personalizados */}
+            <Route path="/programas-personalizados" element={<ProtectedRoute><ProgramasPersonalizados /></ProtectedRoute>} />
+            <Route path="/programas-personalizados/nuevo" element={<ProtectedRoute><NuevoPrograma /></ProtectedRoute>} />
+            <Route path="/programas-personalizados/:id" element={<ProtectedRoute><DetalleProgramaPersonalizado /></ProtectedRoute>} />
+            <Route path="/programas-personalizados/editar/:id" element={<ProtectedRoute><EditarPrograma /></ProtectedRoute>} />
+            <Route path="/programas-personalizados/:id/compartir" element={<ProtectedRoute><CompartirPrograma /></ProtectedRoute>} />
+            <Route path="/programa/:token" element={<VisualizarPrograma />} />
+            
+            {/* Ruta para Perfil */}
+            <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
+            
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>

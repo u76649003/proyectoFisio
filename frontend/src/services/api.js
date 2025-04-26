@@ -2,83 +2,179 @@ import axios from 'axios';
 
 // Crear instancia de Axios con configuración base
 const axiosInstance = axios.create({
-    baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8080',
+    baseURL: process.env.REACT_APP_API_URL || 'https://proyectofisio.onrender.com',
     headers: {
-        'Content-Type': 'application/json',
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*'
     },
-    timeout: 15000, // 15 segundos
+    timeout: 30000, // 30 segundos para dar más tiempo al backend
 });
 
 // Interceptor para las solicitudes
 axiosInstance.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        console.error('Error en la solicitud:', error);
-        return Promise.reject(error);
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+      
+      // Para depuración - log en la consola
+      console.log('Enviando solicitud con token:', config.url);
+    } else {
+      console.warn('Solicitud sin token de autenticación:', config.url);
     }
+    return config;
+  },
+  (error) => {
+      console.error('Error en la solicitud:', error);
+      return Promise.reject(error);
+  }
 );
 
 // Interceptor para las respuestas
 axiosInstance.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        if (error.response) {
-            if (error.response.status === 401) {
-                console.error('Sesión expirada o no autorizada');
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = '/login';
-            } else if (error.response.status === 403) {
-                console.error('Acceso prohibido');
-            } else if (error.response.status === 500) {
-                console.error('Error del servidor');
-            }
-        } else if (error.request) {
-            console.error('No se recibió respuesta del servidor');
-        } else {
-            console.error('Error al configurar la solicitud:', error.message);
+  (response) => {
+    console.log(`Respuesta exitosa de ${response.config.url}:`, response.status);
+    return response;
+  },
+  (error) => {
+    if (error.response) {
+      const url = error.config.url;
+      console.error(`Error en respuesta de ${url} - Estado: ${error.response.status}`);
+      
+      if (error.response.status === 401) {
+        console.error('Sesión expirada o no autorizada - Cerrando sesión...');
+        // Limpiar información de sesión
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('lastAuthentication');
+        
+        // Redirigir al login solo si no estamos ya en la página de login
+        if (!window.location.pathname.includes('/login') && 
+            !window.location.pathname.includes('/register') &&
+            !window.location.pathname === '/') {
+          window.location.href = '/';
         }
-        return Promise.reject(error);
+      } else if (error.response.status === 403) {
+        console.error('Acceso prohibido - Verificando permisos...');
+        // Podríamos validar el token aquí o verificar los roles del usuario
+        // Por ahora solo lo registramos para depuración
+      } else if (error.response.status === 500) {
+        console.error('Error del servidor:', error.response.data);
+      }
+    } else if (error.request) {
+      console.error('No se recibió respuesta del servidor:', error.request);
+    } else {
+      console.error('Error al configurar la solicitud:', error.message);
     }
+    
+    return Promise.reject(error);
+  }
 );
 
 // Función auxiliar para realizar peticiones con autenticación
 const fetchWithAuth = async (url, method = 'GET', data = null, options = {}) => {
     try {
+        // Verificar que hay un token disponible
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('No hay token para realizar la solicitud autenticada:', url);
+            // NO redirigimos automáticamente
+            throw new Error('No hay token de autenticación');
+        }
+        
         const config = {
             ...options,
             method,
             url,
+            headers: {
+                ...options.headers,
+                'Authorization': `Bearer ${token}`
+            }
         };
 
         if (data) {
             config.data = data;
         }
 
+        console.log(`Enviando solicitud ${method} a ${url}...`);
         const response = await axiosInstance(config);
+        console.log(`Respuesta recibida de ${url}:`, response.status);
         return response.data;
     } catch (error) {
         console.error(`Error en ${method} ${url}:`, error);
+        
+        // Contador de intentos para evitar ciclos infinitos
+        const retryCount = options.retryCount || 0;
+        
+        // Si es un 403, propagamos el error sin intentar refrescar la sesión
+        // ya que probablemente es un problema de permisos, no de autenticación
+        if (error.response && error.response.status === 403) {
+            console.log('Error 403: Acceso prohibido. Posible problema de permisos.');
+            throw error;
+        }
+        
+        // Solo intentamos refrescar la sesión para errores 401 (no autenticado)
+        if (error.response && error.response.status === 401 && retryCount < 1) {
+            console.log('Intentando refrescar la sesión...');
+            try {
+                const refreshed = await authService.refreshSession();
+                if (refreshed) {
+                    // Reintentar la solicitud original
+                    console.log('Sesión refrescada, reintentando solicitud original...');
+                    return fetchWithAuth(url, method, data, {...options, retryCount: retryCount + 1});
+                }
+                // No hacemos redirección automática
+            } catch (refreshError) {
+                console.error('Error al refrescar la sesión:', refreshError);
+                // No hacemos redirección automática
+            }
+        } else if (error.response && error.response.status === 401 && retryCount >= 1) {
+            // Si ya intentamos refrescar la sesión, cerramos sesión pero NO redirigimos automáticamente
+            authService.logout();
+        }
+        
         throw error;
     }
 };
-
+  
 // Servicio de autenticación
-export const authService = {
+const authService = {
     login: async (credenciales) => {
         try {
+            console.log('Enviando solicitud de login...');
             const response = await axiosInstance.post('/auth/login', credenciales);
-            if (response.data.token) {
+            console.log('Respuesta login recibida:', response.data);
+            
+            if (response.data && response.data.token) {
+                // Guardar token
                 localStorage.setItem('token', response.data.token);
-                localStorage.setItem('user', JSON.stringify(response.data.usuario));
-                // Guardar timestamp de autenticación
-                localStorage.setItem('lastAuthentication', Date.now().toString());
+                
+                // La estructura del usuario puede variar, así que intentamos ser flexibles
+                let userData = null;
+                if (response.data.id) {
+                    // El usuario viene directamente en la respuesta
+                    userData = response.data;
+                } else if (response.data.usuario) {
+                    // El usuario viene en un campo usuario
+                    userData = response.data.usuario;
+                }
+                
+                if (userData) {
+                    console.log('Guardando datos de usuario:', userData);
+                    localStorage.setItem('user', JSON.stringify(userData));
+                    // Guardar timestamp de autenticación
+                    localStorage.setItem('lastAuthentication', Date.now().toString());
+                    
+                    // Forzar un valor para evitar el ciclo de validación inmediato
+                    localStorage.setItem('tokenValidated', 'true');
+                    
+                    // Esperar un poco para asegurar que los datos se guarden antes de continuar
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                } else {
+                    console.error('Datos de usuario incompletos en la respuesta de login', response.data);
+                }
+            } else {
+                console.error('Respuesta de login incompleta o sin token', response.data);
             }
             return response.data;
         } catch (error) {
@@ -86,7 +182,7 @@ export const authService = {
             throw error;
         }
     },
-
+  
     logout: () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -96,13 +192,13 @@ export const authService = {
     register: async (userData) => {
         try {
             const response = await axiosInstance.post('/auth/register', userData);
-            return response.data;
-        } catch (error) {
+      return response.data;
+    } catch (error) {
             console.error('Error en registro:', error);
-            throw error;
-        }
-    },
-
+      throw error;
+    }
+  },
+  
     registerComplete: async (userData) => {
         try {
             const formData = new FormData();
@@ -151,20 +247,61 @@ export const authService = {
             };
             
             const response = await axiosInstance.post('/auth/registro-completo', formData, config);
-            return response.data;
-        } catch (error) {
+      return response.data;
+    } catch (error) {
             console.error('Error en registro completo:', error);
-            throw error;
+      throw error;
+    }
+  },
+  
+  getCurrentUser: () => {
+        try {
+    const user = localStorage.getItem('user');
+            if (!user) {
+                return null;
+            }
+            return JSON.parse(user);
+        } catch (error) {
+            console.error('Error al obtener usuario actual:', error);
+            // Si hay un error al analizar el JSON, limpiar el almacenamiento
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            localStorage.removeItem('lastAuthentication');
+            return null;
         }
-    },
-
-    getCurrentUser: () => {
-        const user = localStorage.getItem('user');
-        return user ? JSON.parse(user) : null;
-    },
-
-    isAuthenticated: () => {
-        return localStorage.getItem('token') !== null;
+  },
+  
+  isAuthenticated: () => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                return false;
+            }
+            
+            // Verificar que exista información del usuario
+            const user = localStorage.getItem('user');
+            if (!user) {
+                return false;
+            }
+            
+            // Opcional: Verificar que el token no ha expirado basado en alguna lógica
+            // Por ejemplo, si guardamos la fecha de última autenticación
+            const lastAuth = localStorage.getItem('lastAuthentication');
+            if (lastAuth) {
+                const now = Date.now();
+                const lastAuthTime = parseInt(lastAuth, 10);
+                // Si han pasado más de 24 horas, considerar la sesión expirada
+                const MAX_SESSION_TIME = 24 * 60 * 60 * 1000; // 24 horas en milisegundos
+                if (now - lastAuthTime > MAX_SESSION_TIME) {
+                    return false;
+                }
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Error al verificar autenticación:', error);
+            return false;
+        }
     },
     
     getToken: () => {
@@ -173,11 +310,53 @@ export const authService = {
     
     validateToken: async () => {
         try {
-            const response = await axiosInstance.get('/auth/validate');
-            return response.data;
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.error('No hay token para validar');
+                return { valid: false, message: 'No token available' };
+            }
+            
+            // Verificar si se acaba de iniciar sesión (hace menos de 3 segundos)
+            const tokenValidated = localStorage.getItem('tokenValidated');
+            if (tokenValidated === 'true') {
+                console.log('Token ya validado en login reciente, omitiendo validación adicional');
+                // Limpiamos esta marca después de usarla
+                localStorage.removeItem('tokenValidated');
+                return { valid: true, message: 'Token reciente asumido como válido' };
+            }
+            
+            console.log('Validando token con el backend...');
+            // Intentar validar el token con el servidor con timeout reducido
+            const response = await axiosInstance.get('/auth/validate', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                timeout: 5000 // 5 segundos de timeout para evitar esperas largas
+            });
+            console.log('Respuesta de validación:', response.data);
+            
+            return { valid: true, data: response.data };
         } catch (error) {
             console.error('Error validando token:', error);
-            throw error;
+            
+            // Si es un error 403 (Forbidden), consideramos el token como válido
+            // porque 403 generalmente significa que el token es válido pero no tiene permisos
+            // para acceder a ese recurso específico
+            if (error.response && error.response.status === 403) {
+                console.log('Permiso denegado (403) pero token podría ser válido, continuando sesión');
+                return { valid: true, message: 'Token válido pero con permisos insuficientes' };
+            }
+            
+            // Solo para errores 401 (Unauthorized) cerramos sesión
+            if (error.response && error.response.status === 401) {
+                console.log('Token no autorizado (401), cerrando sesión');
+                authService.logout();
+                return { valid: false, message: 'Token inválido o expirado' };
+            }
+            
+            // Para cualquier otro error, asumimos que el token podría ser válido
+            // para evitar cerrar sesión debido a errores temporales de red
+            return { valid: true, message: 'Error de conexión al validar token' };
         }
     },
     
@@ -186,32 +365,64 @@ export const authService = {
             // Actualizar timestamp de última autenticación
             localStorage.setItem('lastAuthentication', Date.now().toString());
             
-            // Opcionalmente, validar el token con el backend
+            // Verificar que todos los datos necesarios existen
             const token = localStorage.getItem('token');
-            if (token) {
-                // Solo intentar validar si hay un token
-                try {
-                    await axiosInstance.get('/auth/validate');
-                    console.log('Sesión refrescada exitosamente');
-                } catch (validationError) {
-                    console.error('Error validando token durante el refresco:', validationError);
-                    // Si hay error al validar, considerar cerrar sesión
-                    if (validationError.response && validationError.response.status === 401) {
-                        this.logout();
-                        window.location.href = '/';
-                    }
-                }
+            const user = localStorage.getItem('user');
+            
+            if (!token || !user) {
+                console.error('Datos de sesión incompletos, cerrando sesión');
+                authService.logout();
+                // NO redirigimos automáticamente
+                return false;
             }
-            return true;
+            
+            // Validar el token con el backend sin usar fetchWithAuth para evitar bucles
+            try {
+                // Usar un timeout más corto para la validación para evitar esperas largas
+                const response = await axiosInstance.get('/auth/validate', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    timeout: 5000 // timeout de 5 segundos para esta solicitud específica
+                });
+                console.log('Sesión refrescada exitosamente');
+                return true;
+            } catch (validationError) {
+                console.error('Error validando token durante el refresco:', validationError);
+                
+                // Si es error 403 (Forbidden), consideramos la sesión como válida
+                // porque probablemente tiene token válido pero sin permisos para ese endpoint
+                if (validationError.response && validationError.response.status === 403) {
+                    console.log('Error 403 en refresco: el token podría ser válido pero sin permisos suficientes');
+                    return true; // Continuamos la sesión
+                }
+                
+                // Solo para errores 401 (Unauthorized) cerramos sesión
+                if (validationError.response && validationError.response.status === 401) {
+                    console.log('Token no autorizado (401), cerrando sesión');
+                    authService.logout();
+                    return false;
+                }
+                
+                // Para otros errores, como problemas de red, mantenemos la sesión
+                console.log('Error de conexión durante refresco, manteniendo sesión');
+                return true;
+            }
         } catch (error) {
             console.error('Error al refrescar la sesión:', error);
-            return false;
+            // Solo cerramos sesión si hay un error crítico (no de conexión)
+            if (error.response) {
+                authService.logout();
+                return false;
+            }
+            // Para errores de conexión, mantener la sesión
+            return true;
         }
     },
 };
 
 // Servicio para gestión de la agenda
-export const agendaService = {
+const agendaService = {
     getAgenda: async (fecha, usuarioId) => {
         try {
             let url = '/agenda';
@@ -232,6 +443,14 @@ export const agendaService = {
             return await fetchWithAuth(url);
         } catch (error) {
             console.error('Error al obtener agenda:', error);
+            
+            // Si es un error 403, devolvemos un array vacío en lugar de propagar el error
+            // Esto permitirá que el Dashboard funcione aunque no se puedan cargar las citas
+            if (error.response && error.response.status === 403) {
+                console.log('Error 403 al cargar agenda - Devolviendo lista vacía');
+                return []; // Devolvemos array vacío
+            }
+            
             throw error;
         }
     },
@@ -298,12 +517,35 @@ export const agendaService = {
 };
 
 // Servicio para gestión de pacientes
-export const pacienteService = {
+const pacienteService = {
+    getPacientes: async () => {
+        try {
+            return await fetchWithAuth('/pacientes');
+        } catch (error) {
+            console.error('Error al obtener pacientes:', error);
+            
+            // Si es un error 403, devolvemos un array vacío
+            if (error.response && error.response.status === 403) {
+                console.log('Error 403 al cargar pacientes - Devolviendo lista vacía');
+                return []; // Devolvemos array vacío
+            }
+            
+            throw error;
+        }
+    },
+    
     getPacientesByEmpresa: async (empresaId) => {
         try {
             return await fetchWithAuth(`/pacientes/empresa/${empresaId}`);
         } catch (error) {
             console.error('Error al obtener pacientes por empresa:', error);
+            
+            // Si es un error 403, devolvemos un array vacío
+            if (error.response && error.response.status === 403) {
+                console.log('Error 403 al cargar pacientes por empresa - Devolviendo lista vacía');
+                return []; // Devolvemos array vacío
+            }
+            
             throw error;
         }
     },
@@ -313,6 +555,13 @@ export const pacienteService = {
             return await fetchWithAuth(`/pacientes/${id}`);
         } catch (error) {
             console.error('Error al obtener paciente por ID:', error);
+            
+            // Si es un error 403, devolvemos un objeto vacío
+            if (error.response && error.response.status === 403) {
+                console.log('Error 403 al cargar paciente - Devolviendo objeto vacío');
+                return {}; // Devolvemos objeto vacío
+            }
+            
             throw error;
         }
     },
@@ -355,12 +604,19 @@ export const pacienteService = {
 };
 
 // Servicio para gestión de usuarios
-export const usuarioService = {
+const usuarioService = {
     getUsuariosByEmpresa: async (empresaId) => {
         try {
             return await fetchWithAuth(`/usuarios/empresa/${empresaId}`);
         } catch (error) {
             console.error('Error al obtener usuarios por empresa:', error);
+            
+            // Si es un error 403, devolvemos un array vacío
+            if (error.response && error.response.status === 403) {
+                console.log('Error 403 al cargar usuarios - Devolviendo lista vacía');
+                return []; // Devolvemos array vacío
+            }
+            
             throw error;
         }
     },
@@ -412,7 +668,7 @@ export const usuarioService = {
 };
 
 // Servicio para gestión de empresas
-export const empresaService = {
+const empresaService = {
     getEmpresaById: async (id) => {
         try {
             return await fetchWithAuth(`/empresas/${id}`);
@@ -451,8 +707,8 @@ export const empresaService = {
                 },
             });
             
-            return response.data;
-        } catch (error) {
+      return response.data;
+    } catch (error) {
             console.error('Error al actualizar logo de empresa:', error);
             throw error;
         }
@@ -460,14 +716,26 @@ export const empresaService = {
 };
 
 // Servicios para bonos de pacientes
-export const bonoPacienteService = {
+const bonoPacienteService = {
     getBonosByPaciente: async (pacienteId) => {
         try {
             return await fetchWithAuth(`/bonos/paciente/${pacienteId}`);
         } catch (error) {
             console.error('Error al obtener bonos del paciente:', error);
+            
+            // Si es un error 403, devolvemos un array vacío
+            if (error.response && error.response.status === 403) {
+                console.log('Error 403 al cargar bonos del paciente - Devolviendo lista vacía');
+                return []; // Devolvemos array vacío
+            }
+            
             throw error;
         }
+    },
+    
+    // Alias para mantener compatibilidad con el componente BonosList
+    getBonosByPacienteId: async (pacienteId) => {
+        return bonoPacienteService.getBonosByPaciente(pacienteId);
     },
     
     getBonoById: async (id) => {
@@ -475,6 +743,13 @@ export const bonoPacienteService = {
             return await fetchWithAuth(`/bonos/${id}`);
         } catch (error) {
             console.error('Error al obtener bono por ID:', error);
+            
+            // Si es un error 403, devolvemos un objeto vacío
+            if (error.response && error.response.status === 403) {
+                console.log('Error 403 al cargar bono - Devolviendo objeto vacío');
+                return {}; // Devolvemos objeto vacío
+            }
+            
             throw error;
         }
     },
@@ -488,11 +763,33 @@ export const bonoPacienteService = {
         }
     },
     
+    createBonoPaciente: async (pacienteId, bonoData) => {
+        try {
+            // Aseguramos que el pacienteId esté en los datos
+            const datos = { ...bonoData, pacienteId };
+            return await fetchWithAuth('/bonos', 'POST', datos);
+        } catch (error) {
+            console.error('Error al crear bono para el paciente:', error);
+            throw error;
+        }
+    },
+    
     updateBono: async (id, bonoData) => {
         try {
             return await fetchWithAuth(`/bonos/${id}`, 'PUT', bonoData);
         } catch (error) {
             console.error('Error al actualizar bono:', error);
+            throw error;
+        }
+    },
+    
+    updateBonoPaciente: async (pacienteId, bonoId, bonoData) => {
+        try {
+            // Aseguramos que el pacienteId esté en los datos
+            const datos = { ...bonoData, pacienteId };
+            return await fetchWithAuth(`/bonos/${bonoId}`, 'PUT', datos);
+        } catch (error) {
+            console.error('Error al actualizar bono del paciente:', error);
             throw error;
         }
     },
@@ -506,15 +803,31 @@ export const bonoPacienteService = {
         }
     },
     
+    deleteBonoPaciente: async (pacienteId, bonoId) => {
+        try {
+            return await fetchWithAuth(`/bonos/${bonoId}`, 'DELETE');
+        } catch (error) {
+            console.error('Error al eliminar bono del paciente:', error);
+            throw error;
+        }
+    },
+    
     getBonosByEmpresa: async (empresaId) => {
         try {
             return await fetchWithAuth(`/bonos/empresa/${empresaId}`);
         } catch (error) {
             console.error('Error al obtener bonos por empresa:', error);
+            
+            // Si es un error 403, devolvemos un array vacío
+            if (error.response && error.response.status === 403) {
+                console.log('Error 403 al cargar bonos por empresa - Devolviendo lista vacía');
+                return []; // Devolvemos array vacío
+            }
+            
             throw error;
         }
     },
-    
+
     consumirSesion: async (bonoId) => {
         try {
             return await fetchWithAuth(`/bonos/${bonoId}/consumir`, 'PUT');
@@ -526,7 +839,7 @@ export const bonoPacienteService = {
 };
 
 // Servicios para productos
-export const productoService = {
+const productoService = {
   // Obtener todos los productos
   getAllProductos: async () => {
     try {
@@ -537,7 +850,7 @@ export const productoService = {
       throw error;
     }
   },
-  
+
   // Obtener un producto específico
   getProductoById: async (productoId) => {
     try {
@@ -575,7 +888,7 @@ export const productoService = {
       throw error;
     }
   },
-  
+
   deleteProducto: async (id) => {
     try {
       return await fetchWithAuth(`/productos/${id}`, 'DELETE');
@@ -587,7 +900,7 @@ export const productoService = {
 };
 
 // Servicios para gestión de servicios
-export const servicioService = {
+const servicioService = {
   // Obtener todos los servicios
   getAllServicios: async () => {
     try {
@@ -609,7 +922,7 @@ export const servicioService = {
       throw error;
     }
   },
-  
+
   // Obtener servicios de tipo bono
   getServiciosBonos: async (empresaId) => {
     try {
@@ -647,7 +960,7 @@ export const servicioService = {
       throw error;
     }
   },
-  
+
   deleteServicio: async (id) => {
     try {
       return await fetchWithAuth(`/servicios/${id}`, 'DELETE');
@@ -657,35 +970,131 @@ export const servicioService = {
     }
   },
 };
-
+  
 // Programas personalizados
-export const programasPersonalizadosService = {
-  getProgramas: async (empresaId) => {
+const programasPersonalizadosService = {
+  getProgramas: async () => {
     try {
-      const response = await axiosInstance.get(`/programas-personalizados`);
+      console.log('Intentando obtener programas personalizados...');
+      console.log('Token actual:', localStorage.getItem('token') ? 'Presente' : 'No disponible');
+      
+      // Verificar autenticación antes de hacer la petición
+      if (!localStorage.getItem('token')) {
+        console.error('No hay token disponible para obtener programas personalizados');
+        return [];
+      }
+      
+      // Obtener el ID de empresa del usuario logueado
+      let empresaId = null;
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          console.log('Usuario actual en servicio:', user.nombre, user.apellidos);
+          console.log('ROL DEL USUARIO EN SERVICIO:', user.rol);
+          empresaId = user.empresaId;
+          console.log('Empresa ID del usuario:', empresaId);
+        }
+      } catch (parseError) {
+        console.error('Error al parsear datos de usuario:', parseError);
+      }
+      
+      if (!empresaId) {
+        console.error('No se encontró ID de empresa para el usuario actual');
+        return [];
+      }
+      
+      // Forzar URL absoluta para evitar problemas de proxy
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/empresa/${empresaId}`;
+      console.log('URL completa de solicitud:', url);
+      
+      // Usar axios directamente con la URL completa
+      const response = await axios.get(url, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      });
+      
+      console.log('Respuesta de programas personalizados recibida:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error al obtener programas personalizados:', error);
-      throw error;
+      
+      // Si es un error 403, devolvemos un array vacío
+      if (error.response && error.response.status === 403) {
+        console.log('Error 403 al cargar programas personalizados - Devolviendo lista vacía');
+        return []; // Devolvemos array vacío
+      }
+      
+      // Para cualquier otro error, también devolvemos array vacío para evitar fallos en la UI
+      console.log('Error general al cargar programas - Devolviendo lista vacía');
+      return [];
     }
   },
   
+  // Alias para mantener compatibilidad con el componente ProgramasPersonalizados
+  getAllProgramas: async () => {
+    console.log('Llamando a getAllProgramas...');
+    return programasPersonalizadosService.getProgramas();
+  },
+
   getProgramaById: async (id) => {
     try {
-      const response = await axiosInstance.get(`/programas-personalizados/${id}`);
+      // Forzar URL absoluta para evitar problemas de proxy
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/${id}`;
+      console.log('URL completa de solicitud getProgramaById:', url);
+      
+      // Usar axios directamente con la URL completa
+      const response = await axios.get(url, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      });
+      
+      console.log('Respuesta de programa personalizado recibida:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error al obtener programa personalizado:', error);
-      throw error;
+      
+      // Si es un error 403, devolvemos un objeto vacío
+      if (error.response && error.response.status === 403) {
+        console.log('Error 403 al cargar programa personalizado - Devolviendo objeto vacío');
+        return {}; // Devolvemos objeto vacío
+      }
+      
+      // Para cualquier otro error, también devolvemos objeto vacío
+      return {};
     }
   },
-  
+
   createPrograma: async (programaData) => {
     try {
-      const response = await axiosInstance.post(
-        `/programas-personalizados`, 
-        programaData
-      );
+      // Obtener empresaId del usuario actual
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        // Asegurar que el programa incluye el ID de empresa
+        programaData.empresaId = user.empresaId;
+      }
+      
+      // Forzar URL absoluta para evitar problemas de proxy
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados`;
+      console.log('URL completa para crear programa:', url);
+      
+      // Usar axios directamente con la URL completa
+      const response = await axios.post(url, programaData, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      });
+      
+      console.log('Programa creado correctamente:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error al crear programa personalizado:', error);
@@ -695,10 +1104,20 @@ export const programasPersonalizadosService = {
   
   updatePrograma: async (id, programaData) => {
     try {
-      const response = await axiosInstance.put(
-        `/programas-personalizados/${id}`, 
-        programaData
-      );
+      // Forzar URL absoluta para evitar problemas de proxy
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/${id}`;
+      console.log('URL completa para actualizar programa:', url);
+      
+      // Usar axios directamente con la URL completa
+      const response = await axios.put(url, programaData, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      });
+      
+      console.log('Programa actualizado correctamente:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error al actualizar programa personalizado:', error);
@@ -708,7 +1127,20 @@ export const programasPersonalizadosService = {
   
   deletePrograma: async (id) => {
     try {
-      const response = await axiosInstance.delete(`/programas-personalizados/${id}`);
+      // Forzar URL absoluta para evitar problemas de proxy
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/${id}`;
+      console.log('URL completa para eliminar programa:', url);
+      
+      // Usar axios directamente con la URL completa
+      const response = await axios.delete(url, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      });
+      
+      console.log('Programa eliminado correctamente:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error al eliminar programa personalizado:', error);
@@ -718,20 +1150,43 @@ export const programasPersonalizadosService = {
   
   generarTokensAcceso: async (programaId, pacienteIds) => {
     try {
-      const response = await axiosInstance.post(
-        `/programas-personalizados/${programaId}/generar-tokens`,
-        { pacientesIds: pacienteIds }
-      );
+      // Forzar URL absoluta para evitar problemas de proxy
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/${programaId}/generar-tokens`;
+      console.log('URL completa para generar tokens:', url);
+      
+      // Usar axios directamente con la URL completa
+      const response = await axios.post(url, { pacientesIds: pacienteIds }, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      });
+      
+      console.log('Tokens generados correctamente:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error al generar tokens de acceso:', error);
       throw error;
     }
   },
-  
+
   getTokensByProgramaId: async (programaId) => {
     try {
-      const response = await axiosInstance.get(`/programas-personalizados/${programaId}/tokens`);
+      // Forzar URL absoluta para evitar problemas de proxy
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/${programaId}/tokens`;
+      console.log('URL completa para obtener tokens:', url);
+      
+      // Usar axios directamente con la URL completa
+      const response = await axios.get(url, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      });
+      
+      console.log('Tokens obtenidos correctamente:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error al obtener tokens de programa:', error);
@@ -741,7 +1196,19 @@ export const programasPersonalizadosService = {
   
   verificarToken: async (token) => {
     try {
-      const response = await axiosInstance.post(`/programas-personalizados/validar-token`, { token });
+      // Forzar URL absoluta para evitar problemas de proxy
+      const url = `${axiosInstance.defaults.baseURL}/acceso-programa/validar`;
+      console.log('URL completa para verificar token:', url);
+      
+      // Usar axios directamente con la URL completa
+      const response = await axios.post(url, { token }, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      });
+      
+      console.log('Token verificado correctamente:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error al verificar token:', error);
@@ -751,7 +1218,7 @@ export const programasPersonalizadosService = {
 };
 
 // Servicio para gestión de facturas
-export const facturaService = {
+const facturaService = {
     getFacturasByEmpresa: async (empresaId) => {
         try {
             return await fetchWithAuth(`/facturas/empresa/${empresaId}`);
@@ -793,28 +1260,28 @@ export const facturaService = {
             return await fetchWithAuth(`/facturas/${id}`, 'DELETE');
         } catch (error) {
             console.error('Error al eliminar factura:', error);
-            throw error;
-        }
-    },
-    
+      throw error;
+    }
+  },
+  
     getFacturasByPaciente: async (pacienteId) => {
-        try {
+    try {
             return await fetchWithAuth(`/facturas/paciente/${pacienteId}`);
-        } catch (error) {
+    } catch (error) {
             console.error('Error al obtener facturas del paciente:', error);
-            throw error;
-        }
-    },
-    
+      throw error;
+    }
+  },
+  
     generarPDF: async (facturaId) => {
-        try {
+    try {
             return await fetchWithAuth(`/facturas/${facturaId}/pdf`, 'GET', null, 'blob');
-        } catch (error) {
+    } catch (error) {
             console.error('Error al generar PDF de la factura:', error);
-            throw error;
-        }
-    },
-    
+      throw error;
+    }
+  },
+  
     enviarPorEmail: async (facturaId) => {
         try {
             return await fetchWithAuth(`/facturas/${facturaId}/enviar`, 'POST');
@@ -826,7 +1293,7 @@ export const facturaService = {
 };
 
 // Servicios relacionados con estadísticas
-export const estadisticasService = {
+const estadisticasService = {
   getEstadisticasGenerales: async (empresaId) => {
     try {
       const response = await axiosInstance.get(`/estadisticas/empresa/${empresaId}/general`);
@@ -839,7 +1306,7 @@ export const estadisticasService = {
 };
 
 // Servicio para gestión de salas
-export const salaService = {
+const salaService = {
     getSalasByEmpresa: async (empresaId) => {
         try {
             return await fetchWithAuth(`/salas/empresa/${empresaId}`);
@@ -886,7 +1353,18 @@ export const salaService = {
     },
 };
 
+// Exportamos todos los servicios juntos
+export {
+    authService,
+    usuarioService,
+    agendaService,
+    pacienteService,
+    empresaService,
+    servicioService,
+    productoService,
+    bonoPacienteService,
+    salaService,
+    programasPersonalizadosService
+};
 
-
-// Exportamos la API
 export default axiosInstance; 

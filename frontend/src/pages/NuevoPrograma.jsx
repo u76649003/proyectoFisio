@@ -22,7 +22,8 @@ import {
   CardContent,
   IconButton,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Snackbar
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -56,7 +57,8 @@ const NuevoPrograma = () => {
   
   const [programaData, setProgramaData] = useState({
     nombre: '',
-    tipoPrograma: ''
+    tipoPrograma: '',
+    descripcion: ''
   });
   
   const [errors, setErrors] = useState({});
@@ -67,6 +69,8 @@ const NuevoPrograma = () => {
   // Cargar datos del usuario al inicio
   const [userData, setUserData] = useState(null);
   
+  const [notification, setNotification] = useState({ open: false, message: '', severity: 'error' });
+  
   useEffect(() => {
     const currentUser = authService.getCurrentUser();
     if (currentUser) {
@@ -74,7 +78,9 @@ const NuevoPrograma = () => {
       
       // Verificar permisos
       if (currentUser.rol !== 'DUENO' && currentUser.rol !== 'FISIOTERAPEUTA') {
-        navigate('/dashboard');
+        setNotification({ open: true, message: 'No tienes permisos para acceder a esta sección.', severity: 'error' });
+        setTimeout(() => navigate('/dashboard'), 2000);
+        return;
       }
     } else {
       navigate('/login');
@@ -127,6 +133,11 @@ const NuevoPrograma = () => {
       const createdPrograma = await programasPersonalizadosService.createPrograma(programaData);
       
       setSuccess(true);
+      setNotification({
+        open: true,
+        message: 'Programa creado correctamente',
+        severity: 'success'
+      });
       
       // Redirigir al detalle del programa creado después de un breve retraso
       setTimeout(() => {
@@ -192,6 +203,7 @@ const NuevoPrograma = () => {
                     helperText={errors.nombre}
                     required
                     disabled={loading}
+                    placeholder="Ej: Programa para lumbalgia crónica"
                   />
                 </Grid>
                 
@@ -226,6 +238,20 @@ const NuevoPrograma = () => {
                       )}
                     />
                   </FormControl>
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Descripción"
+                    name="descripcion"
+                    value={programaData.descripcion}
+                    onChange={handleChange}
+                    multiline
+                    rows={4}
+                    placeholder="Describe en qué consiste este programa y para qué tipo de pacientes está indicado"
+                    disabled={loading}
+                  />
                 </Grid>
                 
                 <Grid item xs={12}>
@@ -295,6 +321,16 @@ const NuevoPrograma = () => {
           </Paper>
         </Box>
       </Container>
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={2000}
+        onClose={() => setNotification({ ...notification, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setNotification({ ...notification, open: false })} severity={notification.severity} variant="filled" sx={{ width: '100%' }}>
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </SidebarMenu>
   );
 };

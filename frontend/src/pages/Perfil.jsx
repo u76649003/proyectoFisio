@@ -98,10 +98,9 @@ const Perfil = () => {
         }
       } catch (error) {
         showNotification('Error al cargar los datos del perfil', 'error');
-        
         // Si hay cualquier error crítico, redirigir al dashboard en lugar de la página principal
         // authService.logout(); // Comentamos esta línea para evitar cerrar la sesión
-        navigate('/dashboard');
+        setTimeout(() => navigate('/dashboard'), 2000); // Espera 2 segundos antes de redirigir
       } finally {
         setLoadingData(false);
       }

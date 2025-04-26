@@ -1,8 +1,6 @@
 package com.proyectofisio.application.services;
 
 import com.proyectofisio.application.ports.input.BonoPacienteServicePort;
-import com.proyectofisio.application.ports.input.PacienteServicePort;
-import com.proyectofisio.application.ports.input.ServicioServicePort;
 import com.proyectofisio.application.ports.output.BonoPacienteRepositoryPort;
 import com.proyectofisio.application.ports.output.ServicioRepositoryPort;
 import com.proyectofisio.domain.model.BonoPaciente;

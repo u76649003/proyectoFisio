@@ -29,7 +29,8 @@ import {
   Menu,
   MenuItem,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Snackbar
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -59,7 +60,9 @@ const DetalleProgramaPersonalizado = () => {
   const [openNewDialog, setOpenNewDialog] = useState(false);
   const [subprogramaData, setSubprogramaData] = useState({
     nombre: '',
-    descripcion: ''
+    descripcion: '',
+    orden: '',
+    fechaInicio: ''
   });
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -72,6 +75,9 @@ const DetalleProgramaPersonalizado = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const openMenu = Boolean(anchorEl);
   
+  // Estado para la notificación
+  const [notification, setNotification] = useState({ open: false, message: '', severity: 'error' });
+  
   // Verificar permisos de usuario
   useEffect(() => {
     const currentUser = authService.getCurrentUser();
@@ -81,7 +87,9 @@ const DetalleProgramaPersonalizado = () => {
     }
     
     if (currentUser.rol !== 'DUENO' && currentUser.rol !== 'FISIOTERAPEUTA') {
-      navigate('/dashboard');
+      setNotification({ open: true, message: 'No tienes permisos para acceder a esta sección.', severity: 'error' });
+      setTimeout(() => navigate('/dashboard'), 2000);
+      return;
     }
   }, [navigate]);
   
@@ -136,7 +144,9 @@ const DetalleProgramaPersonalizado = () => {
   const handleOpenNewDialog = () => {
     setSubprogramaData({
       nombre: '',
-      descripcion: ''
+      descripcion: '',
+      orden: subprogramas.length + 1,
+      fechaInicio: new Date().toISOString().substr(0, 10)
     });
     setFormErrors({});
     setOpenNewDialog(true);
@@ -167,6 +177,10 @@ const DetalleProgramaPersonalizado = () => {
     
     if (!subprogramaData.nombre.trim()) {
       newErrors.nombre = 'El nombre del subprograma es obligatorio';
+    }
+    
+    if (subprogramaData.orden && isNaN(parseInt(subprogramaData.orden))) {
+      newErrors.orden = 'El orden debe ser un número';
     }
     
     setFormErrors(newErrors);
@@ -462,6 +476,36 @@ const DetalleProgramaPersonalizado = () => {
               disabled={submitting}
               margin="normal"
             />
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Orden"
+                  name="orden"
+                  type="number"
+                  value={subprogramaData.orden}
+                  onChange={handleSubprogramaChange}
+                  error={!!formErrors.orden}
+                  helperText={formErrors.orden || "Número que define el orden en el programa"}
+                  disabled={submitting}
+                  margin="normal"
+                  InputProps={{ inputProps: { min: 1 } }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Fecha de inicio (opcional)"
+                  name="fechaInicio"
+                  type="date"
+                  value={subprogramaData.fechaInicio}
+                  onChange={handleSubprogramaChange}
+                  disabled={submitting}
+                  margin="normal"
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+            </Grid>
             {formErrors.form && (
               <Alert severity="error" sx={{ mt: 2 }}>
                 {formErrors.form}
@@ -503,6 +547,18 @@ const DetalleProgramaPersonalizado = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Notificación */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={2000}
+        onClose={() => setNotification({ ...notification, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setNotification({ ...notification, open: false })} severity={notification.severity} variant="filled" sx={{ width: '100%' }}>
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </SidebarMenu>
   );
 };

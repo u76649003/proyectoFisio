@@ -27,9 +27,6 @@ import com.proyectofisio.infrastructure.adapters.input.rest.dto.RegistroCompleto
 import com.proyectofisio.infrastructure.adapters.input.rest.dto.UsuarioDTO;
 import com.proyectofisio.infrastructure.config.security.JwtTokenProvider;
 
-import jakarta.validation.Valid;
-
-import java.io.IOException;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;

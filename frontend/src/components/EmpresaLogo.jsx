@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, Avatar } from '@mui/material';
 import BusinessIcon from '@mui/icons-material/Business';
 
@@ -14,15 +14,30 @@ import BusinessIcon from '@mui/icons-material/Business';
  * @returns {JSX.Element} Componente de logo
  */
 const EmpresaLogo = ({ logoUrl, size = 40, useDefaultLogo = false, sx = {} }) => {
-  if (!logoUrl && !useDefaultLogo) {
+  const [hasError, setHasError] = useState(false);
+  
+  // Verificar y preparar URL
+  const processedLogoUrl = logoUrl && !logoUrl.includes('logo192.png') 
+    ? (logoUrl.startsWith('http') || logoUrl.startsWith('/') ? logoUrl : `${process.env.REACT_APP_API_URL}${logoUrl.startsWith('/') ? '' : '/'}${logoUrl}`)
+    : null;
+  
+  // Si no hay logo y no usamos logo por defecto, no mostrar nada
+  if (!processedLogoUrl && !useDefaultLogo) {
     return null;
   }
 
-  return logoUrl ? (
+  // Manejar errores en la carga de la imagen
+  const handleError = () => {
+    console.warn('Error al cargar el logo:', processedLogoUrl);
+    setHasError(true);
+  };
+
+  return !hasError && processedLogoUrl ? (
     <Box 
       component="img" 
-      src={logoUrl} 
+      src={processedLogoUrl} 
       alt="Logo empresa" 
+      onError={handleError}
       sx={{
         width: size,
         height: size,

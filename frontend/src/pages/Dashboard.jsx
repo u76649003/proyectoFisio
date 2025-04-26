@@ -15,7 +15,8 @@ import {
   Event, 
   MedicalServices,
   Download as ExportIcon,
-  Print as PrintIcon
+  Print as PrintIcon,
+  FitnessCenter
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
@@ -58,6 +59,12 @@ const Dashboard = () => {
     profesionalesActivos: 0,
     ingresosMensuales: '0€'
   });
+  // Estado para rastrear errores de carga
+  const [loadingErrors, setLoadingErrors] = useState({
+    agenda: false,
+    pacientes: false,
+    profesionales: false
+  });
   
   // Cargar datos del usuario y del dashboard
   useEffect(() => {
@@ -87,47 +94,55 @@ const Dashboard = () => {
   
   // Función para cargar los datos del dashboard
   const loadDashboardData = useCallback(async (user) => {
+    // Reiniciamos el estado de errores
+    setLoadingErrors({
+      agenda: false,
+      pacientes: false,
+      profesionales: false
+    });
+
+    // Acumulador para las estadísticas
+    let stats = {
+      pacientesActivos: 0,
+      citasHoy: 0,
+      profesionalesActivos: 0,
+      ingresosMensuales: '0€'
+    };
+    
+    // Contador de pacientes
     try {
-      // Contador de pacientes
-      let pacientesCount = 0;
-      try {
-        const pacientes = await pacienteService.getPacientesByEmpresa(user.empresaId);
-        pacientesCount = pacientes.length;
-      } catch (e) {
-        console.error('Error al cargar pacientes:', e);
-      }
-      
-      // Contador de citas para hoy
-      let citasHoyCount = 0;
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        const citas = await agendaService.getAgenda(today);
-        citasHoyCount = citas.length;
-      } catch (e) {
-        console.error('Error al cargar citas:', e);
-      }
-      
-      // Contador de profesionales
-      let profesionalesCount = 0;
-      try {
-        const profesionales = await usuarioService.getUsuariosByEmpresa(user.empresaId);
-        profesionalesCount = profesionales.length;
-      } catch (e) {
-        console.error('Error al cargar profesionales:', e);
-      }
-      
-      // Simular cálculo de ingresos (en una aplicación real esto sería una API real)
-      const ingresos = '2.500€';
-      
-      setDashboardData({
-        pacientesActivos: pacientesCount,
-        citasHoy: citasHoyCount,
-        profesionalesActivos: profesionalesCount,
-        ingresosMensuales: ingresos
-      });
-    } catch (error) {
-      console.error('Error obteniendo datos del dashboard:', error);
+      const pacientes = await pacienteService.getPacientesByEmpresa(user.empresaId);
+      stats.pacientesActivos = pacientes.length;
+    } catch (e) {
+      console.error('Error al cargar pacientes:', e);
+      setLoadingErrors(prev => ({ ...prev, pacientes: true }));
     }
+    
+    // Contador de citas para hoy
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const citas = await agendaService.getAgenda(today);
+      stats.citasHoy = citas.length;
+    } catch (e) {
+      console.error('Error al cargar citas:', e);
+      // Continuamos sin las citas
+      setLoadingErrors(prev => ({ ...prev, agenda: true }));
+    }
+    
+    // Contador de profesionales
+    try {
+      const profesionales = await usuarioService.getUsuariosByEmpresa(user.empresaId);
+      stats.profesionalesActivos = profesionales.length;
+    } catch (e) {
+      console.error('Error al cargar profesionales:', e);
+      setLoadingErrors(prev => ({ ...prev, profesionales: true }));
+    }
+    
+    // Simular cálculo de ingresos (en una aplicación real esto sería una API real)
+    stats.ingresosMensuales = '2.500€';
+    
+    // Actualizamos el estado con los datos que hemos podido cargar
+    setDashboardData(stats);
   }, []);
 
   return (
@@ -161,6 +176,27 @@ const Dashboard = () => {
           </Button>
         </Box>
       </Box>
+
+      {/* Mostrar mensaje si hay errores de carga */}
+      {(loadingErrors.agenda || loadingErrors.pacientes || loadingErrors.profesionales) && (
+        <Box 
+          sx={{ 
+            mb: 3, 
+            p: 2, 
+            borderRadius: 2, 
+            bgcolor: '#fff3e0', 
+            color: '#e65100',
+            borderLeft: '4px solid #e65100'
+          }}
+        >
+          <Typography variant="subtitle1" fontWeight="bold">
+            Algunos datos no pudieron cargarse correctamente
+          </Typography>
+          <Typography variant="body2">
+            La información mostrada podría estar incompleta. Posible problema de permisos o conectividad.
+          </Typography>
+        </Box>
+      )}
 
       {/* Cards de estadísticas */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -410,6 +446,33 @@ const Dashboard = () => {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Botón de acceso rápido a Programas Personalizados */}
+      {userData && (userData.rol === 'DUENO' || userData.rol === 'FISIOTERAPEUTA') && (
+        <Card variant="outlined" sx={{ 
+          bgcolor: '#f0f8ff', 
+          borderColor: '#1976d2',
+          p: 2,
+          mb: 3,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center'
+        }}>
+          <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', color: '#1976d2' }}>
+            Acceso Rápido
+          </Typography>
+          <Button 
+            variant="contained" 
+            color="primary"
+            component="a"
+            href="/programas-personalizados"
+            startIcon={<FitnessCenter />}
+            sx={{ mt: 1 }}
+          >
+            Ir a Programas Personalizados
+          </Button>
+        </Card>
+      )}
     </SidebarMenu>
   );
 };

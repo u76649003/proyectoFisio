@@ -6,11 +6,12 @@ import './assets/styles/formStyles.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+console.log('Iniciando aplicación...');
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+  // Quitamos StrictMode para evitar doble renderizado y facilitar depuración
+  <App />
 );
 
 // If you want to start measuring performance in your app, pass a function

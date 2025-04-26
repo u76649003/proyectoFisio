@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import com.proyectofisio.domain.model.Agenda;
-import com.proyectofisio.domain.model.Agenda.EstadoCita;
 import com.proyectofisio.infrastructure.adapters.input.rest.dto.AgendaRequest;
 import com.proyectofisio.infrastructure.adapters.input.rest.dto.MessageResponse;
 

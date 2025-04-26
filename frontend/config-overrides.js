@@ -50,6 +50,27 @@ module.exports = override(
       config.resolve.extensions = [...new Set([...config.resolve.extensions, '.js', '.jsx', '.json'])];
     }
     
+    // Añadir polyfills para los módulos de Node.js
+    config.resolve.fallback = {
+      crypto: false,
+      http: false,
+      https: false,
+      os: false,
+      url: false,
+      buffer: false,
+      stream: false,
+      path: false,
+      fs: false,
+      util: false
+    };
+    
+    // Definir variables de entorno de Node para evitar errores
+    config.plugins.push(
+      new webpack.DefinePlugin({
+        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
+      })
+    );
+    
     return config;
   }
 ); 

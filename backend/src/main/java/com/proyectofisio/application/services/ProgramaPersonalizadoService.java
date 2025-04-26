@@ -1,7 +1,6 @@
 package com.proyectofisio.application.services;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -17,7 +16,6 @@ import com.proyectofisio.domain.model.Ejercicio;
 import com.proyectofisio.domain.model.ProgramaPersonalizado;
 import com.proyectofisio.domain.model.Subprograma;
 import com.proyectofisio.infrastructure.adapters.output.persistence.entity.EjercicioEntity;
-import com.proyectofisio.infrastructure.adapters.output.persistence.entity.SubprogramaEntity;
 import com.proyectofisio.infrastructure.adapters.output.persistence.mapper.AccessTokenMapper;
 import com.proyectofisio.infrastructure.adapters.output.persistence.mapper.ComentarioPacienteMapper;
 import com.proyectofisio.infrastructure.adapters.output.persistence.mapper.EjercicioMapper;
