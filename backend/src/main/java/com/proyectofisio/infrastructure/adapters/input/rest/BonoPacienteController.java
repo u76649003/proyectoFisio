@@ -22,7 +22,7 @@ public class BonoPacienteController {
     }
     
     @PostMapping("/{pacienteId}/bonos")
-    @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR', 'RECEPCIONISTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('ADMINISTRADOR') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<BonoPaciente> crearBonoPaciente(
             @PathVariable Long pacienteId,
             @RequestBody BonoPaciente bonoPaciente) {
@@ -33,7 +33,7 @@ public class BonoPacienteController {
     }
     
     @GetMapping("/{pacienteId}/bonos/{bonoId}")
-    @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR', 'RECEPCIONISTA', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('ADMINISTRADOR') or hasAuthority('RECEPCIONISTA') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<BonoPaciente> getBonoPorId(
             @PathVariable Long pacienteId,
             @PathVariable Long bonoId) {
@@ -52,7 +52,7 @@ public class BonoPacienteController {
     }
     
     @GetMapping("/{pacienteId}/bonos")
-    @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR', 'RECEPCIONISTA', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('ADMINISTRADOR') or hasAuthority('RECEPCIONISTA') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<List<BonoPaciente>> getBonosByPacienteId(
             @PathVariable Long pacienteId,
             @RequestParam(required = false) String estado) {
@@ -75,7 +75,7 @@ public class BonoPacienteController {
     }
     
     @PutMapping("/{pacienteId}/bonos/{bonoId}")
-    @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR', 'RECEPCIONISTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('ADMINISTRADOR') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<BonoPaciente> actualizarBonoPaciente(
             @PathVariable Long pacienteId,
             @PathVariable Long bonoId,
@@ -98,7 +98,7 @@ public class BonoPacienteController {
     }
     
     @DeleteMapping("/{pacienteId}/bonos/{bonoId}")
-    @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('ADMINISTRADOR')")
     public ResponseEntity<Void> eliminarBonoPaciente(
             @PathVariable Long pacienteId,
             @PathVariable Long bonoId) {

@@ -37,7 +37,7 @@ public class AgendaController implements AgendaControllerDocs {
 
     @Override
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<Agenda> crearCita(@RequestBody AgendaRequest agendaRequest) {
         Agenda agenda = Agenda.builder()
                 .pacienteId(Long.valueOf(agendaRequest.getPacienteId()))
@@ -56,35 +56,35 @@ public class AgendaController implements AgendaControllerDocs {
 
     @Override
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA', 'PACIENTE')")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA') or hasAuthority('PACIENTE')")
     public ResponseEntity<Agenda> getCitaById(@PathVariable Long id) {
         return ResponseEntity.ok(agendaServicePort.getCitaById(id));
     }
 
     @Override
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<List<Agenda>> getAllCitas() {
         return ResponseEntity.ok(agendaServicePort.getAllCitas());
     }
 
     @Override
     @GetMapping("/paciente/{pacienteId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA', 'PACIENTE')")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA') or hasAuthority('PACIENTE')")
     public ResponseEntity<List<Agenda>> getCitasByPacienteId(@PathVariable Long pacienteId) {
         return ResponseEntity.ok(agendaServicePort.getCitasByPacienteId(pacienteId));
     }
 
     @Override
     @GetMapping("/profesional/{profesionalId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<List<Agenda>> getCitasByProfesionalId(@PathVariable Long profesionalId) {
         return ResponseEntity.ok(agendaServicePort.getCitasByProfesionalId(profesionalId));
     }
 
     @Override
     @GetMapping("/fecha")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<List<Agenda>> getCitasByFecha(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
         return ResponseEntity.ok(agendaServicePort.getCitasByFecha(fecha));
@@ -92,7 +92,7 @@ public class AgendaController implements AgendaControllerDocs {
 
     @Override
     @GetMapping("/rango")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<List<Agenda>> getCitasByRangoFechas(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin) {
@@ -101,35 +101,35 @@ public class AgendaController implements AgendaControllerDocs {
 
     @Override
     @GetMapping("/empresa/{empresaId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<List<Agenda>> getCitasByEmpresaId(@PathVariable Long empresaId) {
         return ResponseEntity.ok(agendaServicePort.getCitasByEmpresaId(empresaId));
     }
 
     @Override
     @GetMapping("/sala/{salaId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<List<Agenda>> getCitasBySalaId(@PathVariable Long salaId) {
         return ResponseEntity.ok(agendaServicePort.getCitasBySalaId(salaId));
     }
 
     @Override
     @GetMapping("/servicio/{servicioId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<List<Agenda>> getCitasByServicioId(@PathVariable Long servicioId) {
         return ResponseEntity.ok(agendaServicePort.getCitasByServicioId(servicioId));
     }
 
     @Override
     @GetMapping("/estado/{estado}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<List<Agenda>> getCitasByEstado(@PathVariable String estado) {
         return ResponseEntity.ok(agendaServicePort.getCitasByEstado(EstadoCita.valueOf(estado)));
     }
 
     @Override
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<Agenda> updateCita(@PathVariable Long id, @RequestBody AgendaRequest agendaRequest) {
         Agenda agenda = Agenda.builder()
                 .id(id)
@@ -149,21 +149,21 @@ public class AgendaController implements AgendaControllerDocs {
 
     @Override
     @PutMapping("/{id}/cancelar")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA', 'PACIENTE')")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA') or hasAuthority('PACIENTE')")
     public ResponseEntity<Agenda> cancelarCita(@PathVariable Long id) {
         return ResponseEntity.ok(agendaServicePort.cancelarCita(id));
     }
 
     @Override
     @PutMapping("/{id}/completar")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<Agenda> completarCita(@PathVariable Long id) {
         return ResponseEntity.ok(agendaServicePort.completarCita(id));
     }
 
     @Override
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<MessageResponse> deleteCita(@PathVariable Long id) {
         agendaServicePort.deleteCita(id);
         return ResponseEntity.ok(new MessageResponse("Cita eliminada correctamente"));

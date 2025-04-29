@@ -58,7 +58,7 @@ public class FileController implements FileControllerDocs {
      */
     @Override
     @PostMapping("/empresas/{empresaId}/logo")
-    @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('ADMINISTRADOR')")
     public ResponseEntity<?> actualizarLogoEmpresa(
             @PathVariable Long empresaId,
             @RequestParam("logo") MultipartFile file) {

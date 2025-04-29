@@ -22,14 +22,14 @@ public class ServicioController {
     }
     
     @PostMapping
-    @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('ADMINISTRADOR')")
     public ResponseEntity<Servicio> crearServicio(@RequestBody Servicio servicio) {
         Servicio nuevoServicio = servicioServicePort.createServicio(servicio);
         return new ResponseEntity<>(nuevoServicio, HttpStatus.CREATED);
     }
     
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR', 'RECEPCIONISTA', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('ADMINISTRADOR') or hasAuthority('RECEPCIONISTA') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<Servicio> getServicioPorId(@PathVariable Long id) {
         try {
             Servicio servicio = servicioServicePort.getServicioById(id);
@@ -40,21 +40,21 @@ public class ServicioController {
     }
     
     @GetMapping
-    @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR', 'RECEPCIONISTA', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('ADMINISTRADOR') or hasAuthority('RECEPCIONISTA') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<List<Servicio>> getAllServicios() {
         List<Servicio> servicios = servicioServicePort.getAllServicios();
         return new ResponseEntity<>(servicios, HttpStatus.OK);
     }
     
     @GetMapping("/empresa/{empresaId}")
-    @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR', 'RECEPCIONISTA', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('ADMINISTRADOR') or hasAuthority('RECEPCIONISTA') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<List<Servicio>> getServiciosByEmpresaId(@PathVariable Long empresaId) {
         List<Servicio> servicios = servicioServicePort.getServiciosByEmpresaId(empresaId);
         return new ResponseEntity<>(servicios, HttpStatus.OK);
     }
     
     @GetMapping("/empresa/{empresaId}/bonos")
-    @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR', 'RECEPCIONISTA', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('ADMINISTRADOR') or hasAuthority('RECEPCIONISTA') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<List<Servicio>> getServiciosByEmpresaIdAndEsBono(
             @PathVariable Long empresaId,
             @RequestParam Boolean esBono) {
@@ -63,7 +63,7 @@ public class ServicioController {
     }
     
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('ADMINISTRADOR')")
     public ResponseEntity<Servicio> actualizarServicio(@PathVariable Long id, @RequestBody Servicio servicio) {
         try {
             Servicio servicioActualizado = servicioServicePort.updateServicio(id, servicio);
@@ -74,7 +74,7 @@ public class ServicioController {
     }
     
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('DUENO', 'ADMINISTRADOR')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('ADMINISTRADOR')")
     public ResponseEntity<Void> eliminarServicio(@PathVariable Long id) {
         try {
             servicioServicePort.deleteServicio(id);

@@ -34,7 +34,7 @@ public class UsuarioController implements UsuarioControllerDocs {
 
     @Override
     @PostMapping
-    @PreAuthorize("hasRole('ADMINISTRADOR') or hasRole('DUENO')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR') or hasAuthority('DUENO')")
     public ResponseEntity<?> crearUsuario(@RequestBody Usuario usuario) {
         try {
             Usuario nuevoUsuario = usuarioService.crearUsuario(usuario);
@@ -46,7 +46,7 @@ public class UsuarioController implements UsuarioControllerDocs {
 
     @Override
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'DUENO', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR') or hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<?> obtenerUsuarioPorId(@PathVariable Long id) {
         return usuarioService.obtenerUsuarioPorId(id)
                 .map(usuario -> new ResponseEntity<>(usuario, HttpStatus.OK))
@@ -55,28 +55,28 @@ public class UsuarioController implements UsuarioControllerDocs {
 
     @Override
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'DUENO')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR') or hasAuthority('DUENO')")
     public ResponseEntity<List<Usuario>> obtenerTodosLosUsuarios() {
         return new ResponseEntity<>(usuarioService.obtenerTodosLosUsuarios(), HttpStatus.OK);
     }
 
     @Override
     @GetMapping("/empresa/{empresaId}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'DUENO')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR') or hasAuthority('DUENO')")
     public ResponseEntity<List<Usuario>> obtenerUsuariosPorEmpresa(@PathVariable Long empresaId) {
         return new ResponseEntity<>(usuarioService.obtenerUsuariosPorEmpresa(empresaId), HttpStatus.OK);
     }
 
     @Override
     @GetMapping("/rol")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'DUENO')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR') or hasAuthority('DUENO')")
     public ResponseEntity<List<Usuario>> obtenerUsuariosPorRol(@RequestParam RolUsuario rol) {
         return new ResponseEntity<>(usuarioService.obtenerUsuariosPorRol(rol), HttpStatus.OK);
     }
 
     @Override
     @GetMapping("/email/{email}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'DUENO', 'FISIOTERAPEUTA', 'RECEPCIONISTA')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR') or hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<?> obtenerUsuarioPorEmail(@PathVariable String email) {
         return usuarioService.obtenerUsuarioPorEmail(email)
                 .map(usuario -> new ResponseEntity<>(usuario, HttpStatus.OK))
@@ -85,7 +85,7 @@ public class UsuarioController implements UsuarioControllerDocs {
 
     @Override
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'DUENO') or @securityService.isCurrentUser(#id)")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR') or hasAuthority('DUENO') or @securityService.isCurrentUser(#id)")
     public ResponseEntity<?> actualizarUsuario(@PathVariable Long id, @RequestBody Usuario usuario) {
         try {
             usuario.setId(id);
@@ -98,7 +98,7 @@ public class UsuarioController implements UsuarioControllerDocs {
 
     @Override
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'DUENO')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR') or hasAuthority('DUENO')")
     public ResponseEntity<Void> eliminarUsuario(@PathVariable Long id) {
         usuarioService.eliminarUsuario(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);

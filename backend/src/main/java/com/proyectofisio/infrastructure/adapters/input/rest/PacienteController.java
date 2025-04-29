@@ -1,6 +1,7 @@
 package com.proyectofisio.infrastructure.adapters.input.rest;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -32,7 +33,7 @@ public class PacienteController implements PacienteControllerDocs {
 
     @Override
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'RECEPCIONISTA', 'DUENO')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<?> crearPaciente(@RequestBody Paciente paciente) {
         try {
             Paciente nuevoPaciente = pacienteService.crearPaciente(paciente);
@@ -44,7 +45,7 @@ public class PacienteController implements PacienteControllerDocs {
 
     @Override
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'RECEPCIONISTA', 'DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<?> obtenerPacientePorId(@PathVariable Long id) {
         return pacienteService.obtenerPacientePorId(id)
                 .map(paciente -> new ResponseEntity<>(paciente, HttpStatus.OK))
@@ -53,21 +54,21 @@ public class PacienteController implements PacienteControllerDocs {
 
     @Override
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'RECEPCIONISTA', 'DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR') or hasAuthority('RECEPCIONISTA') or hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<List<Paciente>> obtenerTodosLosPacientes() {
         return new ResponseEntity<>(pacienteService.obtenerTodosLosPacientes(), HttpStatus.OK);
     }
 
     @Override
     @GetMapping("/empresa/{empresaId}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'RECEPCIONISTA', 'DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR') or hasAuthority('RECEPCIONISTA') or hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<List<Paciente>> obtenerPacientesPorEmpresa(@PathVariable Long empresaId) {
         return new ResponseEntity<>(pacienteService.obtenerPacientesPorEmpresa(empresaId), HttpStatus.OK);
     }
 
     @Override
     @GetMapping("/dni/{dni}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'RECEPCIONISTA', 'DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR') or hasAuthority('RECEPCIONISTA') or hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<?> obtenerPacientePorDni(@PathVariable String dni) {
         return pacienteService.obtenerPacientePorDni(dni)
                 .map(paciente -> new ResponseEntity<>(paciente, HttpStatus.OK))
@@ -76,7 +77,7 @@ public class PacienteController implements PacienteControllerDocs {
 
     @Override
     @GetMapping("/email/{email}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'RECEPCIONISTA', 'DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR') or hasAuthority('RECEPCIONISTA') or hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<?> obtenerPacientePorEmail(@PathVariable String email) {
         return pacienteService.obtenerPacientePorEmail(email)
                 .map(paciente -> new ResponseEntity<>(paciente, HttpStatus.OK))
@@ -85,7 +86,7 @@ public class PacienteController implements PacienteControllerDocs {
 
     @Override
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'RECEPCIONISTA', 'DUENO')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<?> actualizarPaciente(@PathVariable Long id, @RequestBody Paciente paciente) {
         try {
             paciente.setId(id);
@@ -98,7 +99,7 @@ public class PacienteController implements PacienteControllerDocs {
 
     @Override
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'DUENO')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<Void> eliminarPaciente(@PathVariable Long id) {
         try {
             pacienteService.eliminarPaciente(id);

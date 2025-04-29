@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -52,7 +54,7 @@ public class ProgramaPersonalizadoController {
     
     // Endpoint para crear un programa personalizado
     @PostMapping
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<ProgramaPersonalizado> crearProgramaPersonalizado(
             @RequestBody ProgramaPersonalizadoRequest request) {
         
@@ -106,14 +108,14 @@ public class ProgramaPersonalizadoController {
     
     // Endpoint para obtener un programa personalizado por ID
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<ProgramaPersonalizado> getProgramaPersonalizadoById(@PathVariable Long id) {
         return ResponseEntity.ok(programaService.getProgramaPersonalizadoById(id));
     }
     
     // Endpoint para obtener todos los programas personalizados de una empresa
     @GetMapping
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<List<ProgramaPersonalizado>> getProgramasPersonalizadosByEmpresa() {
         // Obtener el usuario autenticado
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -130,7 +132,7 @@ public class ProgramaPersonalizadoController {
     
     // Endpoint para actualizar un programa personalizado
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<ProgramaPersonalizado> updateProgramaPersonalizado(
             @PathVariable Long id, 
             @RequestBody ProgramaPersonalizadoRequest request) {
@@ -152,7 +154,7 @@ public class ProgramaPersonalizadoController {
     
     // Endpoint para eliminar un programa personalizado
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<MessageResponse> deleteProgramaPersonalizado(@PathVariable Long id) {
         programaService.deleteProgramaPersonalizado(id);
         return ResponseEntity.ok(new MessageResponse("Programa personalizado eliminado correctamente"));
@@ -160,7 +162,7 @@ public class ProgramaPersonalizadoController {
     
     // Endpoint para crear un subprograma
     @PostMapping("/{programaId}/subprogramas")
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<Subprograma> crearSubprograma(
             @PathVariable Long programaId,
             @RequestBody SubprogramaRequest request) {
@@ -177,14 +179,14 @@ public class ProgramaPersonalizadoController {
     
     // Endpoint para obtener los subprogramas de un programa
     @GetMapping("/{programaId}/subprogramas")
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<List<Subprograma>> getSubprogramasByProgramaId(@PathVariable Long programaId) {
         return ResponseEntity.ok(programaService.getSubprogramasByProgramaId(programaId));
     }
     
     // Endpoint para actualizar un subprograma
     @PutMapping("/subprogramas/{id}")
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<Subprograma> updateSubprograma(
             @PathVariable Long id,
             @RequestBody SubprogramaRequest request) {
@@ -205,7 +207,7 @@ public class ProgramaPersonalizadoController {
     
     // Endpoint para eliminar un subprograma
     @DeleteMapping("/subprogramas/{id}")
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<MessageResponse> deleteSubprograma(@PathVariable Long id) {
         programaService.deleteSubprograma(id);
         return ResponseEntity.ok(new MessageResponse("Subprograma eliminado correctamente"));
@@ -213,7 +215,7 @@ public class ProgramaPersonalizadoController {
     
     // Endpoint para asignar un ejercicio a un subprograma
     @PostMapping("/subprogramas/{subprogramaId}/ejercicios/{ejercicioId}")
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<Subprograma> asignarEjercicioASubprograma(
             @PathVariable Long subprogramaId,
             @PathVariable Long ejercicioId,
@@ -224,7 +226,7 @@ public class ProgramaPersonalizadoController {
     
     // Endpoint para remover un ejercicio de un subprograma
     @DeleteMapping("/subprogramas/{subprogramaId}/ejercicios/{ejercicioId}")
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<MessageResponse> removerEjercicioDeSubprograma(
             @PathVariable Long subprogramaId,
             @PathVariable Long ejercicioId) {
@@ -235,7 +237,7 @@ public class ProgramaPersonalizadoController {
     
     // Endpoint para reordenar ejercicios en un subprograma
     @PutMapping("/subprogramas/{subprogramaId}/ejercicios/reordenar")
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<MessageResponse> reordenarEjerciciosEnSubprograma(
             @PathVariable Long subprogramaId,
             @RequestBody ReordenarEjerciciosRequest request) {
@@ -246,7 +248,7 @@ public class ProgramaPersonalizadoController {
     
     // Endpoint para generar tokens de acceso para pacientes
     @PostMapping("/{programaId}/generar-tokens")
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<List<TokenResponse>> generarTokensAcceso(
             @PathVariable Long programaId,
             @RequestBody GenerarTokenRequest request) {
@@ -285,7 +287,7 @@ public class ProgramaPersonalizadoController {
     
     // Endpoint para obtener tokens de un programa
     @GetMapping("/{programaId}/tokens")
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<List<TokenResponse>> getTokensByProgramaId(@PathVariable Long programaId) {
         List<AccessToken> tokens = programaService.getTokensByProgramaId(programaId);
         
@@ -330,5 +332,36 @@ public class ProgramaPersonalizadoController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new MessageResponse(e.getMessage()));
         }
+    }
+    
+    // Endpoint de prueba solo para verificar autenticación
+    @GetMapping("/test-auth")
+    public ResponseEntity<Map<String, Object>> testAuth() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("nombre", auth.getName());
+        response.put("autoridades", auth.getAuthorities().toString());
+        response.put("autenticado", auth.isAuthenticated());
+        response.put("detalles", auth.getDetails());
+        
+        // Obtener usuario por email
+        try {
+            Usuario usuario = usuarioService.obtenerUsuarioPorEmail(auth.getName())
+                    .orElse(null);
+            
+            if (usuario != null) {
+                response.put("usuario_id", usuario.getId());
+                response.put("usuario_nombre", usuario.getNombre());
+                response.put("usuario_rol", usuario.getRol().name());
+                response.put("usuario_empresa_id", usuario.getEmpresaId());
+            } else {
+                response.put("usuario_error", "No se encontró el usuario");
+            }
+        } catch (Exception e) {
+            response.put("error", e.getMessage());
+        }
+        
+        return ResponseEntity.ok(response);
     }
 } 

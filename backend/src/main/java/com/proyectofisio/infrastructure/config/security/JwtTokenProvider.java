@@ -54,10 +54,14 @@ public class JwtTokenProvider {
         log.info("Username extraído del token: {}", username);
         log.info("Rol extraído del token: {}", role);
         
+        SimpleGrantedAuthority authority = new SimpleGrantedAuthority(role);
+        
+        log.info("Autoridad creada: {}", authority);
+        
         UserDetails userDetails = org.springframework.security.core.userdetails.User
                 .withUsername(username)
                 .password("")
-                .authorities(new SimpleGrantedAuthority(role))
+                .authorities(authority)
                 .accountExpired(false)
                 .accountLocked(false)
                 .credentialsExpired(false)

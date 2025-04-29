@@ -33,7 +33,7 @@ public class EjercicioController {
     
     // Endpoint para crear un ejercicio
     @PostMapping
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<Ejercicio> crearEjercicio(@RequestBody EjercicioRequest request) {
         // Obtener el usuario autenticado
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -58,14 +58,14 @@ public class EjercicioController {
     
     // Endpoint para obtener un ejercicio por ID
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<Ejercicio> getEjercicioById(@PathVariable Long id) {
         return ResponseEntity.ok(programaService.getEjercicioById(id));
     }
     
     // Endpoint para obtener todos los ejercicios de una empresa
     @GetMapping
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<List<Ejercicio>> getEjerciciosByEmpresa() {
         // Obtener el usuario autenticado
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -77,7 +77,7 @@ public class EjercicioController {
     
     // Endpoint para buscar ejercicios por nombre
     @GetMapping("/search")
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<List<Ejercicio>> searchEjerciciosByNombre(
             @RequestParam String query) {
         
@@ -104,7 +104,7 @@ public class EjercicioController {
     
     // Endpoint para actualizar un ejercicio
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<Ejercicio> updateEjercicio(
             @PathVariable Long id,
             @RequestBody EjercicioRequest request) {
@@ -131,7 +131,7 @@ public class EjercicioController {
     
     // Endpoint para eliminar un ejercicio
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('DUENO', 'FISIOTERAPEUTA')")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<MessageResponse> deleteEjercicio(@PathVariable Long id) {
         programaService.deleteEjercicio(id);
         return ResponseEntity.ok(new MessageResponse("Ejercicio eliminado correctamente"));
