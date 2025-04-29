@@ -49,11 +49,12 @@ const PublicRoute = ({ children }) => {
   const isAuth = authService.isAuthenticated();
   console.log('¿Usuario ya autenticado?', isAuth);
   
-  if (isAuth) {
+  // Solo redirigir si estamos en la página de inicio
+  if (isAuth && window.location.pathname === '/') {
     console.log('Usuario ya autenticado, redirigiendo a dashboard');
     return <Navigate to="/dashboard" replace />;
   }
-  console.log('Usuario no autenticado, mostrando ruta pública');
+  console.log('Usuario no autenticado o no en página de inicio, mostrando ruta pública');
   return children;
 };
 
@@ -147,7 +148,11 @@ function App() {
           </ProtectedRoute>
         } />
         {/* Ruta de programas personalizados sin ProtectedRoute */}
-        <Route path="/programas-personalizados" element={<ProgramasPersonalizados />} />
+        <Route path="/programas-personalizados" element={ 
+          <ProtectedRoute>
+            <ProgramasPersonalizados />
+          </ProtectedRoute>
+        } />
         <Route path="/programas-personalizados/nuevo" element={
           <ProtectedRoute>
             <NuevoPrograma />
