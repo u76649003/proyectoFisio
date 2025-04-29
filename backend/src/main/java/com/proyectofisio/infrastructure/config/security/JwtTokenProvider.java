@@ -50,7 +50,7 @@ public class JwtTokenProvider {
         UserDetails userDetails = org.springframework.security.core.userdetails.User
                 .withUsername(username)
                 .password("")
-                .authorities(new SimpleGrantedAuthority("ROLE_" + role))
+                .authorities(new SimpleGrantedAuthority(role))
                 .accountExpired(false)
                 .accountLocked(false)
                 .credentialsExpired(false)

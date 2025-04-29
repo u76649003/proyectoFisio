@@ -141,8 +141,6 @@ const SidebarMenu = ({ children }) => {
 
   // Determinar qué página está activa
   const isActive = (path) => {
-    console.log('Verificando si la ruta es activa:', path);
-    console.log('Ruta actual:', location.pathname);
     
     // Para rutas principales, verificar si la ruta actual comienza con la ruta dada
     if (path === '/programas-personalizados') {
@@ -156,26 +154,17 @@ const SidebarMenu = ({ children }) => {
   };
 
   // Función para manejar clics en los enlaces del menú
-  const handleMenuClick = (path) => {
-    // Solo navegar si la ruta es diferente a la actual
-    console.log('Intentando navegar a:', path);
-    console.log('Ruta actual:', location.pathname);
-    console.log('Token actual:', localStorage.getItem('token') ? 'Existe' : 'No existe');
+  const handleMenuClick = (path) => {  
     
     // Fix especial para programas personalizados
     if (path === '/programas-personalizados') {
-      console.log('Navegando a programas personalizados usando navigate');
-      // Usar navigate en lugar de window.location para preservar el token
       navigate('/programas-personalizados', { replace: true });
       return;
     }
     
     if (location.pathname !== path) {
-      console.log('Navegando a nueva ruta:', path);
       navigate(path);
-    } else {
-      console.log('Ya estamos en la ruta:', path);
-    }
+    } 
   };
 
   // Función para manejar cierre de sesión

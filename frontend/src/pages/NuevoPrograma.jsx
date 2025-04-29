@@ -129,8 +129,21 @@ const NuevoPrograma = () => {
       setLoading(true);
       setError(null);
       
+      // Verificar que tenemos los datos del usuario necesarios
+      if (!userData || !userData.empresaId) {
+        throw new Error('No se encontraron los datos necesarios del usuario');
+      }
+      
+      // Preparar datos del programa
+      const programaToCreate = {
+        ...programaData,
+        empresaId: userData.empresaId
+      };
+      
+      console.log('Enviando datos del programa:', programaToCreate);
+      
       // Enviar datos al servidor
-      const createdPrograma = await programasPersonalizadosService.createPrograma(programaData);
+      const createdPrograma = await programasPersonalizadosService.createPrograma(programaToCreate);
       
       setSuccess(true);
       setNotification({
@@ -146,7 +159,24 @@ const NuevoPrograma = () => {
       
     } catch (err) {
       console.error('Error al crear programa:', err);
-      setError('No se pudo crear el programa. Inténtalo de nuevo más tarde.');
+      let errorMessage = 'No se pudo crear el programa. ';
+      
+      if (err.response) {
+        if (err.response.status === 403) {
+          errorMessage += 'No tienes permisos para crear programas.';
+        } else if (err.response.data && err.response.data.message) {
+          errorMessage += err.response.data.message;
+        }
+      } else if (err.message) {
+        errorMessage += err.message;
+      }
+      
+      setError(errorMessage);
+      setNotification({
+        open: true,
+        message: errorMessage,
+        severity: 'error'
+      });
     } finally {
       setLoading(false);
     }

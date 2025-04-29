@@ -15,58 +15,78 @@ axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+      // Verificar que el token no esté expirado
+      try {
+        const tokenParts = token.split('.');
+        if (tokenParts.length === 3) {
+          const payload = JSON.parse(atob(tokenParts[1]));
+          const exp = payload.exp * 1000; // Convertir a milisegundos
+          if (Date.now() >= exp) {
+            console.error('Token expirado');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('lastAuthentication');
+            throw new Error('Token expirado');
+          }
+        }
+      } catch (e) {
+        console.error('Error al verificar token:', e);
+      }
       
-      // Para depuración - log en la consola
-      console.log('Enviando solicitud con token:', config.url);
+      config.headers['Authorization'] = `Bearer ${token}`;
+      console.log('=== INTERCEPTOR REQUEST ===');
+      console.log('URL:', config.url);
+      console.log('Headers:', config.headers);
     } else {
       console.warn('Solicitud sin token de autenticación:', config.url);
     }
     return config;
   },
   (error) => {
-      console.error('Error en la solicitud:', error);
-      return Promise.reject(error);
+    console.error('Error en el interceptor de solicitud:', error);
+    return Promise.reject(error);
   }
 );
 
 // Interceptor para las respuestas
 axiosInstance.interceptors.response.use(
   (response) => {
-    console.log(`Respuesta exitosa de ${response.config.url}:`, response.status);
+    console.log('=== INTERCEPTOR RESPONSE SUCCESS ===');
+    console.log('URL:', response.config.url);
+    console.log('Status:', response.status);
+    console.log('Headers:', response.headers);
     return response;
   },
   (error) => {
+    console.log('=== INTERCEPTOR RESPONSE ERROR ===');
     if (error.response) {
-      const url = error.config.url;
-      console.error(`Error en respuesta de ${url} - Estado: ${error.response.status}`);
+      console.error('URL:', error.config.url);
+      console.error('Status:', error.response.status);
+      console.error('Headers:', error.response.headers);
+      console.error('Data:', error.response.data);
       
       if (error.response.status === 401) {
-        console.error('Sesión expirada o no autorizada - Cerrando sesión...');
-        // Limpiar información de sesión
+        console.error('Sesión expirada o no autorizada');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         localStorage.removeItem('lastAuthentication');
         
-        // Redirigir al login solo si no estamos ya en la página de login
         if (!window.location.pathname.includes('/login') && 
             !window.location.pathname.includes('/register') &&
             !window.location.pathname === '/') {
           window.location.href = '/';
         }
       } else if (error.response.status === 403) {
-        console.error('Acceso prohibido - Verificando permisos...');
-        // Podríamos validar el token aquí o verificar los roles del usuario
-        // Por ahora solo lo registramos para depuración
-      } else if (error.response.status === 500) {
-        console.error('Error del servidor:', error.response.data);
+        console.error('Acceso prohibido');
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          console.error('Usuario actual:', user);
+          console.error('Rol:', user.rol);
+          console.error('Empresa ID:', user.empresaId);
+        }
       }
-    } else if (error.request) {
-      console.error('No se recibió respuesta del servidor:', error.request);
-    } else {
-      console.error('Error al configurar la solicitud:', error.message);
     }
-    
     return Promise.reject(error);
   }
 );
@@ -1073,24 +1093,50 @@ const programasPersonalizadosService = {
 
   createPrograma: async (programaData) => {
     try {
-      // Obtener empresaId del usuario actual
+      // Verificar token y datos del usuario
+      const token = localStorage.getItem('token');
       const userStr = localStorage.getItem('user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        // Asegurar que el programa incluye el ID de empresa
-        programaData.empresaId = user.empresaId;
+      
+      console.log('=== DEPURACIÓN DE TOKEN Y USUARIO ===');
+      console.log('Token presente:', token ? 'Sí' : 'No');
+      console.log('Datos de usuario presentes:', userStr ? 'Sí' : 'No');
+      
+      if (!userStr) {
+        throw new Error('No hay datos de usuario disponibles');
       }
+      
+      const user = JSON.parse(userStr);
+      console.log('Datos del usuario:', user);
+      console.log('Rol del usuario:', user.rol);
+      console.log('ID de empresa:', user.empresaId);
+      
+      if (!user.empresaId) {
+        throw new Error('No se encontró el ID de empresa del usuario');
+      }
+      
+      // Asegurar que el programa incluye el ID de empresa
+      const programaConEmpresa = {
+        ...programaData,
+        empresaId: user.empresaId
+      };
+      
+      console.log('=== DATOS DEL PROGRAMA ===');
+      console.log('Programa a crear:', programaConEmpresa);
       
       // Forzar URL absoluta para evitar problemas de proxy
       const url = `${axiosInstance.defaults.baseURL}/programas-personalizados`;
       console.log('URL completa para crear programa:', url);
       
+      // Configurar headers
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      console.log('Headers de la solicitud:', headers);
+      
       // Usar axios directamente con la URL completa
-      const response = await axios.post(url, programaData, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
+      const response = await axios.post(url, programaConEmpresa, {
+        headers,
         timeout: 30000
       });
       
@@ -1098,6 +1144,11 @@ const programasPersonalizadosService = {
       return response.data;
     } catch (error) {
       console.error('Error al crear programa personalizado:', error);
+      if (error.response) {
+        console.error('Detalles del error:', error.response.data);
+        console.error('Headers de la respuesta:', error.response.headers);
+        console.error('Status de la respuesta:', error.response.status);
+      }
       throw error;
     }
   },
