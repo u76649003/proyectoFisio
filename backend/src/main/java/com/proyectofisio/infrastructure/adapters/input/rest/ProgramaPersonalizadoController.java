@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,16 +34,21 @@ import com.proyectofisio.infrastructure.adapters.input.rest.dto.TokenResponse;
 import com.proyectofisio.infrastructure.adapters.input.rest.dto.ValidarTokenRequest;
 import com.proyectofisio.infrastructure.adapters.output.persistence.entity.PacienteEntity;
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.PacienteRepository;
+import com.proyectofisio.application.ports.input.UsuarioServicePort;
+import com.proyectofisio.domain.model.Usuario;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/programas-personalizados")
 @RequiredArgsConstructor
+@Slf4j
 public class ProgramaPersonalizadoController {
 
     private final ProgramaPersonalizadoServicePort programaService;
     private final PacienteRepository pacienteRepository;
+    private final UsuarioServicePort usuarioService;
     
     // Endpoint para crear un programa personalizado
     @PostMapping
@@ -52,8 +58,38 @@ public class ProgramaPersonalizadoController {
         
         // Obtener el usuario autenticado
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = Long.parseLong(auth.getName());
-        Long empresaId = obtenerEmpresaIdDelUsuario(userId);
+        
+        log.info("=== DEBUG AUTENTICACIÓN ===");
+        log.info("Nombre de usuario autenticado: {}", auth.getName());
+        log.info("Autoridades del usuario: {}", auth.getAuthorities());
+        log.info("¿Está autenticado?: {}", auth.isAuthenticated());
+        log.info("Tipo de autenticación: {}", auth.getClass().getName());
+        
+        // Comprobar si el usuario tiene los roles necesarios
+        boolean tieneRolFisio = auth.getAuthorities().contains(new SimpleGrantedAuthority("FISIOTERAPEUTA"));
+        boolean tieneRolDueno = auth.getAuthorities().contains(new SimpleGrantedAuthority("DUENO"));
+        log.info("¿Tiene rol FISIOTERAPEUTA?: {}", tieneRolFisio);
+        log.info("¿Tiene rol DUENO?: {}", tieneRolDueno);
+        
+        String email = auth.getName();
+        log.info("Email del usuario: {}", email);
+        
+        // Obtener usuario por email
+        Usuario usuario = usuarioService.obtenerUsuarioPorEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con email: " + email));
+        
+        log.info("Usuario encontrado: ID={}, Nombre={}, Rol={}", 
+                usuario.getId(), usuario.getNombre(), usuario.getRol());
+        log.info("EmpresaId del usuario: {}", usuario.getEmpresaId());
+        
+        Long userId = usuario.getId();
+        Long empresaId = usuario.getEmpresaId();
+        
+        log.info("Datos del programa a crear:");
+        log.info("Nombre: {}", request.getNombre());
+        log.info("Tipo: {}", request.getTipoPrograma());
+        log.info("EmpresaId: {}", empresaId);
+        log.info("CreadoPorUsuarioId: {}", userId);
         
         ProgramaPersonalizado programa = ProgramaPersonalizado.builder()
                 .nombre(request.getNombre())
@@ -63,6 +99,8 @@ public class ProgramaPersonalizadoController {
                 .build();
         
         ProgramaPersonalizado createdPrograma = programaService.crearProgramaPersonalizado(programa);
+        log.info("Programa creado correctamente con ID: {}", createdPrograma.getId());
+        
         return ResponseEntity.status(HttpStatus.CREATED).body(createdPrograma);
     }
     
@@ -79,23 +117,15 @@ public class ProgramaPersonalizadoController {
     public ResponseEntity<List<ProgramaPersonalizado>> getProgramasPersonalizadosByEmpresa() {
         // Obtener el usuario autenticado
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = Long.parseLong(auth.getName());
-        Long empresaId = obtenerEmpresaIdDelUsuario(userId);
+        String email = auth.getName();
+        
+        // Obtener usuario por email
+        Usuario usuario = usuarioService.obtenerUsuarioPorEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con email: " + email));
+        
+        Long empresaId = usuario.getEmpresaId();
         
         return ResponseEntity.ok(programaService.getProgramasPersonalizadosByEmpresaId(empresaId));
-    }
-    
-    // Método para obtener el empresaId del usuario
-    private Long obtenerEmpresaIdDelUsuario(Long userId) {
-        // Consultar la base de datos para obtener el empresaId del usuario
-        try {
-            // Aquí deberías inyectar y usar el UsuarioRepository para obtener la información
-            // Por ahora, utilizamos un valor por defecto para pruebas
-            return 1L; // ID de empresa por defecto para pruebas
-        } catch (Exception e) {
-            // En caso de error, devolvemos un valor por defecto
-            return 1L;
-        }
     }
     
     // Endpoint para actualizar un programa personalizado

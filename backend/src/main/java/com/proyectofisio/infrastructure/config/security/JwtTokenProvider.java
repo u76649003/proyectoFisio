@@ -18,7 +18,10 @@ import java.security.Key;
 import java.util.Collections;
 import java.util.Date;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Component
+@Slf4j
 public class JwtTokenProvider {
 
     @Value("${jwt.secret}")
@@ -46,7 +49,11 @@ public class JwtTokenProvider {
         Claims claims = extractClaims(token);
         String username = claims.getSubject();
         String role = claims.get("role", String.class);
-
+        
+        log.info("=== DEBUG TOKEN ===");
+        log.info("Username extraído del token: {}", username);
+        log.info("Rol extraído del token: {}", role);
+        
         UserDetails userDetails = org.springframework.security.core.userdetails.User
                 .withUsername(username)
                 .password("")
@@ -56,7 +63,9 @@ public class JwtTokenProvider {
                 .credentialsExpired(false)
                 .disabled(false)
                 .build();
-
+        
+        log.info("Autoridades asignadas al usuario: {}", userDetails.getAuthorities());
+        
         return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
     }
 
