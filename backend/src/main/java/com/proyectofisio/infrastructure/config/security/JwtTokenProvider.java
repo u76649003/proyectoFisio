@@ -17,6 +17,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -32,7 +34,7 @@ public class JwtTokenProvider {
 
     public String createToken(String username, String role) {
         Claims claims = Jwts.claims().setSubject(username);
-        claims.put("role", role);
+        claims.put("authorities", Collections.singletonList(role));
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + validityInMilliseconds);
@@ -48,20 +50,23 @@ public class JwtTokenProvider {
     public Authentication getAuthentication(String token) {
         Claims claims = extractClaims(token);
         String username = claims.getSubject();
-        String role = claims.get("role", String.class);
+        
+        List<String> authorities = claims.get("authorities", List.class);
         
         log.info("=== DEBUG TOKEN ===");
         log.info("Username extraído del token: {}", username);
-        log.info("Rol extraído del token: {}", role);
+        log.info("Autoridades extraídas del token: {}", authorities);
         
-        SimpleGrantedAuthority authority = new SimpleGrantedAuthority(role);
+        List<SimpleGrantedAuthority> grantedAuthorities = authorities.stream()
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
         
-        log.info("Autoridad creada: {}", authority);
+        log.info("Autoridades creadas: {}", grantedAuthorities);
         
         UserDetails userDetails = org.springframework.security.core.userdetails.User
                 .withUsername(username)
                 .password("")
-                .authorities(authority)
+                .authorities(grantedAuthorities)
                 .accountExpired(false)
                 .accountLocked(false)
                 .credentialsExpired(false)
