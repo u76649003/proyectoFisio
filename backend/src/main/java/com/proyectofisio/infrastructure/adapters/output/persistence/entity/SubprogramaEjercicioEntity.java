@@ -39,17 +39,4 @@ public class SubprogramaEjercicioEntity {
     
     @Column(nullable = false)
     private Integer orden;
-}
-
-/**
- * Clase para la clave compuesta de SubprogramaEjercicioEntity
- */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-class SubprogramaEjercicioId implements Serializable {
-    private static final long serialVersionUID = 1L;
-    
-    private Long subprograma;
-    private Long ejercicio;
 } 
