@@ -16,6 +16,7 @@ public class ProgramaPersonalizado {
     private Long id;
     private String nombre;
     private String tipoPrograma;
+    private String descripcion;
     private Long empresaId;
     private Long creadoPorUsuarioId;
     private List<Subprograma> subprogramas;

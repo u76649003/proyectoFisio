@@ -14,10 +14,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OrderBy;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -48,15 +46,9 @@ public class SubprogramaEntity {
     @JoinColumn(name = "programa_personalizado_id", nullable = false)
     private ProgramaPersonalizadoEntity programaPersonalizado;
     
-    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    @JoinTable(
-        name = "subprograma_ejercicio",
-        joinColumns = @JoinColumn(name = "subprograma_id"),
-        inverseJoinColumns = @JoinColumn(name = "ejercicio_id")
-    )
-    @OrderBy("orden ASC")
+    @OneToMany(mappedBy = "subprograma", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<EjercicioEntity> ejercicios = new ArrayList<>();
+    private List<SubprogramaEjercicioEntity> subprogramaEjercicios = new ArrayList<>();
     
     @CreationTimestamp
     @Column(name = "fecha_creacion", updatable = false)

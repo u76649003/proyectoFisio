@@ -40,6 +40,9 @@ public class ProgramaPersonalizadoEntity {
     @Column(name = "tipo_programa")
     private String tipoPrograma;
     
+    @Column
+    private String descripcion;
+    
     @ManyToOne
     @JoinColumn(name = "empresa_id", nullable = false)
     private EmpresaEntity empresa;

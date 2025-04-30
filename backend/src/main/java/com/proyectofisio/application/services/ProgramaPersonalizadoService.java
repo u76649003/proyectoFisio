@@ -16,6 +16,7 @@ import com.proyectofisio.domain.model.Ejercicio;
 import com.proyectofisio.domain.model.ProgramaPersonalizado;
 import com.proyectofisio.domain.model.Subprograma;
 import com.proyectofisio.infrastructure.adapters.output.persistence.entity.EjercicioEntity;
+import com.proyectofisio.infrastructure.adapters.output.persistence.entity.SubprogramaEjercicioEntity;
 import com.proyectofisio.infrastructure.adapters.output.persistence.mapper.AccessTokenMapper;
 import com.proyectofisio.infrastructure.adapters.output.persistence.mapper.ComentarioPacienteMapper;
 import com.proyectofisio.infrastructure.adapters.output.persistence.mapper.EjercicioMapper;
@@ -26,6 +27,7 @@ import com.proyectofisio.infrastructure.adapters.output.persistence.repository.C
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.EjercicioRepository;
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.ProgramaPersonalizadoRepository;
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.SubprogramaRepository;
+import com.proyectofisio.infrastructure.adapters.output.persistence.repository.SubprogramaEjercicioRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -38,6 +40,7 @@ public class ProgramaPersonalizadoService implements ProgramaPersonalizadoServic
     private final EjercicioRepository ejercicioRepository;
     private final AccessTokenRepository accessTokenRepository;
     private final ComentarioPacienteRepository comentarioRepository;
+    private final SubprogramaEjercicioRepository subprogramaEjercicioRepository;
     
     private final ProgramaPersonalizadoMapper programaMapper;
     private final SubprogramaMapper subprogramaMapper;
@@ -129,14 +132,16 @@ public class ProgramaPersonalizadoService implements ProgramaPersonalizadoServic
     
     @Override
     public Subprograma getSubprogramaById(Long id) {
-        var entity = subprogramaRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Subprograma no encontrado con id: " + id));
+        var entity = subprogramaRepository.findByIdWithEjercicios(id);
+        if (entity == null) {
+            throw new IllegalArgumentException("Subprograma no encontrado con id: " + id);
+        }
         return subprogramaMapper.toModel(entity);
     }
     
     @Override
     public List<Subprograma> getSubprogramasByProgramaId(Long programaId) {
-        var entities = subprogramaRepository.findByProgramaPersonalizadoIdOrderByOrdenAsc(programaId);
+        var entities = subprogramaRepository.findByProgramaPersonalizadoIdWithEjerciciosOrderByOrdenAsc(programaId);
         return subprogramaMapper.toModelList(entities);
     }
     
@@ -238,70 +243,96 @@ public class ProgramaPersonalizadoService implements ProgramaPersonalizadoServic
             .orElseThrow(() -> new IllegalArgumentException("Ejercicio no encontrado con id: " + ejercicioId));
         
         // Verificar si el ejercicio ya está asignado
-        if (subprogramaEntity.getEjercicios().stream()
-                .anyMatch(e -> e.getId().equals(ejercicioId))) {
+        Optional<SubprogramaEjercicioEntity> existing = subprogramaEjercicioRepository
+            .findBySubprogramaIdAndEjercicioId(subprogramaId, ejercicioId);
+            
+        if (existing.isPresent()) {
             throw new IllegalArgumentException("El ejercicio ya está asignado a este subprograma");
         }
         
-        // Establecer el orden si se proporciona
+        // Determinar el orden para el nuevo ejercicio
+        int ordenFinal;
         if (orden != null) {
-            ejercicioEntity.setOrden(orden);
-            ejercicioRepository.save(ejercicioEntity);
+            ordenFinal = orden;
         } else {
-            // Asignar el siguiente orden disponible
-            int nextOrder = subprogramaEntity.getEjercicios().size() + 1;
-            ejercicioEntity.setOrden(nextOrder);
-            ejercicioRepository.save(ejercicioEntity);
+            // Obtener el último orden y sumar 1
+            Integer maxOrden = subprogramaEjercicioRepository.findMaxOrdenBySubprogramaId(subprogramaId);
+            ordenFinal = (maxOrden != null) ? maxOrden + 1 : 1;
         }
         
-        // Añadir el ejercicio al subprograma
-        subprogramaEntity.getEjercicios().add(ejercicioEntity);
-        var savedEntity = subprogramaRepository.save(subprogramaEntity);
+        // Crear la entidad de relación
+        SubprogramaEjercicioEntity relacion = SubprogramaEjercicioEntity.builder()
+            .subprograma(subprogramaEntity)
+            .ejercicio(ejercicioEntity)
+            .orden(ordenFinal)
+            .build();
+            
+        // Guardar la relación
+        subprogramaEjercicioRepository.save(relacion);
         
-        return subprogramaMapper.toModel(savedEntity);
+        // Refrescar la entidad del subprograma para obtener las relaciones actualizadas
+        subprogramaEntity = subprogramaRepository.findById(subprogramaId).get();
+        
+        return subprogramaMapper.toModel(subprogramaEntity);
     }
     
     @Override
     @Transactional
     public void removerEjercicioDeSubprograma(Long subprogramaId, Long ejercicioId) {
-        var subprogramaEntity = subprogramaRepository.findById(subprogramaId)
-            .orElseThrow(() -> new IllegalArgumentException("Subprograma no encontrado con id: " + subprogramaId));
-        
-        // Verificar si el ejercicio está asignado
-        boolean removed = subprogramaEntity.getEjercicios().removeIf(e -> e.getId().equals(ejercicioId));
-        
-        if (!removed) {
-            throw new IllegalArgumentException("El ejercicio no está asignado a este subprograma");
+        // Verificar si el subprograma existe
+        if (!subprogramaRepository.existsById(subprogramaId)) {
+            throw new IllegalArgumentException("Subprograma no encontrado con id: " + subprogramaId);
         }
         
-        subprogramaRepository.save(subprogramaEntity);
+        // Verificar si el ejercicio existe
+        if (!ejercicioRepository.existsById(ejercicioId)) {
+            throw new IllegalArgumentException("Ejercicio no encontrado con id: " + ejercicioId);
+        }
+        
+        // Eliminar la relación
+        subprogramaEjercicioRepository.deleteBySubprogramaIdAndEjercicioId(subprogramaId, ejercicioId);
+        
+        // Reordenar los ejercicios restantes
+        List<SubprogramaEjercicioEntity> relaciones = subprogramaEjercicioRepository
+            .findBySubprogramaIdOrderByOrdenAsc(subprogramaId);
+            
+        int orden = 1;
+        for (SubprogramaEjercicioEntity relacion : relaciones) {
+            relacion.setOrden(orden++);
+            subprogramaEjercicioRepository.save(relacion);
+        }
     }
     
     @Override
     @Transactional
     public void reordenarEjerciciosEnSubprograma(Long subprogramaId, List<Long> ejerciciosIds) {
-        var subprogramaEntity = subprogramaRepository.findById(subprogramaId)
-            .orElseThrow(() -> new IllegalArgumentException("Subprograma no encontrado con id: " + subprogramaId));
-        
-        // Verificar que todos los ejercicios en el nuevo orden pertenecen al subprograma
-        List<Long> existingIds = subprogramaEntity.getEjercicios().stream()
-                .map(EjercicioEntity::getId)
-                .collect(Collectors.toList());
-        
-        if (!existingIds.containsAll(ejerciciosIds) || existingIds.size() != ejerciciosIds.size()) {
-            throw new IllegalArgumentException("La lista de ejercicios no coincide con los ejercicios asignados al subprograma");
+        // Verificar si el subprograma existe
+        if (!subprogramaRepository.existsById(subprogramaId)) {
+            throw new IllegalArgumentException("Subprograma no encontrado con id: " + subprogramaId);
         }
         
-        // Actualizar el orden de cada ejercicio
-        for (int i = 0; i < ejerciciosIds.size(); i++) {
-            Long ejercicioId = ejerciciosIds.get(i);
-            Optional<EjercicioEntity> ejercicioOpt = subprogramaEntity.getEjercicios().stream()
-                .filter(e -> e.getId().equals(ejercicioId))
-                .findFirst();
+        // Validar que todos los ejercicios existan y estén asignados al subprograma
+        for (Long ejercicioId : ejerciciosIds) {
+            if (!ejercicioRepository.existsById(ejercicioId)) {
+                throw new IllegalArgumentException("Ejercicio no encontrado con id: " + ejercicioId);
+            }
             
-            if (ejercicioOpt.isPresent()) {
-                ejercicioOpt.get().setOrden(i + 1); // Orden base-1
-                ejercicioRepository.save(ejercicioOpt.get());
+            if (!subprogramaEjercicioRepository.findBySubprogramaIdAndEjercicioId(subprogramaId, ejercicioId).isPresent()) {
+                throw new IllegalArgumentException("El ejercicio con id " + ejercicioId + 
+                    " no está asignado al subprograma con id " + subprogramaId);
+            }
+        }
+        
+        // Actualizar el orden de cada ejercicio según la lista proporcionada
+        int orden = 1;
+        for (Long ejercicioId : ejerciciosIds) {
+            Optional<SubprogramaEjercicioEntity> relacion = subprogramaEjercicioRepository
+                .findBySubprogramaIdAndEjercicioId(subprogramaId, ejercicioId);
+                
+            if (relacion.isPresent()) {
+                SubprogramaEjercicioEntity entity = relacion.get();
+                entity.setOrden(orden++);
+                subprogramaEjercicioRepository.save(entity);
             }
         }
     }

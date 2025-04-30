@@ -1,5 +1,6 @@
 package com.proyectofisio.infrastructure.adapters.output.persistence.mapper;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,9 +27,10 @@ public class SubprogramaMapper {
         }
         
         List<Ejercicio> ejercicios = List.of();
-        if (entity.getEjercicios() != null) {
-            ejercicios = entity.getEjercicios().stream()
-                .map(ejercicioMapper::toModel)
+        if (entity.getSubprogramaEjercicios() != null) {
+            ejercicios = entity.getSubprogramaEjercicios().stream()
+                .sorted(Comparator.comparing(se -> se.getOrden()))
+                .map(se -> ejercicioMapper.toModel(se.getEjercicio()))
                 .collect(Collectors.toList());
         }
         

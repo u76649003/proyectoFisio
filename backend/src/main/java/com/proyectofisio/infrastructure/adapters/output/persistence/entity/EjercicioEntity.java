@@ -13,8 +13,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -62,9 +62,9 @@ public class EjercicioEntity {
     @JoinColumn(name = "creado_por_usuario_id", nullable = false)
     private UsuarioEntity creadoPorUsuario;
     
-    @ManyToMany(mappedBy = "ejercicios")
+    @OneToMany(mappedBy = "ejercicio")
     @Builder.Default
-    private List<SubprogramaEntity> subprogramas = new ArrayList<>();
+    private List<SubprogramaEjercicioEntity> subprogramaEjercicios = new ArrayList<>();
     
     @CreationTimestamp
     @Column(name = "fecha_creacion", updatable = false)

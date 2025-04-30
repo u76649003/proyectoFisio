@@ -14,4 +14,5 @@ import lombok.NoArgsConstructor;
 public class ProgramaPersonalizadoRequest {
     private String nombre;
     private String tipoPrograma;
+    private String descripcion;
 } 

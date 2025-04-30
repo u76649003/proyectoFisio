@@ -90,12 +90,14 @@ public class ProgramaPersonalizadoController {
         log.info("Datos del programa a crear:");
         log.info("Nombre: {}", request.getNombre());
         log.info("Tipo: {}", request.getTipoPrograma());
+        log.info("Descripción: {}", request.getDescripcion());
         log.info("EmpresaId: {}", empresaId);
         log.info("CreadoPorUsuarioId: {}", userId);
         
         ProgramaPersonalizado programa = ProgramaPersonalizado.builder()
                 .nombre(request.getNombre())
                 .tipoPrograma(request.getTipoPrograma())
+                .descripcion(request.getDescripcion())
                 .empresaId(empresaId)
                 .creadoPorUsuarioId(userId)
                 .build();
@@ -145,6 +147,7 @@ public class ProgramaPersonalizadoController {
                 .id(id)
                 .nombre(request.getNombre())
                 .tipoPrograma(request.getTipoPrograma())
+                .descripcion(request.getDescripcion())
                 .empresaId(existingPrograma.getEmpresaId())
                 .creadoPorUsuarioId(existingPrograma.getCreadoPorUsuarioId())
                 .build();
