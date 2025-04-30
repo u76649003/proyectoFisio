@@ -49,7 +49,7 @@ public class EmpresaController implements EmpresaControllerDocs {
 
     @Override
     @PostMapping
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
     public ResponseEntity<?> crearEmpresa(@RequestBody Empresa empresa) {
         try {
             Empresa nuevaEmpresa = empresaService.crearEmpresa(empresa);
@@ -61,6 +61,7 @@ public class EmpresaController implements EmpresaControllerDocs {
 
     @Override
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR') or hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
     public ResponseEntity<?> obtenerEmpresaPorId(@PathVariable Long id) {
         return empresaService.obtenerEmpresaPorId(id)
                 .map(empresa -> new ResponseEntity<>(empresa, HttpStatus.OK))
@@ -69,13 +70,14 @@ public class EmpresaController implements EmpresaControllerDocs {
 
     @Override
     @GetMapping
+    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
     public ResponseEntity<List<Empresa>> obtenerTodasLasEmpresas() {
         return new ResponseEntity<>(empresaService.obtenerTodasLasEmpresas(), HttpStatus.OK);
     }
 
     @Override
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMINISTRADOR') or hasRole('DUENO')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR') or hasAuthority('DUENO')")
     public ResponseEntity<?> actualizarEmpresa(@PathVariable Long id, @RequestBody Empresa empresa) {
         try {
             empresa.setId(id);
@@ -88,7 +90,7 @@ public class EmpresaController implements EmpresaControllerDocs {
     
     @Override
     @PutMapping(value = "/{id}/with-logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole('ADMINISTRADOR') or hasRole('DUENO')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR') or hasAuthority('DUENO')")
     public ResponseEntity<?> actualizarEmpresaConLogo(
             @PathVariable Long id, 
             @RequestPart("empresa") EmpresaDTO empresaDTO,
@@ -128,7 +130,7 @@ public class EmpresaController implements EmpresaControllerDocs {
 
     @Override
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
     public ResponseEntity<Void> eliminarEmpresa(@PathVariable Long id) {
         try {
             empresaService.eliminarEmpresa(id);

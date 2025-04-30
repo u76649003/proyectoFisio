@@ -61,11 +61,20 @@ public class ProgramaPersonalizadoController {
         // Obtener el usuario autenticado
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         
-        log.info("=== DEBUG AUTENTICACIÓN ===");
+        log.info("=== DEBUG AUTENTICACIÓN DETALLADA ===");
         log.info("Nombre de usuario autenticado: {}", auth.getName());
         log.info("Autoridades del usuario: {}", auth.getAuthorities());
+        log.info("Clase de autoridades: {}", auth.getAuthorities().getClass().getName());
+        log.info("Lista de autoridades:");
+        auth.getAuthorities().forEach(authority -> {
+            log.info("- Autoridad: {}, Clase: {}", authority, authority.getClass().getName());
+        });
         log.info("¿Está autenticado?: {}", auth.isAuthenticated());
         log.info("Tipo de autenticación: {}", auth.getClass().getName());
+        log.info("Detalles de la autenticación: {}", auth.getDetails());
+        log.info("Principal: {}", auth.getPrincipal());
+        log.info("Clase del Principal: {}", auth.getPrincipal().getClass().getName());
+        log.info("Credenciales: {}", auth.getCredentials());
         
         // Comprobar si el usuario tiene los roles necesarios
         boolean tieneRolFisio = auth.getAuthorities().contains(new SimpleGrantedAuthority("FISIOTERAPEUTA"));
