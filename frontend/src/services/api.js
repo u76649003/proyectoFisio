@@ -1011,7 +1011,7 @@ const programasPersonalizadosService = {
       
       // La URL no necesita incluir el ID de empresa porque el backend ya filtra
       // por la empresa del usuario autenticado basado en el token JWT
-      const url = `${baseURL}/api/programas-personalizados`;
+      const url = `${baseURL}/programas-personalizados`;
       console.log('URL completa de solicitud:', url);
       
       // Hacer la petición con el token de autenticación
