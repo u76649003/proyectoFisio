@@ -15,4 +15,5 @@ public class ProgramaPersonalizadoRequest {
     private String nombre;
     private String tipoPrograma;
     private String descripcion;
+    private Long empresaId;
 } 
