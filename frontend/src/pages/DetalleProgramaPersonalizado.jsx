@@ -44,6 +44,7 @@ import {
 } from '@mui/icons-material';
 import { programasPersonalizadosService, authService } from '../services/api';
 import SidebarMenu from '../components/SidebarMenu';
+import SubprogramaFormMultimedia from '../components/SubprogramaFormMultimedia';
 
 const DetalleProgramaPersonalizado = () => {
   const { id } = useParams();
@@ -146,7 +147,6 @@ const DetalleProgramaPersonalizado = () => {
       nombre: '',
       descripcion: '',
       orden: subprogramas.length + 1,
-      fechaInicio: new Date().toISOString().substr(0, 10)
     });
     setFormErrors({});
     setOpenNewDialog(true);
@@ -156,50 +156,20 @@ const DetalleProgramaPersonalizado = () => {
     setOpenNewDialog(false);
   };
   
-  const handleSubprogramaChange = (e) => {
-    const { name, value } = e.target;
-    setSubprogramaData({
-      ...subprogramaData,
-      [name]: value
-    });
-    
-    // Limpiar error al modificar
-    if (formErrors[name]) {
-      setFormErrors({
-        ...formErrors,
-        [name]: null
-      });
-    }
-  };
-  
-  const validateSubprogramaForm = () => {
-    const newErrors = {};
-    
-    if (!subprogramaData.nombre.trim()) {
-      newErrors.nombre = 'El nombre del subprograma es obligatorio';
-    }
-    
-    if (subprogramaData.orden && isNaN(parseInt(subprogramaData.orden))) {
-      newErrors.orden = 'El orden debe ser un número';
-    }
-    
-    setFormErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-  
-  const handleSubmitSubprograma = async () => {
-    if (!validateSubprogramaForm()) {
-      return;
-    }
-    
+  const handleSaveSubprograma = async (data) => {
     try {
       setSubmitting(true);
       
       // Crear subprograma
-      const newSubprograma = await programasPersonalizadosService.createSubprograma(id, {
-        ...subprogramaData,
+      const subprogramaToCreate = {
+        ...data,
         programaPersonalizadoId: id
-      });
+      };
+      
+      const newSubprograma = await programasPersonalizadosService.createSubprograma(id, subprogramaToCreate);
+      
+      // Si hay archivos para subir, necesitamos hacerlo después de crear el subprograma
+      // en el componente SubprogramaFormMultimedia se manejan solo los datos básicos en la creación
       
       // Actualizar lista de subprogramas
       setSubprogramas([...subprogramas, newSubprograma]);
@@ -207,11 +177,16 @@ const DetalleProgramaPersonalizado = () => {
       // Cerrar diálogo
       handleCloseNewDialog();
       
+      // Mostrar notificación de éxito
+      setNotification({
+        open: true,
+        message: 'Subprograma creado correctamente',
+        severity: 'success'
+      });
+      
     } catch (err) {
       console.error('Error al crear subprograma:', err);
-      setFormErrors({
-        form: 'Error al crear el subprograma. Inténtalo de nuevo.'
-      });
+      setError('Error al crear el subprograma. Inténtalo de nuevo más tarde.');
     } finally {
       setSubmitting(false);
     }
@@ -449,84 +424,27 @@ const DetalleProgramaPersonalizado = () => {
       </Container>
       
       {/* Diálogo para crear nuevo subprograma */}
-      <Dialog open={openNewDialog} onClose={handleCloseNewDialog}>
+      <Dialog 
+        open={openNewDialog} 
+        onClose={handleCloseNewDialog}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>Añadir nuevo subprograma</DialogTitle>
         <DialogContent>
-          <Box mt={1}>
-            <TextField
-              fullWidth
-              label="Nombre"
-              name="nombre"
-              value={subprogramaData.nombre}
-              onChange={handleSubprogramaChange}
-              error={!!formErrors.nombre}
-              helperText={formErrors.nombre}
-              required
-              disabled={submitting}
-              margin="normal"
-            />
-            <TextField
-              fullWidth
-              label="Descripción (opcional)"
-              name="descripcion"
-              value={subprogramaData.descripcion}
-              onChange={handleSubprogramaChange}
-              multiline
-              rows={3}
-              disabled={submitting}
-              margin="normal"
-            />
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Orden"
-                  name="orden"
-                  type="number"
-                  value={subprogramaData.orden}
-                  onChange={handleSubprogramaChange}
-                  error={!!formErrors.orden}
-                  helperText={formErrors.orden || "Número que define el orden en el programa"}
-                  disabled={submitting}
-                  margin="normal"
-                  InputProps={{ inputProps: { min: 1 } }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Fecha de inicio (opcional)"
-                  name="fechaInicio"
-                  type="date"
-                  value={subprogramaData.fechaInicio}
-                  onChange={handleSubprogramaChange}
-                  disabled={submitting}
-                  margin="normal"
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-            </Grid>
-            {formErrors.form && (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                {formErrors.form}
-              </Alert>
-            )}
-          </Box>
+          <SubprogramaFormMultimedia
+            initialData={{
+              nombre: '',
+              descripcion: '',
+              orden: subprogramas.length + 1,
+              videoReferencia: '',
+              esEnlaceExterno: false,
+              imagenesUrls: []
+            }}
+            onSave={handleSaveSubprograma}
+            onCancel={handleCloseNewDialog}
+          />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseNewDialog} disabled={submitting}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSubmitSubprograma}
-            variant="contained"
-            color="primary"
-            disabled={submitting}
-            startIcon={submitting && <CircularProgress size={20} />}
-          >
-            {submitting ? 'Guardando...' : 'Guardar'}
-          </Button>
-        </DialogActions>
       </Dialog>
       
       {/* Diálogo para confirmar eliminación */}

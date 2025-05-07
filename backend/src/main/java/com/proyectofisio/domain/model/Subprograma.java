@@ -19,6 +19,9 @@ public class Subprograma {
     private Integer orden;
     private Long programaPersonalizadoId;
     private List<Ejercicio> ejercicios;
+    private String videoReferencia;
+    private Boolean esEnlaceExterno;
+    private List<String> imagenesUrls;
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaActualizacion;
 } 

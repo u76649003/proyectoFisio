@@ -1,5 +1,7 @@
 package com.proyectofisio.infrastructure.adapters.input.rest.dto;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,4 +16,7 @@ public class SubprogramaRequest {
     private String descripcion;
     private Integer orden;
     private Long programaPersonalizadoId;
+    private String videoReferencia;
+    private Boolean esEnlaceExterno;
+    private List<String> imagenesUrls;
 } 

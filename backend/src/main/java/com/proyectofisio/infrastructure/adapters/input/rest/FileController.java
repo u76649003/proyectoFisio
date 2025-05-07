@@ -121,6 +121,35 @@ public class FileController implements FileControllerDocs {
     }
     
     /**
+     * Obtiene un archivo multimedia desde una subcarpeta
+     */
+    @GetMapping("/uploads/{folder}/{filename:.+}")
+    public ResponseEntity<Resource> getFileFromFolder(
+            @PathVariable String folder,
+            @PathVariable String filename) {
+        try {
+            Path filePath = Paths.get(uploadDir, folder, filename).normalize();
+            Resource resource = new UrlResource(filePath.toUri());
+            
+            if (resource.exists()) {
+                // Determinar el tipo de contenido
+                String contentType = determineContentType(filename);
+                
+                return ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType(contentType))
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                        .body(resource);
+            } else {
+                log.error("Archivo no encontrado en carpeta {}: {}", folder, filename);
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            log.error("Error al obtener el archivo de la carpeta {}: {}", folder, e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    /**
      * Guarda un archivo de logo en el sistema de archivos
      * @param file Archivo a guardar
      * @return URL del archivo guardado
@@ -189,6 +218,17 @@ public class FileController implements FileControllerDocs {
                 return "application/vnd.ms-excel";
             case ".xlsx":
                 return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            // Formatos de video
+            case ".mp4":
+                return "video/mp4";
+            case ".avi":
+                return "video/x-msvideo";
+            case ".wmv":
+                return "video/x-ms-wmv";
+            case ".webm":
+                return "video/webm";
+            case ".mov":
+                return "video/quicktime";
             default:
                 return "application/octet-stream";
         }

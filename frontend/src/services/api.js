@@ -1266,6 +1266,160 @@ const programasPersonalizadosService = {
       throw error;
     }
   },
+
+  // Subprogramas
+  getSubprogramasByProgramaId: async (programaId) => {
+    try {
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/${programaId}/subprogramas`;
+      
+      const response = await axios.get(url, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener subprogramas:', error);
+      return [];
+    }
+  },
+  
+  getSubprogramaById: async (subprogramaId) => {
+    try {
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/subprogramas/${subprogramaId}`;
+      
+      const response = await axios.get(url, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener subprograma:', error);
+      throw error;
+    }
+  },
+  
+  createSubprograma: async (programaId, subprogramaData) => {
+    try {
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/${programaId}/subprogramas`;
+      
+      const response = await axios.post(url, subprogramaData, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error al crear subprograma:', error);
+      throw error;
+    }
+  },
+  
+  updateSubprograma: async (subprogramaId, subprogramaData) => {
+    try {
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/subprogramas/${subprogramaId}`;
+      
+      const response = await axios.put(url, subprogramaData, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error al actualizar subprograma:', error);
+      throw error;
+    }
+  },
+  
+  deleteSubprograma: async (subprogramaId) => {
+    try {
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/subprogramas/${subprogramaId}`;
+      
+      await axios.delete(url, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error al eliminar subprograma:', error);
+      throw error;
+    }
+  },
+  
+  // Nuevos métodos para multimedia
+  uploadSubprogramaVideo: async (subprogramaId, formData) => {
+    try {
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/subprogramas/${subprogramaId}/video`;
+      
+      const response = await axios.post(url, formData, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error al subir video:', error);
+      throw error;
+    }
+  },
+  
+  uploadSubprogramaImagenes: async (subprogramaId, formData) => {
+    try {
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/subprogramas/${subprogramaId}/imagenes`;
+      
+      const response = await axios.post(url, formData, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error al subir imágenes:', error);
+      throw error;
+    }
+  },
+
+  // Acceso externo a programa para pacientes
+  validarTokenPrograma: async (token) => {
+    try {
+      const url = `${axiosInstance.defaults.baseURL}/acceso-programa/validar`;
+      
+      const response = await axios.post(url, { token });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error al validar token:', error);
+      throw error;
+    }
+  },
+  
+  enviarComentario: async (comentario) => {
+    try {
+      const url = `${axiosInstance.defaults.baseURL}/acceso-programa/comentario`;
+      
+      const response = await axios.post(url, comentario);
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error al enviar comentario:', error);
+      throw error;
+    }
+  }
 };
 
 // Servicio para gestión de facturas

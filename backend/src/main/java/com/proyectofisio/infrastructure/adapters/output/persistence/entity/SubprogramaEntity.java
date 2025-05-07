@@ -9,6 +9,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -37,10 +38,21 @@ public class SubprogramaEntity {
     @Column(nullable = false)
     private String nombre;
     
+    @Column(columnDefinition = "TEXT")
     private String descripcion;
     
     @Column(nullable = false)
     private Integer orden;
+    
+    @Column(name = "video_referencia")
+    private String videoReferencia;
+    
+    @Column(name = "es_enlace_externo")
+    private Boolean esEnlaceExterno;
+    
+    @ElementCollection
+    @Column(name = "imagen_url")
+    private List<String> imagenesUrls = new ArrayList<>();
     
     @ManyToOne
     @JoinColumn(name = "programa_personalizado_id", nullable = false)

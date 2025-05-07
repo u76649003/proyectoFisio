@@ -6,8 +6,13 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.HashMap;
 import java.util.Map;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -22,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.proyectofisio.application.ports.input.ProgramaPersonalizadoServicePort;
 import com.proyectofisio.domain.model.AccessToken;
@@ -183,6 +189,9 @@ public class ProgramaPersonalizadoController {
                 .nombre(request.getNombre())
                 .descripcion(request.getDescripcion())
                 .orden(request.getOrden())
+                .videoReferencia(request.getVideoReferencia())
+                .esEnlaceExterno(request.getEsEnlaceExterno())
+                .imagenesUrls(request.getImagenesUrls())
                 .programaPersonalizadoId(programaId)
                 .build();
         
@@ -211,6 +220,9 @@ public class ProgramaPersonalizadoController {
                 .nombre(request.getNombre())
                 .descripcion(request.getDescripcion())
                 .orden(request.getOrden())
+                .videoReferencia(request.getVideoReferencia())
+                .esEnlaceExterno(request.getEsEnlaceExterno())
+                .imagenesUrls(request.getImagenesUrls())
                 .programaPersonalizadoId(existingSubprograma.getProgramaPersonalizadoId())
                 .build();
         
@@ -223,6 +235,130 @@ public class ProgramaPersonalizadoController {
     public ResponseEntity<MessageResponse> deleteSubprograma(@PathVariable Long id) {
         programaService.deleteSubprograma(id);
         return ResponseEntity.ok(new MessageResponse("Subprograma eliminado correctamente"));
+    }
+    
+    // Endpoint para subir video de un subprograma
+    @PostMapping(value = "/subprogramas/{id}/video", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
+    public ResponseEntity<?> uploadSubprogramaVideo(
+            @PathVariable Long id,
+            @RequestParam("video") MultipartFile videoFile) {
+        
+        try {
+            // Obtener el subprograma existente
+            Subprograma existingSubprograma = programaService.getSubprogramaById(id);
+            
+            // Guardar video en el servidor y obtener URL
+            String videoUrl = guardarMultimedia(videoFile, "videos");
+            
+            // Actualizar el subprograma con la URL del video
+            Subprograma subprogramaToUpdate = Subprograma.builder()
+                    .id(id)
+                    .nombre(existingSubprograma.getNombre())
+                    .descripcion(existingSubprograma.getDescripcion())
+                    .orden(existingSubprograma.getOrden())
+                    .videoReferencia(videoUrl)
+                    .esEnlaceExterno(false)
+                    .imagenesUrls(existingSubprograma.getImagenesUrls())
+                    .programaPersonalizadoId(existingSubprograma.getProgramaPersonalizadoId())
+                    .build();
+            
+            programaService.updateSubprograma(id, subprogramaToUpdate);
+            
+            Map<String, String> response = new HashMap<>();
+            response.put("videoUrl", videoUrl);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("Error al subir video: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse("Error al subir video: " + e.getMessage()));
+        }
+    }
+    
+    // Endpoint para subir imágenes de un subprograma
+    @PostMapping(value = "/subprogramas/{id}/imagenes", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
+    public ResponseEntity<?> uploadSubprogramaImagenes(
+            @PathVariable Long id,
+            @RequestParam("imagenes") List<MultipartFile> imagenesFiles) {
+        
+        try {
+            // Obtener el subprograma existente
+            Subprograma existingSubprograma = programaService.getSubprogramaById(id);
+            
+            // Lista para almacenar las URLs de las imágenes
+            List<String> imagenesUrls = new ArrayList<>();
+            
+            // Si ya hay imágenes, mantenerlas
+            if (existingSubprograma.getImagenesUrls() != null) {
+                imagenesUrls.addAll(existingSubprograma.getImagenesUrls());
+            }
+            
+            // Guardar cada imagen y añadir su URL
+            for (MultipartFile imagenFile : imagenesFiles) {
+                String imagenUrl = guardarMultimedia(imagenFile, "imagenes");
+                imagenesUrls.add(imagenUrl);
+            }
+            
+            // Actualizar el subprograma con las URLs de las imágenes
+            Subprograma subprogramaToUpdate = Subprograma.builder()
+                    .id(id)
+                    .nombre(existingSubprograma.getNombre())
+                    .descripcion(existingSubprograma.getDescripcion())
+                    .orden(existingSubprograma.getOrden())
+                    .videoReferencia(existingSubprograma.getVideoReferencia())
+                    .esEnlaceExterno(existingSubprograma.getEsEnlaceExterno())
+                    .imagenesUrls(imagenesUrls)
+                    .programaPersonalizadoId(existingSubprograma.getProgramaPersonalizadoId())
+                    .build();
+            
+            programaService.updateSubprograma(id, subprogramaToUpdate);
+            
+            return ResponseEntity.ok(imagenesUrls);
+            
+        } catch (Exception e) {
+            log.error("Error al subir imágenes: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse("Error al subir imágenes: " + e.getMessage()));
+        }
+    }
+    
+    // Método para guardar archivos multimedia
+    private String guardarMultimedia(MultipartFile file, String subFolder) throws IOException {
+        // Directorio base para archivos multimedia
+        String uploadDir = "uploads/" + subFolder;
+        
+        // Crear el directorio si no existe
+        Path uploadPath = Paths.get(uploadDir);
+        if (!Files.exists(uploadPath)) {
+            Files.createDirectories(uploadPath);
+        }
+        
+        // Generar un nombre único para el archivo
+        String originalFilename = file.getOriginalFilename();
+        String fileExtension = getFileExtension(originalFilename);
+        String uniqueFileName = UUID.randomUUID().toString() + fileExtension;
+        
+        // Guardar el archivo
+        Path filePath = uploadPath.resolve(uniqueFileName);
+        Files.copy(file.getInputStream(), filePath);
+        
+        // URL para acceder al archivo
+        String baseUrl = "http://localhost:8080"; // Ajustar según configuración
+        return baseUrl + "/api/files/uploads/" + subFolder + "/" + uniqueFileName;
+    }
+    
+    // Método para obtener la extensión de un archivo
+    private String getFileExtension(String fileName) {
+        if (fileName == null) {
+            return "";
+        }
+        int lastDotIndex = fileName.lastIndexOf('.');
+        if (lastDotIndex < 0) {
+            return "";
+        }
+        return fileName.substring(lastDotIndex);
     }
     
     // Endpoint para asignar un ejercicio a un subprograma
