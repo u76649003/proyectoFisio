@@ -6,10 +6,6 @@ import {
   Box,
   Button,
   Paper,
-  Grid,
-  Card,
-  CardContent,
-  CardActions,
   Divider,
   useTheme,
   useMediaQuery,
@@ -28,16 +24,33 @@ import {
   InputAdornment,
   TablePagination,
   TableSortLabel,
-  Chip
+  Chip,
+  Collapse,
+  Link,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  ListItemSecondaryAction
 } from '@mui/material';
 import {
   Add as AddIcon,
   FitnessCenter,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  PlayArrow as ViewIcon,
+  Visibility as ViewIcon,
   Search as SearchIcon,
-  Clear as ClearIcon
+  Clear as ClearIcon,
+  KeyboardArrowDown as ExpandMoreIcon,
+  KeyboardArrowUp as ExpandLessIcon,
+  Link as LinkIcon,
+  Share as ShareIcon,
+  ContentCopy as CopyIcon,
+  PlayCircleOutline as PlayIcon
 } from '@mui/icons-material';
 import SidebarMenu from '../components/SidebarMenu';
 import { authService, programasPersonalizadosService } from '../services/api';
@@ -58,6 +71,16 @@ const ProgramasPersonalizados = () => {
   const [orderBy, setOrderBy] = useState('nombre');
   const [order, setOrder] = useState('asc');
   const [filteredProgramas, setFilteredProgramas] = useState([]);
+  
+  // Estado para expandir filas y mostrar subprogramas
+  const [expandedRows, setExpandedRows] = useState({});
+  const [loadingSubprogramas, setLoadingSubprogramas] = useState({});
+  const [subprogramasPorPrograma, setSubprogramasPorPrograma] = useState({});
+  
+  // Estado para diálogo de compartir
+  const [compartirDialogOpen, setCompartirDialogOpen] = useState(false);
+  const [programaCompartir, setProgramaCompartir] = useState(null);
+  const [pacientesSeleccionados, setPacientesSeleccionados] = useState([]);
   
   // Cargar programas al montar el componente
   useEffect(() => {
@@ -109,15 +132,47 @@ const ProgramasPersonalizados = () => {
       return;
     }
 
+    const searchTermLower = searchTerm.toLowerCase();
     const filtered = programas.filter(programa => 
-      (programa.nombre && programa.nombre.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (programa.tipoPrograma && programa.tipoPrograma.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (programa.descripcion && programa.descripcion.toLowerCase().includes(searchTerm.toLowerCase()))
+      (programa.nombre && programa.nombre.toLowerCase().includes(searchTermLower)) ||
+      (programa.tipoPrograma && programa.tipoPrograma.toLowerCase().includes(searchTermLower)) ||
+      (programa.descripcion && programa.descripcion.toLowerCase().includes(searchTermLower)) ||
+      // También buscar en otros campos como fechas
+      (programa.fechaCreacion && new Date(programa.fechaCreacion).toLocaleDateString().includes(searchTerm))
     );
     
     setFilteredProgramas(filtered);
     setPage(0); // Regresar a la primera página al filtrar
   }, [searchTerm, programas]);
+
+  // Función para cargar subprogramas de un programa
+  const cargarSubprogramas = async (programaId) => {
+    // Si ya tenemos los subprogramas, no es necesario cargarlos de nuevo
+    if (subprogramasPorPrograma[programaId]) {
+      return;
+    }
+    
+    try {
+      setLoadingSubprogramas(prev => ({ ...prev, [programaId]: true }));
+      
+      const subprogramas = await programasPersonalizadosService.getSubprogramasByProgramaId(programaId);
+      
+      setSubprogramasPorPrograma(prev => ({
+        ...prev,
+        [programaId]: subprogramas || []
+      }));
+      
+    } catch (error) {
+      console.error(`Error al cargar subprogramas del programa ${programaId}:`, error);
+      setNotification({
+        open: true,
+        message: 'Error al cargar los subprogramas',
+        severity: 'error'
+      });
+    } finally {
+      setLoadingSubprogramas(prev => ({ ...prev, [programaId]: false }));
+    }
+  };
 
   // Función para ordenar programas
   const handleRequestSort = (property) => {
@@ -126,25 +181,53 @@ const ProgramasPersonalizados = () => {
     setOrderBy(property);
 
     const sortedProgramas = [...filteredProgramas].sort((a, b) => {
-      const aValue = a[property] || '';
-      const bValue = b[property] || '';
-      
-      if (order === 'desc') {
-        return aValue.localeCompare(bValue);
+      // Manejar diferentes tipos de datos para ordenamiento
+      if (property === 'fechaCreacion' || property === 'fechaActualizacion') {
+        // Ordenar fechas
+        const dateA = a[property] ? new Date(a[property]).getTime() : 0;
+        const dateB = b[property] ? new Date(b[property]).getTime() : 0;
+        return isAsc ? dateA - dateB : dateB - dateA;
+      } else if (property === 'cantidadSubprogramas' || property === 'cantidadEjercicios') {
+        // Ordenar números
+        const numA = a[property] || 0;
+        const numB = b[property] || 0;
+        return isAsc ? numA - numB : numB - numA;
       } else {
-        return bValue.localeCompare(aValue);
+        // Ordenar texto
+        const aValue = (a[property] || '').toString().toLowerCase();
+        const bValue = (b[property] || '').toString().toLowerCase();
+        return isAsc ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       }
     });
 
     setFilteredProgramas(sortedProgramas);
   };
   
+  // Función para expandir/colapsar fila y mostrar subprogramas
+  const handleToggleRow = async (programaId) => {
+    const newExpandedRows = {
+      ...expandedRows,
+      [programaId]: !expandedRows[programaId]
+    };
+    
+    setExpandedRows(newExpandedRows);
+    
+    // Si estamos expandiendo y no tenemos subprogramas, cargarlos
+    if (newExpandedRows[programaId] && !subprogramasPorPrograma[programaId]) {
+      await cargarSubprogramas(programaId);
+    }
+  };
+
   const handleCreateProgram = () => {
     navigate('/programas-personalizados/nuevo');
   };
   
   const handleViewProgram = (programaId) => {
     navigate(`/programas-personalizados/${programaId}`);
+  };
+  
+  const handleViewSubprograma = (programaId, subprogramaId) => {
+    navigate(`/programas-personalizados/${programaId}/subprograma/${subprogramaId}`);
   };
   
   const handleEditProgram = (programaId, event) => {
@@ -161,6 +244,50 @@ const ProgramasPersonalizados = () => {
       message: 'Funcionalidad de eliminación pendiente de implementar',
       severity: 'info'
     });
+  };
+
+  // Manejadores para compartir programa
+  const handleOpenCompartir = (programa, event) => {
+    event.stopPropagation();
+    setProgramaCompartir(programa);
+    setCompartirDialogOpen(true);
+  };
+
+  const handleCloseCompartir = () => {
+    setCompartirDialogOpen(false);
+    setProgramaCompartir(null);
+    setPacientesSeleccionados([]);
+  };
+
+  const handleCompartirPrograma = () => {
+    // Aquí iría la lógica para compartir el programa con pacientes
+    setNotification({
+      open: true,
+      message: 'Programa compartido correctamente',
+      severity: 'success'
+    });
+    handleCloseCompartir();
+  };
+
+  // Copiar enlace de acceso
+  const handleCopyLink = (url, event) => {
+    event.stopPropagation();
+    navigator.clipboard.writeText(url)
+      .then(() => {
+        setNotification({
+          open: true,
+          message: 'Enlace copiado al portapapeles',
+          severity: 'success'
+        });
+      })
+      .catch((error) => {
+        console.error('Error al copiar enlace:', error);
+        setNotification({
+          open: true,
+          message: 'Error al copiar enlace',
+          severity: 'error'
+        });
+      });
   };
 
   // Manejadores para paginación
@@ -208,7 +335,7 @@ const ProgramasPersonalizados = () => {
               <TextField
                 fullWidth
                 variant="outlined"
-                placeholder="Buscar programas por nombre, tipo o descripción..."
+                placeholder="Buscar por nombre, tipo, descripción o fecha..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 InputProps={{
@@ -289,43 +416,132 @@ const ProgramasPersonalizados = () => {
               </Button>
             </Paper>
           ) : (
-            <>
-              {/* Vista en tarjetas para pantallas grandes */}
-              <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-                <Grid container spacing={3}>
-                  {getPaginatedData().map((programa) => (
-                    <Grid item xs={12} sm={6} md={4} key={programa.id}>
-                      <Card 
-                        sx={{ 
-                          height: '100%', 
-                          display: 'flex', 
-                          flexDirection: 'column',
-                          cursor: 'pointer',
-                          transition: 'transform 0.2s',
-                          '&:hover': {
-                            transform: 'translateY(-5px)',
-                            boxShadow: 4
-                          }
-                        }}
-                        onClick={() => handleViewProgram(programa.id)}
+            <TableContainer component={Paper} elevation={3}>
+              <Table aria-label="tabla de programas personalizados" size="medium">
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: theme.palette.action.hover }}>
+                    <TableCell width="50px"></TableCell>
+                    <TableCell>
+                      <TableSortLabel
+                        active={orderBy === 'nombre'}
+                        direction={orderBy === 'nombre' ? order : 'asc'}
+                        onClick={() => handleRequestSort('nombre')}
                       >
-                        <CardContent sx={{ flexGrow: 1 }}>
-                          <Typography variant="h6" component="h2" gutterBottom noWrap>
-                            {programa.nombre || 'Programa sin nombre'}
+                        Nombre
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell>
+                      <TableSortLabel
+                        active={orderBy === 'tipoPrograma'}
+                        direction={orderBy === 'tipoPrograma' ? order : 'asc'}
+                        onClick={() => handleRequestSort('tipoPrograma')}
+                      >
+                        Tipo
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell>Descripción</TableCell>
+                    <TableCell align="center">Contenido</TableCell>
+                    <TableCell>
+                      <TableSortLabel
+                        active={orderBy === 'fechaCreacion'}
+                        direction={orderBy === 'fechaCreacion' ? order : 'asc'}
+                        onClick={() => handleRequestSort('fechaCreacion')}
+                      >
+                        Fecha creación
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell align="right">Acciones</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {getPaginatedData().map((programa) => (
+                    <React.Fragment key={programa.id}>
+                      <TableRow 
+                        hover
+                        sx={{ 
+                          cursor: 'pointer',
+                          '& > *': { borderBottom: 'unset' }
+                        }}
+                      >
+                        <TableCell>
+                          <Tooltip title={expandedRows[programa.id] ? "Ocultar subprogramas" : "Ver subprogramas"}>
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleRow(programa.id);
+                              }}
+                            >
+                              {expandedRows[programa.id] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell 
+                          component="th" 
+                          scope="row"
+                          onClick={() => handleViewProgram(programa.id)}
+                        >
+                          <Typography fontWeight="medium">
+                            {programa.nombre || 'Sin nombre'}
                           </Typography>
-                          {programa.tipoPrograma && (
-                            <Typography variant="body2" color="text.secondary" gutterBottom>
-                              Tipo: {programa.tipoPrograma}
-                            </Typography>
+                        </TableCell>
+                        <TableCell onClick={() => handleViewProgram(programa.id)}>
+                          {programa.tipoPrograma ? (
+                            <Chip 
+                              label={programa.tipoPrograma} 
+                              size="small" 
+                              color="primary" 
+                              variant="outlined"
+                            />
+                          ) : (
+                            '-'
                           )}
-                          <Divider sx={{ my: 1 }} />
-                          <Typography variant="body2" color="text.secondary">
-                            {programa.subprogramas?.length || 0} subprograma(s)
-                          </Typography>
-                        </CardContent>
-                        <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2 }}>
+                        </TableCell>
+                        <TableCell 
+                          onClick={() => handleViewProgram(programa.id)}
+                          sx={{
+                            maxWidth: '200px',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                        >
+                          {programa.descripcion || 'Sin descripción'}
+                        </TableCell>
+                        <TableCell 
+                          align="center"
+                          onClick={() => handleViewProgram(programa.id)}
+                        >
+                          <Box display="flex" flexDirection="column" alignItems="center">
+                            <Chip 
+                              label={programa.cantidadSubprogramas || 0} 
+                              size="small"
+                              color={programa.cantidadSubprogramas > 0 ? 'success' : 'default'}
+                            />
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                              {programa.cantidadEjercicios || 0} ejercicios
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell 
+                          align="center"
+                          onClick={() => handleViewProgram(programa.id)}
+                        >
+                          {programa.fechaCreacion ? (
+                            <Typography variant="body2" color="text.secondary">
+                              {new Date(programa.fechaCreacion).toLocaleDateString()}
+                            </Typography>
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell align="right">
                           <Tooltip title="Ver programa">
-                            <IconButton size="small" color="primary">
+                            <IconButton 
+                              size="small" 
+                              color="primary"
+                              onClick={() => handleViewProgram(programa.id)}
+                            >
                               <ViewIcon />
                             </IconButton>
                           </Tooltip>
@@ -338,79 +554,123 @@ const ProgramasPersonalizados = () => {
                               <EditIcon />
                             </IconButton>
                           </Tooltip>
-                        </CardActions>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-              
-              {/* Vista en tabla para pantallas pequeñas y medianas */}
-              <Box sx={{ display: { xs: 'block', md: 'none' } }}>
-                <TableContainer component={Paper}>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>
-                          <TableSortLabel
-                            active={orderBy === 'nombre'}
-                            direction={orderBy === 'nombre' ? order : 'asc'}
-                            onClick={() => handleRequestSort('nombre')}
-                          >
-                            Nombre
-                          </TableSortLabel>
+                          <Tooltip title="Compartir programa">
+                            <IconButton 
+                              size="small" 
+                              color="primary"
+                              onClick={(e) => handleOpenCompartir(programa, e)}
+                            >
+                              <ShareIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Eliminar programa">
+                            <IconButton 
+                              size="small" 
+                              color="error"
+                              onClick={(e) => handleDeleteProgram(programa.id, e)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
                         </TableCell>
-                        <TableCell>
-                          <TableSortLabel
-                            active={orderBy === 'tipoPrograma'}
-                            direction={orderBy === 'tipoPrograma' ? order : 'asc'}
-                            onClick={() => handleRequestSort('tipoPrograma')}
-                          >
-                            Tipo
-                          </TableSortLabel>
-                        </TableCell>
-                        <TableCell>Subprogramas</TableCell>
-                        <TableCell align="right">Acciones</TableCell>
                       </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {getPaginatedData().map((programa) => (
-                        <TableRow 
-                          key={programa.id}
-                          hover
-                          onClick={() => handleViewProgram(programa.id)}
-                          sx={{ cursor: 'pointer' }}
-                        >
-                          <TableCell>{programa.nombre || 'Sin nombre'}</TableCell>
-                          <TableCell>{programa.tipoPrograma || '-'}</TableCell>
-                          <TableCell>{programa.subprogramas?.length || 0}</TableCell>
-                          <TableCell align="right">
-                            <Tooltip title="Editar programa">
-                              <IconButton 
-                                size="small" 
-                                color="primary"
-                                onClick={(e) => handleEditProgram(programa.id, e)}
+                      
+                      {/* Fila expandible para subprogramas */}
+                      <TableRow>
+                        <TableCell colSpan={6} style={{ paddingTop: 0, paddingBottom: 0 }}>
+                          <Collapse in={expandedRows[programa.id]} timeout="auto" unmountOnExit>
+                            <Box p={3} bgcolor={theme.palette.action.hover} borderRadius={1} m={1}>
+                              <Typography variant="h6" gutterBottom component="div">
+                                Subprogramas
+                              </Typography>
+                              
+                              {loadingSubprogramas[programa.id] ? (
+                                <Box display="flex" justifyContent="center" my={2}>
+                                  <CircularProgress size={30} />
+                                </Box>
+                              ) : !subprogramasPorPrograma[programa.id] ? (
+                                <Typography color="text.secondary">
+                                  Error al cargar subprogramas
+                                </Typography>
+                              ) : subprogramasPorPrograma[programa.id].length === 0 ? (
+                                <Typography color="text.secondary">
+                                  No hay subprogramas disponibles
+                                </Typography>
+                              ) : (
+                                <List>
+                                  {subprogramasPorPrograma[programa.id].map((subprograma) => (
+                                    <ListItem 
+                                      key={subprograma.id}
+                                      button
+                                      onClick={() => handleViewSubprograma(programa.id, subprograma.id)}
+                                      sx={{
+                                        mb: 1,
+                                        bgcolor: 'background.paper',
+                                        borderRadius: 1,
+                                      }}
+                                    >
+                                      <ListItemIcon>
+                                        <PlayIcon color="primary" />
+                                      </ListItemIcon>
+                                      <ListItemText
+                                        primary={subprograma.nombre}
+                                        secondary={
+                                          <>
+                                            {subprograma.descripcion ? (
+                                              <Typography variant="body2" color="text.secondary" noWrap>
+                                                {subprograma.descripcion}
+                                              </Typography>
+                                            ) : null}
+                                            <Typography variant="caption" color="text.secondary">
+                                              {subprograma.ejercicios?.length || 0} ejercicios
+                                            </Typography>
+                                          </>
+                                        }
+                                      />
+                                      <ListItemSecondaryAction>
+                                        <Tooltip title="Copiar enlace de acceso">
+                                          <IconButton 
+                                            edge="end" 
+                                            size="small"
+                                            onClick={(e) => handleCopyLink(`${window.location.origin}/acceso-programa?subprograma=${subprograma.id}`, e)}
+                                          >
+                                            <CopyIcon fontSize="small" />
+                                          </IconButton>
+                                        </Tooltip>
+                                        <Tooltip title="Ver subprograma">
+                                          <IconButton 
+                                            edge="end" 
+                                            size="small"
+                                            sx={{ ml: 1 }}
+                                            onClick={() => handleViewSubprograma(programa.id, subprograma.id)}
+                                          >
+                                            <ViewIcon fontSize="small" />
+                                          </IconButton>
+                                        </Tooltip>
+                                      </ListItemSecondaryAction>
+                                    </ListItem>
+                                  ))}
+                                </List>
+                              )}
+                              
+                              <Button
+                                startIcon={<AddIcon />}
+                                variant="outlined"
+                                size="small"
+                                onClick={() => navigate(`/programas-personalizados/${programa.id}`)}
+                                sx={{ mt: 1 }}
                               >
-                                <EditIcon />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Eliminar programa">
-                              <IconButton 
-                                size="small" 
-                                color="error"
-                                onClick={(e) => handleDeleteProgram(programa.id, e)}
-                              >
-                                <DeleteIcon />
-                              </IconButton>
-                            </Tooltip>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
-
+                                Añadir subprograma
+                              </Button>
+                            </Box>
+                          </Collapse>
+                        </TableCell>
+                      </TableRow>
+                    </React.Fragment>
+                  ))}
+                </TableBody>
+              </Table>
+              
               {/* Paginación */}
               <TablePagination
                 component="div"
@@ -422,13 +682,54 @@ const ProgramasPersonalizados = () => {
                 rowsPerPageOptions={[5, 10, 25, 50]}
                 labelRowsPerPage="Programas por página:"
                 labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
-                sx={{ mt: 2 }}
               />
-            </>
+            </TableContainer>
           )}
         </Box>
       </Container>
       
+      {/* Diálogo para compartir programa */}
+      <Dialog 
+        open={compartirDialogOpen} 
+        onClose={handleCloseCompartir}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Compartir Programa</DialogTitle>
+        <DialogContent>
+          {programaCompartir && (
+            <>
+              <Typography variant="h6" gutterBottom>
+                {programaCompartir.nombre}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Generar enlaces de acceso para pacientes a este programa.
+              </Typography>
+              
+              <Divider sx={{ my: 2 }} />
+              
+              <Typography variant="subtitle1" gutterBottom>
+                Opciones de compartir
+              </Typography>
+              
+              <Button
+                variant="outlined"
+                startIcon={<LinkIcon />}
+                onClick={() => navigate(`/programas-personalizados/${programaCompartir.id}/compartir`)}
+                fullWidth
+                sx={{ mb: 2 }}
+              >
+                Ir a pantalla de compartir
+              </Button>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseCompartir}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Notificaciones */}
       <Snackbar
         open={notification.open}
         autoHideDuration={2000}
@@ -448,4 +749,4 @@ const ProgramasPersonalizados = () => {
   );
 };
 
-export default ProgramasPersonalizados; 
+export default ProgramasPersonalizados;

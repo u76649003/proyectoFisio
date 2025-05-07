@@ -996,7 +996,6 @@ const programasPersonalizadosService = {
   getProgramas: async () => {
     try {
       console.log('Intentando obtener programas personalizados...');
-      console.log('Token actual:', localStorage.getItem('token') ? 'Presente' : 'No disponible');
       
       // Verificar autenticación antes de hacer la petición
       if (!localStorage.getItem('token')) {
@@ -1004,40 +1003,29 @@ const programasPersonalizadosService = {
         return [];
       }
       
-      // Obtener el ID de empresa del usuario logueado
-      let empresaId = null;
-      try {
-        const userStr = localStorage.getItem('user');
-        if (userStr) {
-          const user = JSON.parse(userStr);
-          console.log('Usuario actual en servicio:', user.nombre, user.apellidos);
-          console.log('ROL DEL USUARIO EN SERVICIO:', user.rol);
-          empresaId = user.empresaId;
-          console.log('Empresa ID del usuario:', empresaId);
-        }
-      } catch (parseError) {
-        console.error('Error al parsear datos de usuario:', parseError);
-      }
+      // Obtener token de autenticación
+      const token = localStorage.getItem('token');
       
-      if (!empresaId) {
-        console.error('No se encontró ID de empresa para el usuario actual');
-        return [];
-      }
+      // Obtener URL base
+      const baseURL = axiosInstance.defaults.baseURL || 'https://proyectofisio.onrender.com';
       
-      // Forzar URL absoluta para evitar problemas de proxy
-      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/empresa/${empresaId}`;
+      // La URL no necesita incluir el ID de empresa porque el backend ya filtra
+      // por la empresa del usuario autenticado basado en el token JWT
+      const url = `${baseURL}/api/programas-personalizados`;
       console.log('URL completa de solicitud:', url);
       
-      // Usar axios directamente con la URL completa
+      // Hacer la petición con el token de autenticación
       const response = await axios.get(url, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         timeout: 30000
       });
       
       console.log('Respuesta de programas personalizados recibida:', response.data);
+      
+      // La respuesta ahora contiene información más detallada
       return response.data;
     } catch (error) {
       console.error('Error al obtener programas personalizados:', error);

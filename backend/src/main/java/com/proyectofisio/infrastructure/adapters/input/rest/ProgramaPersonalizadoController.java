@@ -44,6 +44,7 @@ import com.proyectofisio.infrastructure.adapters.output.persistence.entity.Pacie
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.PacienteRepository;
 import com.proyectofisio.application.ports.input.UsuarioServicePort;
 import com.proyectofisio.domain.model.Usuario;
+import com.proyectofisio.infrastructure.adapters.input.rest.dto.ProgramaPersonalizadoResponse;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -127,13 +128,6 @@ public class ProgramaPersonalizadoController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<ProgramaPersonalizado> getProgramaPersonalizadoById(@PathVariable Long id) {
-        return ResponseEntity.ok(programaService.getProgramaPersonalizadoById(id));
-    }
-    
-    // Endpoint para obtener todos los programas personalizados de una empresa
-    @GetMapping
-    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
-    public ResponseEntity<List<ProgramaPersonalizado>> getProgramasPersonalizadosByEmpresa() {
         // Obtener el usuario autenticado
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String email = auth.getName();
@@ -144,7 +138,64 @@ public class ProgramaPersonalizadoController {
         
         Long empresaId = usuario.getEmpresaId();
         
-        return ResponseEntity.ok(programaService.getProgramasPersonalizadosByEmpresaId(empresaId));
+        // Obtener el programa
+        ProgramaPersonalizado programa = programaService.getProgramaPersonalizadoById(id);
+        
+        // Verificar que el programa pertenece a la empresa del usuario
+        if (!programa.getEmpresaId().equals(empresaId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(null);
+        }
+        
+        return ResponseEntity.ok(programa);
+    }
+    
+    // Endpoint para obtener todos los programas personalizados de una empresa
+    @GetMapping
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
+    public ResponseEntity<List<ProgramaPersonalizadoResponse>> getProgramasPersonalizadosByEmpresa() {
+        // Obtener el usuario autenticado
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        
+        // Obtener usuario por email
+        Usuario usuario = usuarioService.obtenerUsuarioPorEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con email: " + email));
+        
+        Long empresaId = usuario.getEmpresaId();
+        
+        // Obtener programas
+        List<ProgramaPersonalizado> programas = programaService.getProgramasPersonalizadosByEmpresaId(empresaId);
+        
+        // Convertir a DTOs con información detallada
+        List<ProgramaPersonalizadoResponse> responses = programas.stream()
+                .map(programa -> {
+                    // Contar subprogramas y ejercicios
+                    int cantidadSubprogramas = programa.getSubprogramas() != null ? programa.getSubprogramas().size() : 0;
+                    int cantidadEjercicios = 0;
+                    if (programa.getSubprogramas() != null) {
+                        cantidadEjercicios = programa.getSubprogramas().stream()
+                                .mapToInt(subprograma -> 
+                                    subprograma.getEjercicios() != null ? subprograma.getEjercicios().size() : 0)
+                                .sum();
+                    }
+                    
+                    return ProgramaPersonalizadoResponse.builder()
+                            .id(programa.getId())
+                            .nombre(programa.getNombre())
+                            .tipoPrograma(programa.getTipoPrograma())
+                            .descripcion(programa.getDescripcion())
+                            .empresaId(programa.getEmpresaId())
+                            .creadoPorUsuarioId(programa.getCreadoPorUsuarioId())
+                            .cantidadSubprogramas(cantidadSubprogramas)
+                            .cantidadEjercicios(cantidadEjercicios)
+                            .fechaCreacion(programa.getFechaCreacion())
+                            .fechaActualizacion(programa.getFechaActualizacion())
+                            .build();
+                })
+                .collect(Collectors.toList());
+        
+        return ResponseEntity.ok(responses);
     }
     
     // Endpoint para actualizar un programa personalizado
@@ -185,6 +236,23 @@ public class ProgramaPersonalizadoController {
             @PathVariable Long programaId,
             @RequestBody SubprogramaRequest request) {
         
+        // Obtener el usuario autenticado
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        
+        // Obtener usuario por email
+        Usuario usuario = usuarioService.obtenerUsuarioPorEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con email: " + email));
+        
+        Long empresaId = usuario.getEmpresaId();
+        
+        // Verificar que el programa pertenece a la empresa del usuario
+        ProgramaPersonalizado programa = programaService.getProgramaPersonalizadoById(programaId);
+        if (!programa.getEmpresaId().equals(empresaId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(null);
+        }
+        
         Subprograma subprograma = Subprograma.builder()
                 .nombre(request.getNombre())
                 .descripcion(request.getDescripcion())
@@ -202,6 +270,25 @@ public class ProgramaPersonalizadoController {
     @GetMapping("/{programaId}/subprogramas")
     @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
     public ResponseEntity<List<Subprograma>> getSubprogramasByProgramaId(@PathVariable Long programaId) {
+        // Obtener el usuario autenticado
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        
+        // Obtener usuario por email
+        Usuario usuario = usuarioService.obtenerUsuarioPorEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con email: " + email));
+        
+        Long empresaId = usuario.getEmpresaId();
+        
+        // Obtener el programa
+        ProgramaPersonalizado programa = programaService.getProgramaPersonalizadoById(programaId);
+        
+        // Verificar que el programa pertenece a la empresa del usuario
+        if (!programa.getEmpresaId().equals(empresaId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(null);
+        }
+        
         return ResponseEntity.ok(programaService.getSubprogramasByProgramaId(programaId));
     }
     
@@ -212,8 +299,27 @@ public class ProgramaPersonalizadoController {
             @PathVariable Long id,
             @RequestBody SubprogramaRequest request) {
         
-        // Obtener el subprograma existente para mantener los datos actuales
+        // Obtener el usuario autenticado
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        
+        // Obtener usuario por email
+        Usuario usuario = usuarioService.obtenerUsuarioPorEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con email: " + email));
+        
+        Long empresaId = usuario.getEmpresaId();
+        
+        // Obtener el subprograma existente
         Subprograma existingSubprograma = programaService.getSubprogramaById(id);
+        
+        // Obtener el programa al que pertenece el subprograma
+        ProgramaPersonalizado programa = programaService.getProgramaPersonalizadoById(existingSubprograma.getProgramaPersonalizadoId());
+        
+        // Verificar que el programa pertenece a la empresa del usuario
+        if (!programa.getEmpresaId().equals(empresaId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(null);
+        }
         
         Subprograma subprogramaToUpdate = Subprograma.builder()
                 .id(id)
