@@ -40,11 +40,13 @@ import {
   Delete as DeleteIcon,
   MoreVert as MoreVertIcon,
   PlayArrow as PlayArrowIcon,
-  Share as ShareIcon
+  Share as ShareIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import { programasPersonalizadosService, authService } from '../services/api';
 import SidebarMenu from '../components/SidebarMenu';
 import SubprogramaFormMultimedia from '../components/SubprogramaFormMultimedia';
+import SubprogramaMultimediaViewer from '../components/SubprogramaMultimediaViewer';
 
 const DetalleProgramaPersonalizado = () => {
   const { id } = useParams();
@@ -78,6 +80,13 @@ const DetalleProgramaPersonalizado = () => {
   
   // Estado para la notificación
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'error' });
+  
+  // Nuevo estado para el detalle de subprograma
+  const [selectedSubprograma, setSelectedSubprograma] = useState(null);
+  const [openSubprogramaDetail, setOpenSubprogramaDetail] = useState(false);
+  
+  // Estado para edición de subprograma en el modal
+  const [editingSubprograma, setEditingSubprograma] = useState(false);
   
   // Verificar permisos de usuario
   useEffect(() => {
@@ -207,6 +216,7 @@ const DetalleProgramaPersonalizado = () => {
     if (!subprogramaToDelete) return;
     
     try {
+      setSubmitting(true);
       await programasPersonalizadosService.deleteSubprograma(subprogramaToDelete.id);
       
       // Actualizar lista de subprogramas
@@ -215,15 +225,119 @@ const DetalleProgramaPersonalizado = () => {
       // Cerrar diálogo
       handleCloseDeleteDialog();
       
+      // Mostrar notificación de éxito
+      setNotification({
+        open: true,
+        message: 'Subprograma eliminado correctamente',
+        severity: 'success'
+      });
+      
     } catch (err) {
       console.error('Error al eliminar subprograma:', err);
-      setError('No se pudo eliminar el subprograma. Inténtalo de nuevo más tarde.');
+      setNotification({
+        open: true,
+        message: 'No se pudo eliminar el subprograma. Inténtalo de nuevo más tarde.',
+        severity: 'error'
+      });
       handleCloseDeleteDialog();
+    } finally {
+      setSubmitting(false);
     }
   };
   
+  // Manejadores para el detalle de subprograma
+  const handleViewSubprogramaDetail = async (subprogramaId) => {
+    try {
+      setLoading(true);
+      const subprogramaData = await programasPersonalizadosService.getSubprogramaById(subprogramaId);
+      setSelectedSubprograma(subprogramaData);
+      setOpenSubprogramaDetail(true);
+    } catch (error) {
+      console.error('Error al cargar detalle del subprograma:', error);
+      setNotification({
+        open: true,
+        message: 'No se pudo cargar el detalle del subprograma',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleCloseSubprogramaDetail = () => {
+    setOpenSubprogramaDetail(false);
+    setSelectedSubprograma(null);
+    setEditingSubprograma(false);
+  };
+  
+  // Iniciar edición de subprograma en el modal
+  const handleStartEditSubprograma = () => {
+    setEditingSubprograma(true);
+  };
+  
+  // Cancelar edición de subprograma en el modal
+  const handleCancelEditSubprograma = () => {
+    setEditingSubprograma(false);
+  };
+  
+  // Guardar cambios en el subprograma desde el modal
+  const handleSaveSubprogramaEdit = async (data) => {
+    try {
+      setSubmitting(true);
+      
+      // Actualizar subprograma
+      const updatedSubprograma = await programasPersonalizadosService.updateSubprograma(
+        selectedSubprograma.id, 
+        data
+      );
+      
+      // Actualizar el subprograma en la lista
+      setSubprogramas(subprogramas.map(s => 
+        s.id === updatedSubprograma.id ? updatedSubprograma : s
+      ));
+      
+      // Actualizar el subprograma seleccionado
+      setSelectedSubprograma(updatedSubprograma);
+      
+      // Salir del modo edición
+      setEditingSubprograma(false);
+      
+      // Mostrar notificación de éxito
+      setNotification({
+        open: true,
+        message: 'Subprograma actualizado correctamente',
+        severity: 'success'
+      });
+      
+    } catch (err) {
+      console.error('Error al actualizar subprograma:', err);
+      setNotification({
+        open: true,
+        message: 'Error al actualizar el subprograma',
+        severity: 'error'
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  
+  // Eliminar subprograma desde el modal
+  const handleDeleteSubprogramaFromModal = () => {
+    if (selectedSubprograma) {
+      // Configurar el subprograma a eliminar
+      setSubprogramaToDelete(selectedSubprograma);
+      
+      // Cerrar el modal de detalle
+      handleCloseSubprogramaDetail();
+      
+      // Abrir el diálogo de confirmación
+      setOpenDeleteDialog(true);
+    }
+  };
+  
+  // Modificar el handler existente para que no navegue
   const handleViewSubprograma = (subprogramaId) => {
-    navigate(`/programas-personalizados/${id}/subprograma/${subprogramaId}`);
+    handleViewSubprogramaDetail(subprogramaId);
   };
   
   return (
@@ -457,11 +571,19 @@ const DetalleProgramaPersonalizado = () => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDeleteDialog}>
+          <Button 
+            onClick={handleCloseDeleteDialog}
+            disabled={submitting}
+          >
             Cancelar
           </Button>
-          <Button onClick={handleDeleteSubprograma} color="error">
-            Eliminar
+          <Button 
+            onClick={handleDeleteSubprograma} 
+            color="error"
+            disabled={submitting}
+            startIcon={submitting ? <CircularProgress size={20} /> : <DeleteIcon />}
+          >
+            {submitting ? 'Eliminando...' : 'Eliminar'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -477,6 +599,106 @@ const DetalleProgramaPersonalizado = () => {
           {notification.message}
         </Alert>
       </Snackbar>
+      
+      {/* Diálogo de detalle de subprograma */}
+      <Dialog 
+        open={openSubprogramaDetail} 
+        onClose={handleCloseSubprogramaDetail}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Typography variant="h6">
+              {selectedSubprograma?.nombre}
+            </Typography>
+            <Box>
+              {!editingSubprograma && (
+                <>
+                  <Tooltip title="Editar subprograma">
+                    <IconButton onClick={handleStartEditSubprograma} color="primary">
+                      <EditIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Eliminar subprograma">
+                    <IconButton onClick={handleDeleteSubprogramaFromModal} color="error">
+                      <DeleteIcon />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              )}
+              <IconButton onClick={handleCloseSubprogramaDetail}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          {selectedSubprograma ? (
+            editingSubprograma ? (
+              <SubprogramaFormMultimedia
+                subprogramaId={selectedSubprograma.id}
+                initialData={selectedSubprograma}
+                onSave={handleSaveSubprogramaEdit}
+                onCancel={handleCancelEditSubprograma}
+              />
+            ) : (
+              <Box>
+                <Typography variant="subtitle1" gutterBottom>
+                  Descripción
+                </Typography>
+                <Typography variant="body1" paragraph>
+                  {selectedSubprograma.descripcion || 'Sin descripción'}
+                </Typography>
+                
+                <Divider sx={{ my: 2 }} />
+                
+                <Typography variant="subtitle1" gutterBottom>
+                  Contenido multimedia
+                </Typography>
+                <SubprogramaMultimediaViewer subprograma={selectedSubprograma} />
+                
+                <Divider sx={{ my: 2 }} />
+                
+                <Typography variant="subtitle1" gutterBottom>
+                  Ejercicios
+                </Typography>
+                {selectedSubprograma.ejercicios?.length > 0 ? (
+                  <List>
+                    {selectedSubprograma.ejercicios.map((ejercicio, index) => (
+                      <ListItem key={index} divider>
+                        <ListItemText
+                          primary={ejercicio.nombre}
+                          secondary={ejercicio.descripcion}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                ) : (
+                  <Typography variant="body2" color="textSecondary">
+                    No hay ejercicios en este subprograma
+                  </Typography>
+                )}
+              </Box>
+            )
+          ) : (
+            <Box display="flex" justifyContent="center" py={3}>
+              <CircularProgress />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          {editingSubprograma ? (
+            <Button onClick={handleCancelEditSubprograma}>
+              Cancelar edición
+            </Button>
+          ) : (
+            <Button onClick={handleCloseSubprogramaDetail}>
+              Cerrar
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </SidebarMenu>
   );
 };

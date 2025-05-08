@@ -618,4 +618,32 @@ public class ProgramaPersonalizadoController {
         
         return ResponseEntity.ok(response);
     }
+    
+    @GetMapping("/subprogramas/{id}")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
+    public ResponseEntity<Subprograma> getSubprogramaById(@PathVariable Long id) {
+        // Obtener el usuario autenticado
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        
+        // Obtener usuario por email
+        Usuario usuario = usuarioService.obtenerUsuarioPorEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con email: " + email));
+        
+        Long empresaId = usuario.getEmpresaId();
+        
+        // Obtener el subprograma
+        Subprograma subprograma = programaService.getSubprogramaById(id);
+        
+        // Obtener el programa al que pertenece el subprograma
+        ProgramaPersonalizado programa = programaService.getProgramaPersonalizadoById(subprograma.getProgramaPersonalizadoId());
+        
+        // Verificar que el programa pertenece a la empresa del usuario
+        if (!programa.getEmpresaId().equals(empresaId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(null);
+        }
+        
+        return ResponseEntity.ok(subprograma);
+    }
 } 

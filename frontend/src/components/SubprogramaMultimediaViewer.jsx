@@ -91,6 +91,21 @@ const SubprogramaMultimediaViewer = ({ subprograma, compact = false }) => {
     return url;
   };
   
+  // Obtener URL completa para archivos multimedia (videos e imágenes)
+  const getFullMediaUrl = (url) => {
+    if (!url) return '';
+    
+    // Si ya es una URL completa (comienza con http), devolverla tal cual
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // Si es una ruta relativa, añadirle la URL base de la API
+    const baseUrl = process.env.REACT_APP_API_URL || 'https://proyectofisio.onrender.com';
+    // Asegurarnos de que la URL no tenga doble barra
+    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+  
   // Renderizar contenido en modo compacto
   if (compact) {
     return (
@@ -180,7 +195,7 @@ const SubprogramaMultimediaViewer = ({ subprograma, compact = false }) => {
                     <CardMedia
                       component="video"
                       controls
-                      src={subprograma.videoReferencia}
+                      src={getFullMediaUrl(subprograma.videoReferencia)}
                       sx={{ width: '100%', borderRadius: 1 }}
                     />
                   </Box>
@@ -225,7 +240,7 @@ const SubprogramaMultimediaViewer = ({ subprograma, compact = false }) => {
                       }}
                     >
                       <img
-                        src={img}
+                        src={getFullMediaUrl(img)}
                         alt={`Imagen ${index + 1}`}
                         loading="lazy"
                         style={{ borderRadius: 4 }}
@@ -290,7 +305,7 @@ const SubprogramaMultimediaViewer = ({ subprograma, compact = false }) => {
           <Box sx={{ position: 'relative', textAlign: 'center', bgcolor: 'black', height: 'calc(100vh - 100px)' }}>
             {selectedImage ? (
               <img
-                src={selectedImage}
+                src={getFullMediaUrl(selectedImage)}
                 alt="Imagen ampliada"
                 style={{
                   maxWidth: '100%',
@@ -303,7 +318,7 @@ const SubprogramaMultimediaViewer = ({ subprograma, compact = false }) => {
               />
             ) : subprograma?.imagenesUrls?.length > 0 && (
               <img
-                src={subprograma.imagenesUrls[0]}
+                src={getFullMediaUrl(subprograma.imagenesUrls[0])}
                 alt="Imagen ampliada"
                 style={{
                   maxWidth: '100%',
@@ -334,7 +349,7 @@ const SubprogramaMultimediaViewer = ({ subprograma, compact = false }) => {
                   <Box
                     key={idx}
                     component="img"
-                    src={img}
+                    src={getFullMediaUrl(img)}
                     alt={`Miniatura ${idx + 1}`}
                     onClick={() => setSelectedImage(img)}
                     sx={{
