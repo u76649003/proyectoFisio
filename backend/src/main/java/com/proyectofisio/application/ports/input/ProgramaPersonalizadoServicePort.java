@@ -26,6 +26,13 @@ public interface ProgramaPersonalizadoServicePort {
     
     void deleteProgramaPersonalizado(Long id);
     
+    // Validaciones para borrado de programas
+    boolean puedeEliminarPrograma(Long programaId);
+    
+    boolean tienePacientesAsociados(Long programaId);
+    
+    boolean tieneSubprogramasCreados(Long programaId);
+    
     // Métodos para gestionar subprogramas
     Subprograma crearSubprograma(Subprograma subprograma);
     
@@ -62,12 +69,16 @@ public interface ProgramaPersonalizadoServicePort {
     
     List<AccessToken> getTokensByProgramaId(Long programaId);
     
+    List<AccessToken> generarTokensParaPacientes(Long programaId, List<Long> pacientesIds);
+    
     ProgramaPersonalizado getProgramaPersonalizadoByToken(UUID token);
     
     AccessToken getAccessTokenByToken(UUID token);
     
     // Métodos para comentarios de pacientes
     ComentarioPaciente crearComentarioPaciente(ComentarioPaciente comentario);
+    
+    List<ComentarioPaciente> getComentariosByTokenAndSubprogramaId(UUID token, Long subprogramaId);
     
     List<ComentarioPaciente> getComentariosByProgramaAndPacienteId(Long programaId, Long pacienteId);
     

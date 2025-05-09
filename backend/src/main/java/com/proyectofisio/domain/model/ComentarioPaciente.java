@@ -1,6 +1,7 @@
 package com.proyectofisio.domain.model;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,8 +14,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ComentarioPaciente {
     private Long id;
-    private Long programaPersonalizadoId;
-    private Long pacienteId;
+    private Long subprogramaId;
+    private UUID token;
     private String contenido;
     private LocalDateTime fechaCreacion;
     private Boolean leido;

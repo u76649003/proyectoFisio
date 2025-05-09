@@ -20,6 +20,7 @@ import com.proyectofisio.domain.model.ComentarioPaciente;
 import com.proyectofisio.domain.model.ProgramaPersonalizado;
 import com.proyectofisio.domain.model.Subprograma;
 import com.proyectofisio.infrastructure.adapters.input.rest.dto.ComentarioPacienteRequest;
+import com.proyectofisio.infrastructure.adapters.input.rest.dto.ComentarioSubprogramaRequest;
 import com.proyectofisio.infrastructure.adapters.input.rest.dto.MessageResponse;
 import com.proyectofisio.infrastructure.adapters.input.rest.dto.ValidarTokenRequest;
 
@@ -33,40 +34,36 @@ public class AccesoProgramaController {
     private final ProgramaPersonalizadoServicePort programaService;
     
     // Endpoint para validar token y obtener programa personalizado
-    @PostMapping("/validar")
-    public ResponseEntity<?> validarTokenYObtenerPrograma(@RequestBody ValidarTokenRequest request) {
+    @GetMapping("")
+    public ResponseEntity<?> validarTokenYObtenerPrograma(@RequestParam String token) {
         try {
-            UUID tokenUUID = UUID.fromString(request.getToken());
+            UUID tokenUUID = UUID.fromString(token);
             
             // Validar token
-            AccessToken token = programaService.getAccessTokenByToken(tokenUUID);
-            if (token == null) {
+            AccessToken accessToken = programaService.getAccessTokenByToken(tokenUUID);
+            if (accessToken == null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new MessageResponse("Token no válido"));
             }
             
-            // Si el token ha expirado o ya ha sido usado, devolver error
-            if (token.getFechaExpiracion().isBefore(java.time.LocalDateTime.now())) {
+            // Si el token ha expirado, devolver error
+            if (accessToken.getFechaExpiracion().isBefore(java.time.LocalDateTime.now())) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new MessageResponse("El token ha expirado"));
             }
             
             // Obtener programa personalizado
-            ProgramaPersonalizado programa = programaService.getProgramaPersonalizadoById(token.getProgramaPersonalizadoId());
+            ProgramaPersonalizado programa = programaService.getProgramaPersonalizadoById(accessToken.getProgramaPersonalizadoId());
             
             // Obtener subprogramas con ejercicios
             List<Subprograma> subprogramas = programaService.getSubprogramasByProgramaId(programa.getId());
-            
-            // Obtener comentarios del paciente
-            List<ComentarioPaciente> comentarios = programaService.getComentariosByProgramaAndPacienteId(
-                programa.getId(), token.getPacienteId());
             
             // Crear un mapa con toda la información
             Map<String, Object> response = new HashMap<>();
             response.put("programa", programa);
             response.put("subprogramas", subprogramas);
-            response.put("pacienteId", token.getPacienteId());
-            response.put("comentarios", comentarios);
+            response.put("token", accessToken.getToken().toString());
+            response.put("pacienteId", accessToken.getPacienteId());
             
             return ResponseEntity.ok(response);
             
@@ -76,13 +73,22 @@ public class AccesoProgramaController {
         }
     }
     
-    // Endpoint para agregar comentario de paciente
+    // Endpoint para agregar comentario de paciente a un subprograma
     @PostMapping("/comentario")
-    public ResponseEntity<?> agregarComentarioPaciente(@RequestBody ComentarioPacienteRequest request) {
+    public ResponseEntity<?> agregarComentarioSubprograma(@RequestBody ComentarioSubprogramaRequest request) {
         try {
+            UUID tokenUUID = UUID.fromString(request.getToken());
+            
+            // Verificar que el token sea válido
+            AccessToken accessToken = programaService.getAccessTokenByToken(tokenUUID);
+            if (accessToken == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new MessageResponse("Token no válido"));
+            }
+            
             ComentarioPaciente comentario = ComentarioPaciente.builder()
-                .programaPersonalizadoId(request.getProgramaPersonalizadoId())
-                .pacienteId(request.getPacienteId())
+                .subprogramaId(request.getSubprogramaId())
+                .token(tokenUUID)
                 .contenido(request.getContenido())
                 .leido(false)
                 .build();
@@ -97,18 +103,31 @@ public class AccesoProgramaController {
         }
     }
     
-    // Endpoint para obtener todos los comentarios de un paciente para un programa
+    // Endpoint para obtener comentarios de un subprograma para un token específico
     @GetMapping("/comentarios")
-    public ResponseEntity<?> getComentariosByProgramaAndPaciente(
-            @RequestParam Long programaId,
-            @RequestParam Long pacienteId) {
+    public ResponseEntity<?> getComentariosByTokenAndSubprograma(
+            @RequestParam String token,
+            @RequestParam Long subprogramaId) {
         
         try {
-            List<ComentarioPaciente> comentarios = programaService.getComentariosByProgramaAndPacienteId(
-                programaId, pacienteId);
+            UUID tokenUUID = UUID.fromString(token);
+            List<ComentarioPaciente> comentarios = programaService.getComentariosByTokenAndSubprogramaId(
+                tokenUUID, subprogramaId);
             
             return ResponseEntity.ok(comentarios);
             
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new MessageResponse(e.getMessage()));
+        }
+    }
+    
+    // Endpoint para marcar un comentario como leído
+    @PostMapping("/comentario/leido")
+    public ResponseEntity<?> marcarComentarioComoLeido(@RequestParam Long comentarioId) {
+        try {
+            programaService.marcarComentarioComoLeido(comentarioId);
+            return ResponseEntity.ok(new MessageResponse("Comentario marcado como leído"));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new MessageResponse(e.getMessage()));

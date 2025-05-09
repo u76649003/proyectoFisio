@@ -119,7 +119,7 @@ const SubprogramaMultimediaViewer = ({ subprograma, compact = false }) => {
                     display="flex" 
                     alignItems="center" 
                     p={1} 
-                    onClick={() => !compact && handleOpenVideo()}
+                    onClick={() => !compact && setOpenGallery(true)}
                     sx={{ cursor: !compact && hasVideo ? 'pointer' : 'default' }}
                   >
                     <MovieIcon color="primary" sx={{ mr: 1 }} />

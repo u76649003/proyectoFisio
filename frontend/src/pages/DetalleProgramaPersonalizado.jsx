@@ -41,7 +41,8 @@ import {
   MoreVert as MoreVertIcon,
   PlayArrow as PlayArrowIcon,
   Share as ShareIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  View as ViewIcon
 } from '@mui/icons-material';
 import { programasPersonalizadosService, authService } from '../services/api';
 import SidebarMenu from '../components/SidebarMenu';
@@ -340,6 +341,121 @@ const DetalleProgramaPersonalizado = () => {
     handleViewSubprogramaDetail(subprogramaId);
   };
   
+  const renderSubprogramasList = () => {
+    return (
+      <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
+        {subprogramas.map((subprograma, index) => (
+          <ListItem
+            key={subprograma.id}
+            disablePadding
+            sx={{
+              mb: 1.5,
+              borderRadius: 1,
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              bgcolor: theme.palette.background.paper,
+              position: 'relative'
+            }}
+          >
+            <ListItemButton
+              onClick={() => handleViewSubprogramaDetail(subprograma.id)}
+              sx={{ borderRadius: 1, pr: '100px' }}
+            >
+              <ListItemIcon>
+                <Box
+                  sx={{
+                    borderRadius: '50%',
+                    width: 32,
+                    height: 32,
+                    bgcolor: theme.palette.primary.main,
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold',
+                    mr: 1
+                  }}
+                >
+                  {index + 1}
+                </Box>
+              </ListItemIcon>
+              <ListItemText
+                primary={
+                  <Typography variant="subtitle1" fontWeight="bold">
+                    {subprograma.nombre}
+                  </Typography>
+                }
+                secondary={
+                  subprograma.descripcion ? (
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical'
+                      }}
+                    >
+                      {subprograma.descripcion}
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                      Sin descripción
+                    </Typography>
+                  )
+                }
+              />
+              <ListItemSecondaryAction>
+                <Tooltip title="Ver detalles">
+                  <IconButton
+                    edge="end"
+                    color="primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewSubprogramaDetail(subprograma.id);
+                    }}
+                  >
+                    <ViewIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Editar">
+                  <IconButton
+                    edge="end"
+                    color="primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedSubprograma(subprograma);
+                      setOpenSubprogramaDetail(true);
+                      setEditingSubprograma(true);
+                    }}
+                    sx={{ ml: 1 }}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Eliminar">
+                  <IconButton
+                    edge="end"
+                    color="error"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSubprogramaToDelete(subprograma);
+                      setOpenDeleteDialog(true);
+                    }}
+                    sx={{ ml: 1 }}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Tooltip>
+              </ListItemSecondaryAction>
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+    );
+  };
+  
   return (
     <SidebarMenu>
       <Container maxWidth="lg">
@@ -448,56 +564,7 @@ const DetalleProgramaPersonalizado = () => {
                     </Button>
                   </Box>
                 ) : (
-                  <List>
-                    {subprogramas.map((subprograma) => (
-                      <ListItem
-                        key={subprograma.id}
-                        disablePadding
-                        sx={{
-                          mb: 1,
-                          border: '1px solid',
-                          borderColor: 'divider',
-                          borderRadius: 1,
-                          '&:hover': {
-                            bgcolor: 'action.hover',
-                          }
-                        }}
-                      >
-                        <ListItemButton onClick={() => handleViewSubprograma(subprograma.id)}>
-                          <ListItemIcon>
-                            <PlayArrowIcon />
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={subprograma.nombre}
-                            secondary={
-                              <Box component="span">
-                                {subprograma.descripcion}
-                                <Box component="span" sx={{ ml: 1 }}>
-                                  <Chip
-                                    label={`${subprograma.ejercicios?.length || 0} ejercicios`}
-                                    size="small"
-                                    color={subprograma.ejercicios?.length ? 'primary' : 'default'}
-                                    variant="outlined"
-                                  />
-                                </Box>
-                              </Box>
-                            }
-                          />
-                        </ListItemButton>
-                        <ListItemSecondaryAction>
-                          <Tooltip title="Eliminar">
-                            <IconButton
-                              edge="end"
-                              onClick={() => handleOpenDeleteDialog(subprograma)}
-                              color="error"
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </Tooltip>
-                        </ListItemSecondaryAction>
-                      </ListItem>
-                    ))}
-                  </List>
+                  renderSubprogramasList()
                 )}
               </Paper>
               

@@ -62,6 +62,10 @@ public class SubprogramaEntity {
     @Builder.Default
     private List<SubprogramaEjercicioEntity> subprogramaEjercicios = new ArrayList<>();
     
+    @OneToMany(mappedBy = "subprograma", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ComentarioPacienteEntity> comentariosPaciente = new ArrayList<>();
+    
     @CreationTimestamp
     @Column(name = "fecha_creacion", updatable = false)
     private LocalDateTime fechaCreacion;

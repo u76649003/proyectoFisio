@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -103,7 +104,30 @@ public class ProgramaPersonalizadoService implements ProgramaPersonalizadoServic
         if (!programaRepository.existsById(id)) {
             throw new IllegalArgumentException("Programa personalizado no encontrado con id: " + id);
         }
+        
+        // Verificar si se puede eliminar el programa
+        if (!puedeEliminarPrograma(id)) {
+            throw new IllegalArgumentException("No se puede eliminar el programa porque tiene pacientes asociados o subprogramas creados");
+        }
+        
         programaRepository.deleteById(id);
+    }
+    
+    @Override
+    public boolean puedeEliminarPrograma(Long programaId) {
+        return !tienePacientesAsociados(programaId) && !tieneSubprogramasCreados(programaId);
+    }
+    
+    @Override
+    public boolean tienePacientesAsociados(Long programaId) {
+        var tokens = accessTokenRepository.findByProgramaPersonalizadoId(programaId);
+        return !tokens.isEmpty();
+    }
+    
+    @Override
+    public boolean tieneSubprogramasCreados(Long programaId) {
+        var subprogramas = subprogramaRepository.findByProgramaPersonalizadoIdOrderByOrdenAsc(programaId);
+        return !subprogramas.isEmpty();
     }
     
     // Implementación de métodos para subprogramas
@@ -391,6 +415,24 @@ public class ProgramaPersonalizadoService implements ProgramaPersonalizadoServic
         return accessTokenMapper.toModel(entity);
     }
     
+    @Override
+    @Transactional
+    public List<AccessToken> generarTokensParaPacientes(Long programaId, List<Long> pacientesIds) {
+        // Verificar que el programa exista
+        var programaEntity = programaRepository.findById(programaId)
+            .orElseThrow(() -> new IllegalArgumentException("Programa personalizado no encontrado con id: " + programaId));
+        
+        List<AccessToken> tokensGenerados = new ArrayList<>();
+        
+        for (Long pacienteId : pacientesIds) {
+            // Generar token para cada paciente
+            AccessToken token = generarTokenAcceso(programaId, pacienteId);
+            tokensGenerados.add(token);
+        }
+        
+        return tokensGenerados;
+    }
+    
     // Implementación de métodos para comentarios de pacientes
     
     @Override
@@ -402,9 +444,15 @@ public class ProgramaPersonalizadoService implements ProgramaPersonalizadoServic
     }
     
     @Override
+    public List<ComentarioPaciente> getComentariosByTokenAndSubprogramaId(UUID token, Long subprogramaId) {
+        var entities = comentarioRepository.findBySubprogramaIdAndAccessTokenToken(subprogramaId, token);
+        return comentarioMapper.toModelList(entities);
+    }
+    
+    @Override
     public List<ComentarioPaciente> getComentariosByProgramaAndPacienteId(Long programaId, Long pacienteId) {
         var entities = comentarioRepository
-            .findByPacienteIdAndProgramaPersonalizadoIdOrderByFechaCreacionDesc(pacienteId, programaId);
+            .findBySubprogramaProgramaPersonalizadoIdAndAccessTokenPacienteId(programaId, pacienteId);
         return comentarioMapper.toModelList(entities);
     }
     

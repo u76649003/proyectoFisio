@@ -30,12 +30,12 @@ public class ComentarioPacienteEntity {
     private Long id;
     
     @ManyToOne
-    @JoinColumn(name = "programa_personalizado_id", nullable = false)
-    private ProgramaPersonalizadoEntity programaPersonalizado;
+    @JoinColumn(name = "subprograma_id", nullable = false)
+    private SubprogramaEntity subprograma;
     
     @ManyToOne
-    @JoinColumn(name = "paciente_id", nullable = false)
-    private PacienteEntity paciente;
+    @JoinColumn(name = "access_token_id", nullable = false)
+    private AccessTokenEntity accessToken;
     
     @Column(nullable = false, columnDefinition = "TEXT")
     private String contenido;

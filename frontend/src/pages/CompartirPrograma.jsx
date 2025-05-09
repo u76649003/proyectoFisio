@@ -42,7 +42,8 @@ import {
   FileCopy as CopyIcon,
   Check as CheckIcon,
   FitnessCenter,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  Mail as MailIcon
 } from '@mui/icons-material';
 import { programasPersonalizadosService, pacienteService, authService } from '../services/api';
 import SidebarMenu from '../components/SidebarMenu';
@@ -75,6 +76,16 @@ const CompartirPrograma = () => {
   const [copiedToken, setCopiedToken] = useState(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  
+  // Estado para notificaciones
+  const [notification, setNotification] = useState({ 
+    open: false, 
+    message: '', 
+    severity: 'success' 
+  });
+  
+  // Estado para el diálogo de enlaces generados
+  const [showLinksDialog, setShowLinksDialog] = useState(false);
   
   // Cargar datos del usuario
   useEffect(() => {
@@ -280,298 +291,406 @@ const CompartirPrograma = () => {
     }
   };
   
+  // Generar tokens para los pacientes seleccionados
+  const handleGenerateTokens = async () => {
+    if (selectedPacientes.length === 0) {
+      setNotification({
+        open: true,
+        message: 'Selecciona al menos un paciente',
+        severity: 'warning'
+      });
+      return;
+    }
+    
+    try {
+      setGeneratingTokens(true);
+      
+      // Llamar al servicio para generar tokens
+      const tokens = await programasPersonalizadosService.generarTokensParaPacientes(
+        id, 
+        selectedPacientes
+      );
+      
+      // Enriquecer los tokens con nombres de pacientes para mejor visualización
+      const tokensEnriquecidos = tokens.map(token => {
+        const paciente = pacientes.find(p => p.id === token.pacienteId);
+        return {
+          ...token,
+          pacienteNombre: paciente ? `${paciente.nombre} ${paciente.apellidos}` : 'Paciente'
+        };
+      });
+      
+      setTokens(tokensEnriquecidos);
+      setShowLinksDialog(true);
+      
+      // Limpiar selección después de generar tokens
+      setSelectedPacientes([]);
+      
+    } catch (error) {
+      console.error('Error al generar tokens:', error);
+      setNotification({
+        open: true,
+        message: 'Error al generar enlaces de acceso',
+        severity: 'error'
+      });
+    } finally {
+      setGeneratingTokens(false);
+    }
+  };
+  
+  // Compartir por Email
+  const handleShareEmail = (url, pacienteNombre) => {
+    const subject = encodeURIComponent('Tu programa personalizado de fisioterapia');
+    const body = encodeURIComponent(
+      `Hola ${pacienteNombre},\n\nAquí tienes el enlace a tu programa personalizado: ${url}\n\nSaludos,\nTu fisioterapeuta`
+    );
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  };
+  
+  // Copiar todos los enlaces
+  const handleCopyAllLinks = () => {
+    const linksText = tokens
+      .map(token => `${token.pacienteNombre}: ${token.enlaceAcceso}`)
+      .join('\n');
+    
+    navigator.clipboard.writeText(linksText)
+      .then(() => {
+        setNotification({
+          open: true,
+          message: 'Todos los enlaces copiados al portapapeles',
+          severity: 'success'
+        });
+      })
+      .catch(err => {
+        console.error('Error al copiar enlaces:', err);
+        setNotification({
+          open: true,
+          message: 'No se pudieron copiar los enlaces',
+          severity: 'error'
+        });
+      });
+  };
+  
+  // Cerrar notificación
+  const handleCloseNotification = () => {
+    setNotification({...notification, open: false});
+  };
+  
+  // Volver a la página anterior
+  const handleBack = () => {
+    navigate(`/programas-personalizados/${id}`);
+  };
+  
+  if (loading) {
+    return (
+      <SidebarMenu>
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 5 }}>
+          <CircularProgress />
+        </Box>
+      </SidebarMenu>
+    );
+  }
+  
+  if (error) {
+    return (
+      <SidebarMenu>
+        <Container maxWidth="lg">
+          <Box sx={{ mt: 3 }}>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              onClick={() => navigate('/programas-personalizados')}
+              sx={{ mb: 3 }}
+            >
+              Volver a Programas
+            </Button>
+            
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          </Box>
+        </Container>
+      </SidebarMenu>
+    );
+  }
+  
   return (
     <SidebarMenu>
       <Container maxWidth="lg">
-        <Box sx={{ mt: 3, mb: 4 }}>
-          {/* Encabezado */}
-          <Box display="flex" alignItems="center" mb={3}>
-            <IconButton
-              color="inherit"
-              onClick={() => navigate(`/programas-personalizados/${id}`)}
-              sx={{ mr: 1 }}
+        <Box sx={{ mt: 3 }}>
+          {/* Cabecera */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              onClick={handleBack}
+              sx={{ mr: 2 }}
             >
-              <ArrowBackIcon />
-            </IconButton>
+              Volver
+            </Button>
+            
             <Typography variant="h4" component="h1" fontWeight="bold">
-              <ShareIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
               Compartir Programa
             </Typography>
           </Box>
           
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-          )}
-          
-          {loading ? (
-            <Box display="flex" justifyContent="center" my={5}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <>
-              {/* Información del programa */}
-              <Paper sx={{ p: 3, mb: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Programa: {programa?.nombre}
+          {/* Información del programa */}
+          <Paper sx={{ p: 3, mb: 4 }}>
+            {programa && (
+              <>
+                <Typography variant="h5" gutterBottom>
+                  {programa.nombre}
                 </Typography>
-                {programa?.tipoPrograma && (
+                
+                <Typography variant="body1" color="text.secondary" paragraph>
+                  {programa.descripcion || 'Sin descripción'}
+                </Typography>
+                
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
                   <Chip 
-                    label={programa.tipoPrograma} 
+                    label={programa.tipoPrograma || 'General'} 
                     color="primary" 
-                    size="small" 
-                    sx={{ mb: 2 }} 
+                    variant="outlined" 
+                    size="small"
                   />
-                )}
-                <Typography variant="body2" color="textSecondary">
-                  Selecciona los pacientes a los que quieres enviar este programa personalizado.
-                  Se generará un enlace único para cada paciente que podrás compartir por WhatsApp u otro medio.
-                </Typography>
-              </Paper>
-              
-              {/* Tokens existentes */}
-              <Paper sx={{ p: 3, mb: 3 }}>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                  <Typography variant="h6">
-                    Enlaces compartidos
+                  <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+                    {programa.subprogramas?.length || 0} subprogramas
                   </Typography>
-                  <Button
-                    startIcon={<RefreshIcon />}
-                    onClick={handleRefreshTokens}
-                    disabled={loadingExistingTokens}
-                  >
-                    Actualizar
-                  </Button>
                 </Box>
-                
-                <Divider sx={{ mb: 2 }} />
-                
-                {loadingExistingTokens ? (
-                  <Box display="flex" justifyContent="center" my={3}>
-                    <CircularProgress size={30} />
-                  </Box>
-                ) : existingTokens.length === 0 ? (
-                  <Box textAlign="center" py={3}>
-                    <Typography variant="body1" color="textSecondary">
-                      No hay enlaces compartidos todavía.
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Grid container spacing={2}>
-                    {existingTokens.map(token => {
-                      const paciente = pacientes.find(p => p.id === token.pacienteId);
-                      return (
-                        <Grid item xs={12} md={6} key={token.id}>
-                          <Card variant="outlined">
-                            <CardContent>
-                              <Box display="flex" alignItems="center" mb={1}>
-                                <Avatar sx={{ mr: 1.5, bgcolor: 'primary.main' }}>
-                                  {paciente?.nombre?.charAt(0) || '?'}
-                                </Avatar>
-                                <Box>
-                                  <Typography variant="subtitle1">
-                                    {paciente ? `${paciente.nombre} ${paciente.apellidos}` : 'Paciente desconocido'}
-                                  </Typography>
-                                  <Typography variant="body2" color="textSecondary">
-                                    Expira: {new Date(token.fechaExpiracion).toLocaleDateString()}
-                                  </Typography>
-                                </Box>
-                              </Box>
-                              
-                              <Box display="flex" mt={2} gap={1} flexWrap="wrap">
-                                <Button
-                                  variant="outlined"
-                                  size="small"
-                                  startIcon={copiedToken === token.id ? <CheckIcon /> : <CopyIcon />}
-                                  onClick={() => handleCopyLink(token)}
-                                >
-                                  {copiedToken === token.id ? 'Copiado' : 'Copiar enlace'}
-                                </Button>
-                                
-                                {paciente?.telefono && (
-                                  <Button
-                                    variant="contained"
-                                    color="success"
-                                    size="small"
-                                    startIcon={<WhatsAppIcon />}
-                                    onClick={() => handleShareWhatsApp(token)}
-                                  >
-                                    WhatsApp
-                                  </Button>
-                                )}
-                                
-                                <Chip
-                                  label={token.usado ? 'Utilizado' : 'No utilizado'}
-                                  color={token.usado ? 'default' : 'info'}
-                                  size="small"
-                                  variant="outlined"
-                                  sx={{ ml: 'auto' }}
-                                />
-                              </Box>
-                            </CardContent>
-                          </Card>
-                        </Grid>
-                      );
-                    })}
-                  </Grid>
-                )}
-              </Paper>
+              </>
+            )}
+          </Paper>
+          
+          {/* Selección de pacientes */}
+          <Paper sx={{ p: 3, mb: 4 }}>
+            <Typography variant="h5" gutterBottom>
+              Seleccionar Pacientes
+            </Typography>
+            
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Buscar pacientes por nombre, email o teléfono..."
+              size="small"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              sx={{ mb: 2 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+                endAdornment: searchTerm && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="clear search"
+                      onClick={() => setSearchTerm('')}
+                      edge="end"
+                      size="small"
+                    >
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
+            />
+            
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleSelectAll}
+                disabled={filteredPacientes.length === 0}
+              >
+                {selectedPacientes.length === filteredPacientes.length && filteredPacientes.length > 0
+                  ? 'Deseleccionar Todos'
+                  : 'Seleccionar Todos'
+                }
+              </Button>
               
-              {/* Selección de pacientes */}
-              <Paper sx={{ p: 3 }}>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                  <Typography variant="h6">
-                    Seleccionar pacientes
+              <Typography variant="body2" color="text.secondary">
+                {selectedPacientes.length} paciente(s) seleccionado(s)
+              </Typography>
+            </Box>
+            
+            <Card variant="outlined">
+              {filteredPacientes.length === 0 ? (
+                <CardContent>
+                  <Typography variant="body2" color="text.secondary" align="center">
+                    No se encontraron pacientes {searchTerm ? 'con ese criterio de búsqueda' : ''}
                   </Typography>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<ShareIcon />}
-                    disabled={selectedPacientes.length === 0}
-                    onClick={handleGenerarTokens}
-                  >
-                    Generar enlaces ({selectedPacientes.length})
-                  </Button>
-                </Box>
-                
-                <Divider sx={{ mb: 2 }} />
-                
-                <TextField
-                  fullWidth
-                  placeholder="Buscar pacientes..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  sx={{ mb: 2 }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon color="action" />
-                      </InputAdornment>
-                    ),
-                    endAdornment: searchTerm && (
-                      <InputAdornment position="end">
-                        <IconButton size="small" onClick={handleClearSearch}>
-                          <ClearIcon fontSize="small" />
-                        </IconButton>
-                      </InputAdornment>
-                    )
-                  }}
-                />
-                
-                <List sx={{ maxHeight: 400, overflow: 'auto' }}>
-                  <ListItem>
-                    <ListItemIcon>
-                      <Checkbox
-                        edge="start"
-                        checked={selectedPacientes.length === filteredPacientes.length && filteredPacientes.length > 0}
-                        indeterminate={selectedPacientes.length > 0 && selectedPacientes.length < filteredPacientes.length}
-                        onChange={handleSelectAll}
-                        disabled={filteredPacientes.length === 0}
-                      />
-                    </ListItemIcon>
-                    <ListItemText 
-                      primary="Seleccionar todos" 
-                      secondary={`${selectedPacientes.length} de ${filteredPacientes.length} seleccionados`}
-                    />
-                  </ListItem>
-                  
-                  <Divider />
-                  
-                  {filteredPacientes.length === 0 ? (
-                    <ListItem>
-                      <ListItemText 
-                        primary="No se encontraron pacientes" 
-                        secondary={searchTerm ? "Prueba con otra búsqueda" : "No hay pacientes disponibles"} 
+                </CardContent>
+              ) : (
+                <List sx={{ maxHeight: '400px', overflow: 'auto' }}>
+                  {filteredPacientes.map((paciente) => (
+                    <ListItem 
+                      key={paciente.id}
+                      secondaryAction={
+                        <Checkbox
+                          edge="end"
+                          onChange={() => handleTogglePaciente(paciente.id)}
+                          checked={selectedPacientes.includes(paciente.id)}
+                          inputProps={{ 'aria-labelledby': `paciente-${paciente.id}` }}
+                        />
+                      }
+                      divider
+                    >
+                      <ListItemIcon>
+                        <PersonIcon color="primary" />
+                      </ListItemIcon>
+                      <ListItemText
+                        id={`paciente-${paciente.id}`}
+                        primary={`${paciente.nombre} ${paciente.apellidos}`}
+                        secondary={paciente.email || paciente.telefono || 'Sin contacto'}
                       />
                     </ListItem>
-                  ) : (
-                    filteredPacientes.map(paciente => (
-                      <ListItem key={paciente.id} button onClick={() => handleTogglePaciente(paciente.id)}>
-                        <ListItemIcon>
-                          <Checkbox
-                            edge="start"
-                            checked={selectedPacientes.includes(paciente.id)}
-                            tabIndex={-1}
-                            disableRipple
-                          />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={`${paciente.nombre} ${paciente.apellidos}`}
-                          secondary={
-                            <>
-                              {paciente.email}
-                              {paciente.telefono && (
-                                <Typography 
-                                  component="span" 
-                                  variant="body2" 
-                                  color="textSecondary"
-                                  sx={{ ml: 1 }}
-                                >
-                                  • {paciente.telefono}
-                                </Typography>
-                              )}
-                            </>
-                          }
-                        />
-                        <ListItemSecondaryAction>
-                          {existingTokens.some(t => t.pacienteId === paciente.id) && (
-                            <Tooltip title="Ya tiene un enlace generado">
-                              <Chip
-                                label="Compartido"
-                                color="info"
-                                size="small"
-                                variant="outlined"
-                              />
-                            </Tooltip>
-                          )}
-                        </ListItemSecondaryAction>
-                      </ListItem>
-                    ))
-                  )}
+                  ))}
                 </List>
-              </Paper>
-            </>
-          )}
+              )}
+            </Card>
+          </Paper>
+          
+          {/* Botón de generar enlaces */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<ShareIcon />}
+              disabled={selectedPacientes.length === 0 || generatingTokens}
+              onClick={handleGenerateTokens}
+              sx={{ px: 4, py: 1.5 }}
+            >
+              {generatingTokens ? (
+                <>
+                  <CircularProgress size={24} sx={{ mr: 1 }} color="inherit" />
+                  Generando Enlaces...
+                </>
+              ) : (
+                `Compartir con ${selectedPacientes.length} paciente(s)`
+              )}
+            </Button>
+          </Box>
+          
+          {/* Historial de enlaces compartidos - podría implementarse en una versión futura */}
         </Box>
-      </Container>
-      
-      {/* Diálogo de confirmación */}
-      <Dialog open={openDialog} onClose={handleCloseDialog}>
-        <DialogTitle>Generar enlaces de acceso</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Estás a punto de generar enlaces de acceso para {selectedPacientes.length} pacientes.
-            {existingTokens.filter(t => selectedPacientes.includes(t.pacienteId)).length > 0 && (
-              <Box component="span" fontWeight="bold">
-                {" "}Algunos pacientes ya tienen enlaces generados y serán actualizados.
-              </Box>
-            )}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} disabled={generatingTokens}>
-            Cancelar
-          </Button>
-          <Button 
-            onClick={handleConfirmGenerarTokens} 
-            color="primary" 
-            variant="contained"
-            disabled={generatingTokens}
-            startIcon={generatingTokens && <CircularProgress size={20} />}
+        
+        {/* Diálogo de enlaces generados */}
+        <Dialog
+          open={showLinksDialog}
+          onClose={() => setShowLinksDialog(false)}
+          fullWidth
+          maxWidth="md"
+        >
+          <DialogTitle>
+            Enlaces Generados ({tokens.length})
+            <IconButton
+              aria-label="close"
+              onClick={() => setShowLinksDialog(false)}
+              sx={{
+                position: 'absolute',
+                right: 8,
+                top: 8,
+                color: (theme) => theme.palette.grey[500],
+              }}
+            >
+              <ClearIcon />
+            </IconButton>
+          </DialogTitle>
+          
+          <DialogContent dividers>
+            <Alert severity="success" sx={{ mb: 2 }}>
+              Se han generado correctamente {tokens.length} enlaces de acceso.
+              Estos enlaces funcionan sin necesidad de iniciar sesión.
+            </Alert>
+            
+            <Button
+              variant="outlined"
+              startIcon={<CopyIcon />}
+              onClick={handleCopyAllLinks}
+              sx={{ mb: 3 }}
+            >
+              Copiar Todos los Enlaces
+            </Button>
+            
+            <List>
+              {tokens.map((token) => (
+                <ListItem 
+                  key={token.id}
+                  sx={{ 
+                    bgcolor: 'background.default', 
+                    mb: 1, 
+                    borderRadius: 1
+                  }}
+                >
+                  <ListItemIcon>
+                    <PersonIcon />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={token.pacienteNombre}
+                    secondary={token.enlaceAcceso}
+                    secondaryTypographyProps={{ 
+                      sx: { 
+                        wordBreak: 'break-all',
+                        fontFamily: 'monospace',
+                        fontSize: '0.75rem'
+                      } 
+                    }}
+                  />
+                  <Box>
+                    <Tooltip title="Copiar enlace">
+                      <IconButton 
+                        onClick={() => handleCopyLink(token)}
+                        edge="end"
+                      >
+                        <CopyIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Compartir por WhatsApp">
+                      <IconButton 
+                        onClick={() => handleShareWhatsApp(token)}
+                        edge="end"
+                        color="success"
+                      >
+                        <WhatsAppIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Compartir por Email">
+                      <IconButton 
+                        onClick={() => handleShareEmail(token.enlaceAcceso, token.pacienteNombre)}
+                        edge="end"
+                        color="primary"
+                      >
+                        <MailIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </ListItem>
+              ))}
+            </List>
+          </DialogContent>
+          
+          <DialogActions>
+            <Button onClick={() => setShowLinksDialog(false)}>Cerrar</Button>
+          </DialogActions>
+        </Dialog>
+        
+        {/* Notificaciones */}
+        <Snackbar
+          open={notification.open}
+          autoHideDuration={3000}
+          onClose={handleCloseNotification}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert 
+            onClose={handleCloseNotification} 
+            severity={notification.severity} 
+            sx={{ width: '100%' }}
           >
-            {generatingTokens ? 'Generando...' : 'Generar'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-      
-      {/* Snackbar para notificaciones */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={4000}
-        onClose={() => setSnackbarOpen(false)}
-        message={snackbarMessage}
-      />
+            {notification.message}
+          </Alert>
+        </Snackbar>
+      </Container>
     </SidebarMenu>
   );
 };

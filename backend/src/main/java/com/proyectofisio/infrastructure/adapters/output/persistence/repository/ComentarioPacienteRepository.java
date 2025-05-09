@@ -1,26 +1,29 @@
 package com.proyectofisio.infrastructure.adapters.output.persistence.repository;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import com.proyectofisio.infrastructure.adapters.output.persistence.entity.AccessTokenEntity;
 import com.proyectofisio.infrastructure.adapters.output.persistence.entity.ComentarioPacienteEntity;
-import com.proyectofisio.infrastructure.adapters.output.persistence.entity.PacienteEntity;
-import com.proyectofisio.infrastructure.adapters.output.persistence.entity.ProgramaPersonalizadoEntity;
+import com.proyectofisio.infrastructure.adapters.output.persistence.entity.SubprogramaEntity;
 
 @Repository
 public interface ComentarioPacienteRepository extends JpaRepository<ComentarioPacienteEntity, Long> {
     
-    List<ComentarioPacienteEntity> findByProgramaPersonalizado(ProgramaPersonalizadoEntity programaPersonalizado);
+    List<ComentarioPacienteEntity> findBySubprograma(SubprogramaEntity subprograma);
     
-    List<ComentarioPacienteEntity> findByProgramaPersonalizadoId(Long programaPersonalizadoId);
+    List<ComentarioPacienteEntity> findBySubprogramaId(Long subprogramaId);
     
-    List<ComentarioPacienteEntity> findByPaciente(PacienteEntity paciente);
+    List<ComentarioPacienteEntity> findByAccessToken(AccessTokenEntity accessToken);
     
-    List<ComentarioPacienteEntity> findByPacienteId(Long pacienteId);
+    List<ComentarioPacienteEntity> findByAccessTokenToken(UUID token);
     
-    List<ComentarioPacienteEntity> findByPacienteIdAndProgramaPersonalizadoIdOrderByFechaCreacionDesc(Long pacienteId, Long programaPersonalizadoId);
+    List<ComentarioPacienteEntity> findBySubprogramaIdAndAccessTokenToken(Long subprogramaId, UUID token);
+    
+    List<ComentarioPacienteEntity> findBySubprogramaProgramaPersonalizadoIdAndAccessTokenPacienteId(Long programaId, Long pacienteId);
     
     List<ComentarioPacienteEntity> findByLeidoFalseOrderByFechaCreacionDesc();
     

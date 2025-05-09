@@ -8,12 +8,30 @@ import {
   CircularProgress,
   Button,
   Divider,
-  Alert
+  Alert,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Chip,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { pacienteService, authService } from '../services/api';
+import { 
+  pacienteService, 
+  authService, 
+  programasPersonalizadosService 
+} from '../services/api';
 import { BonosList } from '../components';
 import SidebarMenu from '../components/SidebarMenu';
+import { 
+  ExpandMore as ExpandMoreIcon,
+  FitnessCenter,
+  Comment as CommentIcon,
+  CalendarMonth as CalendarIcon
+} from '@mui/icons-material';
 
 // Componente TabPanel para el contenido de cada pestaña
 function TabPanel(props) {
@@ -46,6 +64,10 @@ const DetallesPaciente = () => {
   const [tabValue, setTabValue] = useState(0);
   const [currentUser, setCurrentUser] = useState(null);
   
+  // Nuevos estados para programas y comentarios
+  const [programasCompartidos, setProgramasCompartidos] = useState([]);
+  const [loadingProgramas, setLoadingProgramas] = useState(false);
+  
   // Cargar datos del paciente
   useEffect(() => {
     const fetchPaciente = async () => {
@@ -63,6 +85,19 @@ const DetallesPaciente = () => {
         // Cargar datos del paciente
         const data = await pacienteService.getPacienteById(id);
         setPaciente(data);
+        
+        // Cargar programas compartidos y comentarios
+        setLoadingProgramas(true);
+        try {
+          // Este endpoint debería devolver los programas compartidos con el paciente
+          // y los comentarios asociados
+          const programasResponse = await pacienteService.getProgramasCompartidosConPaciente(id);
+          setProgramasCompartidos(programasResponse || []);
+        } catch (programasError) {
+          console.error('Error al cargar programas compartidos:', programasError);
+        } finally {
+          setLoadingProgramas(false);
+        }
       } catch (error) {
         console.error('Error al cargar paciente:', error);
         setError('No se pudo cargar la información del paciente.');
@@ -82,6 +117,107 @@ const DetallesPaciente = () => {
   // Volver a la lista de pacientes
   const handleBack = () => {
     navigate('/pacientes');
+  };
+  
+  // Renderizar sección de programas compartidos
+  const renderProgramasCompartidos = () => {
+    if (loadingProgramas) {
+      return <CircularProgress size={24} />;
+    }
+    
+    if (programasCompartidos.length === 0) {
+      return (
+        <Alert severity="info" sx={{ mt: 2 }}>
+          No hay programas compartidos con este paciente todavía.
+        </Alert>
+      );
+    }
+    
+    return (
+      <>
+        {programasCompartidos.map(programa => (
+          <Accordion key={programa.id} sx={{ mb: 2 }}>
+            <AccordionSummary
+              expandIcon={<ExpandMoreIcon />}
+              aria-controls={`programa-${programa.id}-content`}
+              id={`programa-${programa.id}-header`}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+                <FitnessCenter sx={{ mr: 1, color: 'primary.main' }} />
+                <Typography variant="subtitle1" fontWeight="bold">
+                  {programa.nombre}
+                </Typography>
+                <Chip 
+                  label={`Compartido: ${new Date(programa.fechaCompartido).toLocaleDateString()}`}
+                  size="small"
+                  sx={{ ml: 2 }}
+                  icon={<CalendarIcon fontSize="small" />}
+                />
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography variant="body2" paragraph>
+                {programa.descripcion || 'Sin descripción'}
+              </Typography>
+              
+              <Divider sx={{ my: 2 }} />
+              
+              <Typography variant="subtitle2" gutterBottom>
+                Comentarios del paciente:
+              </Typography>
+              
+              {programa.comentarios && programa.comentarios.length > 0 ? (
+                <List>
+                  {programa.comentarios.map(comentario => (
+                    <ListItem 
+                      key={comentario.id}
+                      sx={{ 
+                        bgcolor: 'background.default', 
+                        mb: 1, 
+                        borderRadius: 1,
+                        border: comentario.leido ? '1px solid #e0e0e0' : '1px solid #c8e6c9'
+                      }}
+                    >
+                      <ListItemIcon>
+                        <CommentIcon color={comentario.leido ? 'action' : 'success'} />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={
+                          <Box display="flex" justifyContent="space-between" alignItems="center">
+                            <Typography variant="body2" fontWeight={comentario.leido ? 'normal' : 'bold'}>
+                              Sobre: <strong>{comentario.subprogramaNombre}</strong>
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {new Date(comentario.fechaCreacion).toLocaleString()}
+                            </Typography>
+                          </Box>
+                        }
+                        secondary={
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              mt: 1,
+                              fontStyle: 'italic',
+                              color: 'text.primary'
+                            }}
+                          >
+                            "{comentario.contenido}"
+                          </Typography>
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  El paciente no ha dejado comentarios todavía.
+                </Typography>
+              )}
+            </AccordionDetails>
+          </Accordion>
+        ))}
+      </>
+    );
   };
   
   if (loading) {
@@ -148,6 +284,7 @@ const DetallesPaciente = () => {
         >
           <Tab label="Información" />
           <Tab label="Historial" />
+          <Tab label="Programas" />
           <Tab label="Bonos" />
         </Tabs>
         
@@ -198,9 +335,21 @@ const DetallesPaciente = () => {
           </Typography>
         </TabPanel>
         
-        {/* Pestaña de Bonos */}
+        {/* Nueva pestaña de Programas Compartidos */}
         <TabPanel value={tabValue} index={2}>
-          <BonosList pacienteId={paciente.id} />
+          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+            Programas Compartidos con el Paciente
+          </Typography>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            Aquí se muestran los programas personalizados que han sido compartidos con el paciente y sus comentarios.
+          </Typography>
+          
+          {renderProgramasCompartidos()}
+        </TabPanel>
+        
+        {/* Pestaña de Bonos */}
+        <TabPanel value={tabValue} index={3}>
+          <BonosList pacienteId={id} />
         </TabPanel>
       </Paper>
     </SidebarMenu>

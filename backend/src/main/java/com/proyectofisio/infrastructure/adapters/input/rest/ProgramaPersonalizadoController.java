@@ -45,6 +45,9 @@ import com.proyectofisio.infrastructure.adapters.output.persistence.repository.P
 import com.proyectofisio.application.ports.input.UsuarioServicePort;
 import com.proyectofisio.domain.model.Usuario;
 import com.proyectofisio.infrastructure.adapters.input.rest.dto.ProgramaPersonalizadoResponse;
+import com.proyectofisio.infrastructure.adapters.input.rest.dto.GenerarTokensRequest;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +58,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ProgramaPersonalizadoController {
 
+    @Value("${frontend.base.url:http://localhost:3000}")
+    private String frontendBaseUrl;
+    
     private final ProgramaPersonalizadoServicePort programaService;
     private final PacienteRepository pacienteRepository;
     private final UsuarioServicePort usuarioService;
@@ -500,43 +506,63 @@ public class ProgramaPersonalizadoController {
         return ResponseEntity.ok(new MessageResponse("Ejercicios reordenados correctamente"));
     }
     
-    // Endpoint para generar tokens de acceso para pacientes
-    @PostMapping("/{programaId}/generar-tokens")
-    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
-    public ResponseEntity<List<TokenResponse>> generarTokensAcceso(
-            @PathVariable Long programaId,
-            @RequestBody GenerarTokenRequest request) {
-        
-        List<TokenResponse> tokensResponse = new ArrayList<>();
-        
-        for (Long pacienteId : request.getPacientesIds()) {
-            AccessToken token = programaService.generarTokenAcceso(programaId, pacienteId);
+    // Endpoint para verificar si un programa se puede eliminar
+    @GetMapping("/{id}/puede-eliminar")
+    public ResponseEntity<?> puedeEliminarPrograma(@PathVariable Long id) {
+        try {
+            if (!programaService.puedeEliminarPrograma(id)) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("puedeEliminar", false);
+                response.put("tieneSubprogramas", programaService.tieneSubprogramasCreados(id));
+                response.put("tienePacientes", programaService.tienePacientesAsociados(id));
+                response.put("mensaje", "No se puede eliminar el programa porque tiene pacientes asociados o subprogramas creados");
+                
+                return ResponseEntity.ok(response);
+            }
             
-            // Obtener nombre del paciente
-            PacienteEntity paciente = pacienteRepository.findById(pacienteId)
-                .orElse(null);
+            return ResponseEntity.ok(Map.of(
+                "puedeEliminar", true,
+                "mensaje", "El programa se puede eliminar correctamente"
+            ));
             
-            // Obtener nombre del programa
-            ProgramaPersonalizado programa = programaService.getProgramaPersonalizadoById(programaId);
-            
-            // Construir enlace de acceso
-            String enlaceAcceso = "/acceso-programa?token=" + token.getToken().toString();
-            
-            tokensResponse.add(TokenResponse.builder()
-                .id(token.getId())
-                .token(token.getToken())
-                .pacienteId(token.getPacienteId())
-                .pacienteNombre(paciente != null ? paciente.getNombre() + " " + paciente.getApellidos() : "")
-                .programaPersonalizadoId(token.getProgramaPersonalizadoId())
-                .programaNombre(programa.getNombre())
-                .fechaCreacion(token.getFechaCreacion())
-                .fechaExpiracion(token.getFechaExpiracion())
-                .usado(token.getUsado())
-                .enlaceAcceso(enlaceAcceso)
-                .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new MessageResponse("Error al verificar si el programa se puede eliminar: " + e.getMessage()));
         }
+    }
+    
+    // Endpoint para generar tokens de acceso para múltiples pacientes
+    @PostMapping("/{programaId}/generar-tokens")
+    public ResponseEntity<?> generarTokens(
+            @PathVariable Long programaId,
+            @Valid @RequestBody GenerarTokensRequest request) {
         
-        return ResponseEntity.ok(tokensResponse);
+        try {
+            List<AccessToken> tokens = programaService.generarTokensParaPacientes(programaId, request.getPacientesIds());
+            
+            List<TokenResponse> response = tokens.stream()
+                .map(token -> {
+                    String enlaceAcceso = frontendBaseUrl + "/acceso-programa?token=" + token.getToken();
+                    
+                    return TokenResponse.builder()
+                        .id(token.getId())
+                        .token(token.getToken())
+                        .pacienteId(token.getPacienteId())
+                        .programaPersonalizadoId(token.getProgramaPersonalizadoId())
+                        .fechaCreacion(token.getFechaCreacion())
+                        .fechaExpiracion(token.getFechaExpiracion())
+                        .usado(token.getUsado())
+                        .enlaceAcceso(enlaceAcceso)
+                        .build();
+                })
+                .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new MessageResponse("Error al generar tokens: " + e.getMessage()));
+        }
     }
     
     // Endpoint para obtener tokens de un programa

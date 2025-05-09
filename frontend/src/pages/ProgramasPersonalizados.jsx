@@ -237,13 +237,60 @@ const ProgramasPersonalizados = () => {
   
   const handleDeleteProgram = (programaId, event) => {
     event.stopPropagation();
-    // Aquí iría la lógica para eliminar un programa
-    // Por ahora solo mostramos una notificación
-    setNotification({
-      open: true,
-      message: 'Funcionalidad de eliminación pendiente de implementar',
-      severity: 'info'
-    });
+    
+    // Primero verificar si el programa se puede eliminar
+    programasPersonalizadosService.puedeEliminarPrograma(programaId)
+      .then(response => {
+        if (response.puedeEliminar) {
+          // Si se puede eliminar, mostrar confirmación
+          if (window.confirm('¿Estás seguro de que deseas eliminar este programa?')) {
+            programasPersonalizadosService.deletePrograma(programaId)
+              .then(() => {
+                // Eliminar el programa de la lista local
+                setProgramas(prevProgramas => prevProgramas.filter(p => p.id !== programaId));
+                setFilteredProgramas(prevProgramas => prevProgramas.filter(p => p.id !== programaId));
+                
+                // Mostrar notificación de éxito
+                setNotification({
+                  open: true,
+                  message: 'Programa eliminado correctamente',
+                  severity: 'success'
+                });
+              })
+              .catch(error => {
+                console.error('Error al eliminar programa:', error);
+                setNotification({
+                  open: true,
+                  message: 'Error al eliminar el programa',
+                  severity: 'error'
+                });
+              });
+          }
+        } else {
+          // Si no se puede eliminar, mostrar el motivo
+          let mensaje = 'No se puede eliminar el programa porque:';
+          if (response.tieneSubprogramas) {
+            mensaje += ' tiene subprogramas asociados.';
+          }
+          if (response.tienePacientes) {
+            mensaje += ' tiene pacientes (tokens) asociados.';
+          }
+          
+          setNotification({
+            open: true,
+            message: mensaje,
+            severity: 'warning'
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Error al verificar si el programa se puede eliminar:', error);
+        setNotification({
+          open: true,
+          message: 'Error al verificar si el programa se puede eliminar',
+          severity: 'error'
+        });
+      });
   };
 
   // Manejadores para compartir programa

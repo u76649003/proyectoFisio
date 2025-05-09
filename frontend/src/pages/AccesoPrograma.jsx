@@ -34,7 +34,8 @@ import {
   DialogContent,
   DialogActions,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Snackbar
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
@@ -159,7 +160,7 @@ const EjercicioDetalle = ({ ejercicio }) => {
 };
 
 // Componente para visualizar un subprograma completo
-const SubprogramaAcceso = ({ subprograma, expanded, onChange }) => {
+const SubprogramaAcceso = ({ subprograma, expanded, token, onExpandChange, onComentarClick }) => {
   const [tabValue, setTabValue] = useState(0);
 
   const handleChangeTab = (event, newValue) => {
@@ -169,7 +170,7 @@ const SubprogramaAcceso = ({ subprograma, expanded, onChange }) => {
   return (
     <Accordion 
       expanded={expanded} 
-      onChange={onChange}
+      onChange={onExpandChange}
       sx={{ mb: 2 }}
     >
       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -201,48 +202,54 @@ const SubprogramaAcceso = ({ subprograma, expanded, onChange }) => {
               iconPosition="start" 
               label="Multimedia" 
               id="tab-1" 
-              disabled={!(subprograma.videoReferencia || (subprograma.imagenesUrls && subprograma.imagenesUrls.length > 0))}
             />
             <Tab 
-              icon={<PlayArrowIcon />} 
+              icon={<CommentIcon />} 
               iconPosition="start" 
-              label={`Ejercicios (${subprograma.ejercicios?.length || 0})`} 
+              label="Comentario" 
               id="tab-2" 
-              disabled={!subprograma.ejercicios || subprograma.ejercicios.length === 0} 
             />
           </Tabs>
         </Box>
         
-        {/* Panel de detalles */}
         <TabPanel value={tabValue} index={0}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Orden en el programa
-              </Typography>
-              <Typography variant="body1" paragraph>
-                {subprograma.orden}
-              </Typography>
-            </Grid>
-            
-            {/* Más detalles si hay necesidad */}
-          </Grid>
+          {subprograma.ejercicios && subprograma.ejercicios.length > 0 ? (
+            subprograma.ejercicios.map((ejercicio) => (
+              <EjercicioDetalle key={ejercicio.id} ejercicio={ejercicio} />
+            ))
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+              No hay ejercicios disponibles para este subprograma.
+            </Typography>
+          )}
         </TabPanel>
         
-        {/* Panel de multimedia */}
         <TabPanel value={tabValue} index={1}>
-          <SubprogramaMultimediaViewer subprograma={subprograma} />
+          <SubprogramaMultimediaViewer 
+            subprograma={subprograma} 
+            showControls={false}
+          />
         </TabPanel>
         
-        {/* Panel de ejercicios */}
         <TabPanel value={tabValue} index={2}>
-          <Typography variant="subtitle1" gutterBottom>
-            Ejercicios a realizar
-          </Typography>
-          
-          {subprograma.ejercicios && subprograma.ejercicios.map((ejercicio, index) => (
-            <EjercicioDetalle key={ejercicio.id} ejercicio={ejercicio} />
-          ))}
+          <Box sx={{ py: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              ¿Cómo te has sentido con este ejercicio?
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Tu fisioterapeuta podrá ver este comentario para hacer seguimiento de tu progreso.
+            </Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<CommentIcon />}
+              onClick={() => onComentarClick(subprograma.id)}
+              fullWidth
+              sx={{ mt: 2 }}
+            >
+              Añadir comentario
+            </Button>
+          </Box>
         </TabPanel>
       </AccordionDetails>
     </Accordion>
@@ -427,7 +434,9 @@ const AccesoPrograma = () => {
                     key={subprograma.id}
                     subprograma={subprograma}
                     expanded={expanded === subprograma.id}
-                    onChange={handleAccordionChange(subprograma.id)}
+                    token={token}
+                    onExpandChange={handleAccordionChange(subprograma.id)}
+                    onComentarClick={handleOpenComentario}
                   />
                 ))}
               </Box>
