@@ -42,7 +42,7 @@ import {
   PlayArrow as PlayArrowIcon,
   Share as ShareIcon,
   Close as CloseIcon,
-  View as ViewIcon
+  Visibility as ViewIcon
 } from '@mui/icons-material';
 import { programasPersonalizadosService, authService } from '../services/api';
 import SidebarMenu from '../components/SidebarMenu';

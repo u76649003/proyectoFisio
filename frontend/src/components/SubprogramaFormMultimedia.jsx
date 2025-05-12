@@ -111,12 +111,12 @@ const ImagePreview = ({ url, onRemove }) => {
 
 const SubprogramaFormMultimedia = ({ subprogramaId, initialData, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
-    nombre: '',
-    descripcion: '',
-    orden: 1,
-    videoReferencia: '',
-    esEnlaceExterno: false,
-    imagenesUrls: []
+    nombre: initialData ? initialData.nombre : '',
+    descripcion: initialData ? initialData.descripcion : '',
+    orden: initialData ? initialData.orden : (initialData ? initialData.orden : 1),
+    videoReferencia: initialData ? initialData.videoReferencia : '',
+    esEnlaceExterno: initialData ? initialData.esEnlaceExterno : false,
+    imagenesUrls: initialData ? initialData.imagenesUrls : []
   });
   
   const [videoType, setVideoType] = useState('none');

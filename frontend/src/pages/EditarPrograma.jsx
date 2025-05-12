@@ -14,15 +14,36 @@ import {
   CircularProgress,
   Alert,
   IconButton,
-  Snackbar
+  Snackbar,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  ListItemSecondaryAction,
+  ListItemButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Chip,
+  Tooltip,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
   Save as SaveIcon,
-  FitnessCenter
+  FitnessCenter,
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Visibility as ViewIcon,
+  Share as ShareIcon
 } from '@mui/icons-material';
 import { programasPersonalizadosService, authService } from '../services/api';
 import SidebarMenu from '../components/SidebarMenu';
+import SubprogramaFormMultimedia from '../components/SubprogramaFormMultimedia';
+import SubprogramaMultimediaViewer from '../components/SubprogramaMultimediaViewer';
 
 // Tipos de programas predefinidos
 const TIPOS_PROGRAMA = [
@@ -43,6 +64,8 @@ const TIPOS_PROGRAMA = [
 const EditarPrograma = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   const [programaData, setProgramaData] = useState({
     nombre: '',
@@ -50,12 +73,26 @@ const EditarPrograma = () => {
     descripcion: ''
   });
   
+  const [subprogramas, setSubprogramas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'error' });
+
+  // Estados para subprogramas
+  const [openNewDialog, setOpenNewDialog] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [subprogramaToDelete, setSubprogramaToDelete] = useState(null);
+  const [selectedSubprograma, setSelectedSubprograma] = useState(null);
+  const [openSubprogramaDetail, setOpenSubprogramaDetail] = useState(false);
+  const [editingSubprograma, setEditingSubprograma] = useState(false);
+  const [subprogramaData, setSubprogramaData] = useState({
+    nombre: '',
+    descripcion: '',
+    orden: 0
+  });
 
   // Verificar permisos
   useEffect(() => {
@@ -72,28 +109,34 @@ const EditarPrograma = () => {
     }
   }, [navigate]);
 
-  // Cargar datos del programa existente
+  // Cargar datos del programa y subprogramas
   useEffect(() => {
-    const fetchPrograma = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const data = await programasPersonalizadosService.getProgramaById(id);
+        const [programaData, subprogramasData] = await Promise.all([
+          programasPersonalizadosService.getProgramaById(id),
+          programasPersonalizadosService.getSubprogramasByProgramaId(id)
+        ]);
+        
         setProgramaData({
-          nombre: data.nombre || '',
-          tipoPrograma: data.tipoPrograma || '',
-          descripcion: data.descripcion || ''
+          nombre: programaData.nombre || '',
+          tipoPrograma: programaData.tipoPrograma || '',
+          descripcion: programaData.descripcion || ''
         });
+        
+        setSubprogramas(subprogramasData);
       } catch (error) {
-        console.error('Error al cargar programa:', error);
-        setError('Error al cargar los datos del programa');
-        setNotification({ open: true, message: 'Error al cargar los datos del programa', severity: 'error' });
+        console.error('Error al cargar datos:', error);
+        setError('Error al cargar los datos');
+        setNotification({ open: true, message: 'Error al cargar los datos', severity: 'error' });
       } finally {
         setLoading(false);
       }
     };
 
     if (id) {
-      fetchPrograma();
+      fetchData();
     }
   }, [id]);
 
@@ -104,7 +147,6 @@ const EditarPrograma = () => {
       [name]: value
     });
     
-    // Limpiar error al modificar
     if (errors[name]) {
       setErrors({
         ...errors,
@@ -139,7 +181,6 @@ const EditarPrograma = () => {
       setSaving(true);
       setError(null);
       
-      // Enviar datos al servidor
       await programasPersonalizadosService.updatePrograma(id, programaData);
       
       setSuccess(true);
@@ -148,11 +189,6 @@ const EditarPrograma = () => {
         message: 'Programa actualizado correctamente',
         severity: 'success'
       });
-      
-      // Redirigir al detalle del programa
-      setTimeout(() => {
-        navigate(`/programas-personalizados/${id}`);
-      }, 1500);
       
     } catch (err) {
       console.error('Error al actualizar programa:', err);
@@ -167,6 +203,118 @@ const EditarPrograma = () => {
     }
   };
 
+  // Manejadores para subprogramas
+  const handleOpenNewDialog = () => {
+    setSubprogramaData({
+      nombre: '',
+      descripcion: '',
+      orden: subprogramas.length + 1
+    });
+    setOpenNewDialog(true);
+  };
+
+  const handleCloseNewDialog = () => {
+    setOpenNewDialog(false);
+  };
+
+  const handleSaveSubprograma = async (data) => {
+    try {
+      const subprogramaToCreate = {
+        ...data,
+        programaPersonalizadoId: id
+      };
+      
+      const newSubprograma = await programasPersonalizadosService.createSubprograma(id, subprogramaToCreate);
+      setSubprogramas([...subprogramas, newSubprograma]);
+      
+      handleCloseNewDialog();
+      setNotification({
+        open: true,
+        message: 'Subprograma creado correctamente',
+        severity: 'success'
+      });
+      
+    } catch (err) {
+      console.error('Error al crear subprograma:', err);
+      setNotification({
+        open: true,
+        message: 'Error al crear el subprograma',
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleOpenDeleteDialog = (subprograma) => {
+    setSubprogramaToDelete(subprograma);
+    setOpenDeleteDialog(true);
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setOpenDeleteDialog(false);
+    setSubprogramaToDelete(null);
+  };
+
+  const handleDeleteSubprograma = async () => {
+    if (!subprogramaToDelete) return;
+    
+    try {
+      await programasPersonalizadosService.deleteSubprograma(subprogramaToDelete.id);
+      setSubprogramas(subprogramas.filter(s => s.id !== subprogramaToDelete.id));
+      handleCloseDeleteDialog();
+      setNotification({
+        open: true,
+        message: 'Subprograma eliminado correctamente',
+        severity: 'success'
+      });
+    } catch (err) {
+      console.error('Error al eliminar subprograma:', err);
+      setNotification({
+        open: true,
+        message: 'Error al eliminar el subprograma',
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleViewSubprograma = (subprograma) => {
+    setSelectedSubprograma(subprograma);
+    setOpenSubprogramaDetail(true);
+  };
+
+  const handleEditSubprograma = (subprograma) => {
+    setSelectedSubprograma(subprograma);
+    setEditingSubprograma(true);
+    setOpenSubprogramaDetail(true);
+  };
+
+  const handleCloseSubprogramaDetail = () => {
+    setOpenSubprogramaDetail(false);
+    setSelectedSubprograma(null);
+    setEditingSubprograma(false);
+  };
+
+  const handleSaveSubprogramaEdit = async (data) => {
+    try {
+      const updatedSubprograma = await programasPersonalizadosService.updateSubprograma(selectedSubprograma.id, data);
+      setSubprogramas(subprogramas.map(sp => 
+        sp.id === selectedSubprograma.id ? updatedSubprograma : sp
+      ));
+      setNotification({
+        open: true,
+        message: 'Subprograma actualizado correctamente',
+        severity: 'success'
+      });
+      handleCloseSubprogramaDetail();
+    } catch (err) {
+      console.error('Error al actualizar subprograma:', err);
+      setNotification({
+        open: true,
+        message: 'Error al actualizar el subprograma',
+        severity: 'error'
+      });
+    }
+  };
+
   return (
     <SidebarMenu>
       <Container maxWidth="lg">
@@ -174,16 +322,47 @@ const EditarPrograma = () => {
           <Box display="flex" alignItems="center" mb={3}>
             <IconButton
               color="inherit"
-              onClick={() => navigate(`/programas-personalizados/${id}`)}
+              onClick={() => navigate(-1)}
               sx={{ mr: 1 }}
             >
               <ArrowBackIcon />
             </IconButton>
             <Typography variant="h4" component="h1" fontWeight="bold">
               <FitnessCenter sx={{ mr: 1, verticalAlign: 'middle' }} />
-              {loading ? 'Cargando...' : `Editar: ${programaData.nombre}`}
+              {loading ? 'Cargando...' : programaData.nombre}
             </Typography>
           </Box>
+
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Acciones rápidas
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6} md={4}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<ShareIcon />}
+                  onClick={() => navigate(`/programas-personalizados/${id}/compartir`)}
+                  sx={{ p: 2, justifyContent: 'flex-start' }}
+                >
+                  Compartir con pacientes
+                </Button>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<EditIcon />}
+                  disabled
+                  sx={{ p: 2, justifyContent: 'flex-start' }}
+                >
+                  Editar programa
+                </Button>
+              </Grid>
+            </Grid>
+          </Paper>
 
           {error && (
             <Alert severity="error" sx={{ mb: 3 }}>
@@ -193,7 +372,7 @@ const EditarPrograma = () => {
 
           {success && (
             <Alert severity="success" sx={{ mb: 3 }}>
-              Programa actualizado correctamente. Redirigiendo...
+              Programa actualizado correctamente
             </Alert>
           )}
 
@@ -202,7 +381,7 @@ const EditarPrograma = () => {
               <CircularProgress />
             </Box>
           ) : (
-            <Paper sx={{ p: 3, mb: 4 }}>
+            <Paper sx={{ p: 3 }}>
               <form onSubmit={handleSubmit}>
                 <Grid container spacing={3}>
                   <Grid item xs={12}>
@@ -211,7 +390,6 @@ const EditarPrograma = () => {
                     </Typography>
                     <Divider sx={{ mb: 2 }} />
                   </Grid>
-                  
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
@@ -225,7 +403,6 @@ const EditarPrograma = () => {
                       disabled={saving}
                     />
                   </Grid>
-                  
                   <Grid item xs={12} sm={6}>
                     <FormControl fullWidth error={!!errors.tipoPrograma}>
                       <Autocomplete
@@ -236,7 +413,6 @@ const EditarPrograma = () => {
                             ...programaData,
                             tipoPrograma: newValue || ''
                           });
-                          
                           if (errors.tipoPrograma) {
                             setErrors({
                               ...errors,
@@ -258,7 +434,6 @@ const EditarPrograma = () => {
                       />
                     </FormControl>
                   </Grid>
-                  
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
@@ -272,23 +447,21 @@ const EditarPrograma = () => {
                       disabled={saving}
                     />
                   </Grid>
-                  
                   <Grid item xs={12}>
-                    <Box display="flex" justifyContent="space-between" mt={2}>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
                       <Button
                         variant="outlined"
-                        color="inherit"
-                        onClick={() => navigate(`/programas-personalizados/${id}`)}
+                        onClick={() => navigate(-1)}
                         disabled={saving}
                       >
                         Cancelar
                       </Button>
                       <Button
-                        type="submit"
                         variant="contained"
                         color="primary"
-                        startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
+                        type="submit"
                         disabled={saving}
+                        startIcon={<SaveIcon />}
                       >
                         {saving ? 'Guardando...' : 'Guardar cambios'}
                       </Button>
@@ -299,18 +472,223 @@ const EditarPrograma = () => {
             </Paper>
           )}
         </Box>
-      </Container>
 
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={2000}
-        onClose={() => setNotification({ ...notification, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={() => setNotification({ ...notification, open: false })} severity={notification.severity} variant="filled" sx={{ width: '100%' }}>
-          {notification.message}
-        </Alert>
-      </Snackbar>
+        {/* --- GESTIÓN DE SUBPROGRAMAS --- */}
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <Typography variant="h6">Subprogramas</Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={handleOpenNewDialog}
+            >
+              Añadir Subprograma
+            </Button>
+          </Box>
+          {subprogramas.length === 0 ? (
+            <Typography color="text.secondary" fontStyle="italic">
+              No hay subprogramas añadidos aún.
+            </Typography>
+          ) : (
+            <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
+              {subprogramas.map((subprograma, index) => (
+                <ListItem
+                  key={subprograma.id}
+                  disablePadding
+                  sx={{
+                    mb: 1.5,
+                    borderRadius: 1,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                    bgcolor: theme.palette.background.paper,
+                    position: 'relative'
+                  }}
+                >
+                  <ListItemButton
+                    onClick={() => handleViewSubprograma(subprograma)}
+                    sx={{ borderRadius: 1, pr: '100px' }}
+                  >
+                    <ListItemIcon>
+                      <Box
+                        sx={{
+                          borderRadius: '50%',
+                          width: 32,
+                          height: 32,
+                          bgcolor: theme.palette.primary.main,
+                          color: 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 'bold',
+                          mr: 1
+                        }}
+                      >
+                        {index + 1}
+                      </Box>
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={
+                        <Typography variant="subtitle1" fontWeight="bold">
+                          {subprograma.nombre}
+                        </Typography>
+                      }
+                      secondary={
+                        subprograma.descripcion ? (
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical'
+                            }}
+                          >
+                            {subprograma.descripcion}
+                          </Typography>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                            Sin descripción
+                          </Typography>
+                        )
+                      }
+                    />
+                    <ListItemSecondaryAction>
+                      <Tooltip title="Ver detalles">
+                        <IconButton
+                          edge="end"
+                          color="primary"
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleViewSubprograma(subprograma);
+                          }}
+                        >
+                          <ViewIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Editar">
+                        <IconButton
+                          edge="end"
+                          color="primary"
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleEditSubprograma(subprograma);
+                          }}
+                          sx={{ ml: 1 }}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Eliminar">
+                        <IconButton
+                          edge="end"
+                          color="error"
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleOpenDeleteDialog(subprograma);
+                          }}
+                          sx={{ ml: 1 }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </ListItemSecondaryAction>
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </Paper>
+
+        {/* Diálogo para nuevo subprograma */}
+        <Dialog
+          open={openNewDialog}
+          onClose={handleCloseNewDialog}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>Nuevo Subprograma</DialogTitle>
+          <DialogContent>
+            <SubprogramaFormMultimedia
+              onSubmit={handleSaveSubprograma}
+              onCancel={handleCloseNewDialog}
+              programaId={id}
+              subprogramaData={subprogramaData}
+              onSubprogramaDataChange={(data) => setSubprogramaData(data)}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* Diálogo para ver/editar subprograma */}
+        <Dialog
+          open={openSubprogramaDetail}
+          onClose={handleCloseSubprogramaDetail}
+          maxWidth="md"
+          fullWidth
+        >
+          {selectedSubprograma && (
+            <>
+              <DialogTitle>
+                {editingSubprograma ? 'Editar Subprograma' : selectedSubprograma.titulo}
+              </DialogTitle>
+              <DialogContent>
+                {editingSubprograma ? (
+                  <SubprogramaFormMultimedia
+                    onSubmit={handleSaveSubprogramaEdit}
+                    onCancel={handleCloseSubprogramaDetail}
+                    programaId={id}
+                    subprograma={selectedSubprograma}
+                  />
+                ) : (
+                  <SubprogramaMultimediaViewer
+                    subprograma={selectedSubprograma}
+                    onClose={handleCloseSubprogramaDetail}
+                    onEdit={() => setEditingSubprograma(true)}
+                    onDelete={() => {
+                      handleCloseSubprogramaDetail();
+                      handleOpenDeleteDialog(selectedSubprograma);
+                    }}
+                  />
+                )}
+              </DialogContent>
+            </>
+          )}
+        </Dialog>
+
+        {/* Diálogo de confirmación para eliminar subprograma */}
+        <Dialog
+          open={openDeleteDialog}
+          onClose={handleCloseDeleteDialog}
+        >
+          <DialogTitle>Confirmar eliminación</DialogTitle>
+          <DialogContent>
+            <Typography>
+              ¿Estás seguro de que deseas eliminar este subprograma? Esta acción no se puede deshacer.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDeleteDialog}>Cancelar</Button>
+            <Button onClick={handleDeleteSubprograma} color="error">
+              Eliminar
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Snackbar
+          open={notification.open}
+          autoHideDuration={6000}
+          onClose={() => setNotification({ ...notification, open: false })}
+        >
+          <Alert
+            onClose={() => setNotification({ ...notification, open: false })}
+            severity={notification.severity}
+            sx={{ width: '100%' }}
+          >
+            {notification.message}
+          </Alert>
+        </Snackbar>
+      </Container>
     </SidebarMenu>
   );
 };

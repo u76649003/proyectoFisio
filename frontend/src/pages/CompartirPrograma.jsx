@@ -43,7 +43,8 @@ import {
   Check as CheckIcon,
   FitnessCenter,
   Refresh as RefreshIcon,
-  Mail as MailIcon
+  Mail as MailIcon,
+  Person as PersonIcon
 } from '@mui/icons-material';
 import { programasPersonalizadosService, pacienteService, authService } from '../services/api';
 import SidebarMenu from '../components/SidebarMenu';
