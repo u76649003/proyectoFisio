@@ -464,15 +464,15 @@ const DetalleProgramaPersonalizado = () => {
           <Box display="flex" alignItems="center" mb={3}>
             <IconButton
               color="inherit"
-              onClick={() => navigate('/programas-personalizados')}
+              onClick={() => navigate(-1)}
               sx={{ mr: 1 }}
             >
               <ArrowBackIcon />
             </IconButton>
-            <Box flexGrow={1}>
+            <Box>
               <Typography variant="h4" component="h1" fontWeight="bold">
                 <FitnessCenter sx={{ mr: 1, verticalAlign: 'middle' }} />
-                {loading ? 'Cargando programa...' : programa?.nombre}
+                {loading ? 'Cargando...' : programa?.nombre}
               </Typography>
               {programa?.tipoPrograma && (
                 <Chip 
@@ -483,37 +483,17 @@ const DetalleProgramaPersonalizado = () => {
                 />
               )}
             </Box>
-            <IconButton
-              onClick={handleMenuClick}
-              aria-controls={openMenu ? 'programa-menu' : undefined}
-              aria-haspopup="true"
-              aria-expanded={openMenu ? 'true' : undefined}
-            >
-              <MoreVertIcon />
-            </IconButton>
-            <Menu
-              id="programa-menu"
-              anchorEl={anchorEl}
-              open={openMenu}
-              onClose={handleMenuClose}
-              MenuListProps={{
-                'aria-labelledby': 'programa-menu-button',
-              }}
-            >
-              <MenuItem onClick={handleEditPrograma}>
-                <ListItemIcon>
-                  <EditIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>Editar programa</ListItemText>
-              </MenuItem>
-              <MenuItem onClick={handleCompartirPrograma}>
-                <ListItemIcon>
-                  <ShareIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>Compartir con pacientes</ListItemText>
-              </MenuItem>
-            </Menu>
           </Box>
+          
+          {/* Nueva sección para mostrar la descripción del programa */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Descripción del programa
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              {programa?.descripcion || 'No hay descripción disponible.'}
+            </Typography>
+          </Paper>
           
           {error && (
             <Alert severity="error" sx={{ mb: 3 }}>

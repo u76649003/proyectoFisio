@@ -35,7 +35,8 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  ListItemSecondaryAction
+  ListItemSecondaryAction,
+  ListItemButton
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -54,6 +55,7 @@ import {
 } from '@mui/icons-material';
 import SidebarMenu from '../components/SidebarMenu';
 import { authService, programasPersonalizadosService } from '../services/api';
+import SubprogramaMultimediaViewer from '../components/SubprogramaMultimediaViewer';
 
 const ProgramasPersonalizados = () => {
   const navigate = useNavigate();
@@ -81,6 +83,9 @@ const ProgramasPersonalizados = () => {
   const [compartirDialogOpen, setCompartirDialogOpen] = useState(false);
   const [programaCompartir, setProgramaCompartir] = useState(null);
   const [pacientesSeleccionados, setPacientesSeleccionados] = useState([]);
+  
+  const [selectedSubprograma, setSelectedSubprograma] = useState(null);
+  const [openSubprogramaDetail, setOpenSubprogramaDetail] = useState(false);
   
   // Cargar programas al montar el componente
   useEffect(() => {
@@ -226,8 +231,9 @@ const ProgramasPersonalizados = () => {
     navigate(`/programas-personalizados/${programaId}`);
   };
   
-  const handleViewSubprograma = (programaId, subprogramaId) => {
-    navigate(`/programas-personalizados/${programaId}/subprograma/${subprogramaId}`);
+  const handleViewSubprograma = (subprograma) => {
+    setSelectedSubprograma(subprograma);
+    setOpenSubprogramaDetail(true);
   };
   
   const handleEditProgram = (programaId, event) => {
@@ -316,27 +322,6 @@ const ProgramasPersonalizados = () => {
     handleCloseCompartir();
   };
 
-  // Copiar enlace de acceso
-  const handleCopyLink = (url, event) => {
-    event.stopPropagation();
-    navigator.clipboard.writeText(url)
-      .then(() => {
-        setNotification({
-          open: true,
-          message: 'Enlace copiado al portapapeles',
-          severity: 'success'
-        });
-      })
-      .catch((error) => {
-        console.error('Error al copiar enlace:', error);
-        setNotification({
-          open: true,
-          message: 'Error al copiar enlace',
-          severity: 'error'
-        });
-      });
-  };
-
   // Manejadores para paginación
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -354,7 +339,12 @@ const ProgramasPersonalizados = () => {
       page * rowsPerPage + rowsPerPage
     );
   };
-  
+
+  const handleCloseSubprogramaDetail = () => {
+    setOpenSubprogramaDetail(false);
+    setSelectedSubprograma(null);
+  };
+
   return (
     <SidebarMenu>
       <Container maxWidth="xl">
@@ -646,55 +636,82 @@ const ProgramasPersonalizados = () => {
                               ) : (
                                 <List>
                                   {subprogramasPorPrograma[programa.id].map((subprograma) => (
-                                    <ListItem 
+                                    <ListItem
                                       key={subprograma.id}
-                                      button
-                                      onClick={() => handleViewSubprograma(programa.id, subprograma.id)}
+                                      disablePadding
                                       sx={{
-                                        mb: 1,
-                                        bgcolor: 'background.paper',
+                                        mb: 1.5,
                                         borderRadius: 1,
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                        bgcolor: theme.palette.background.paper,
+                                        position: 'relative'
                                       }}
                                     >
-                                      <ListItemIcon>
-                                        <PlayIcon color="primary" />
-                                      </ListItemIcon>
-                                      <ListItemText
-                                        primary={subprograma.nombre}
-                                        secondary={
-                                          <>
-                                            {subprograma.descripcion ? (
-                                              <Typography variant="body2" color="text.secondary" noWrap>
+                                      <ListItemButton
+                                        onClick={() => handleViewSubprograma(subprograma)}
+                                        sx={{ borderRadius: 1, pr: '100px' }}
+                                      >
+                                        <ListItemIcon>
+                                          <Box
+                                            sx={{
+                                              borderRadius: '50%',
+                                              width: 32,
+                                              height: 32,
+                                              bgcolor: theme.palette.primary.main,
+                                              color: 'white',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              fontWeight: 'bold',
+                                              mr: 1
+                                            }}
+                                          >
+                                            {subprograma.id}
+                                          </Box>
+                                        </ListItemIcon>
+                                        <ListItemText
+                                          primary={
+                                            <Typography variant="subtitle1" fontWeight="bold">
+                                              {subprograma.nombre}
+                                            </Typography>
+                                          }
+                                          secondary={
+                                            subprograma.descripcion ? (
+                                              <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                                sx={{
+                                                  overflow: 'hidden',
+                                                  textOverflow: 'ellipsis',
+                                                  display: '-webkit-box',
+                                                  WebkitLineClamp: 2,
+                                                  WebkitBoxOrient: 'vertical'
+                                                }}
+                                              >
                                                 {subprograma.descripcion}
                                               </Typography>
-                                            ) : null}
-                                            <Typography variant="caption" color="text.secondary">
-                                              {subprograma.ejercicios?.length || 0} ejercicios
-                                            </Typography>
-                                          </>
-                                        }
-                                      />
-                                      <ListItemSecondaryAction>
-                                        <Tooltip title="Copiar enlace de acceso">
-                                          <IconButton 
-                                            edge="end" 
-                                            size="small"
-                                            onClick={(e) => handleCopyLink(`${window.location.origin}/acceso-programa?subprograma=${subprograma.id}`, e)}
-                                          >
-                                            <CopyIcon fontSize="small" />
-                                          </IconButton>
-                                        </Tooltip>
-                                        <Tooltip title="Ver subprograma">
-                                          <IconButton 
-                                            edge="end" 
-                                            size="small"
-                                            sx={{ ml: 1 }}
-                                            onClick={() => handleViewSubprograma(programa.id, subprograma.id)}
-                                          >
-                                            <ViewIcon fontSize="small" />
-                                          </IconButton>
-                                        </Tooltip>
-                                      </ListItemSecondaryAction>
+                                            ) : (
+                                              <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                                                Sin descripción
+                                              </Typography>
+                                            )
+                                          }
+                                        />
+                                        <ListItemSecondaryAction>
+                                          <Tooltip title="Ver detalles">
+                                            <IconButton
+                                              edge="end"
+                                              color="primary"
+                                              onClick={e => {
+                                                e.stopPropagation();
+                                                handleViewSubprograma(subprograma);
+                                              }}
+                                            >
+                                              <ViewIcon />
+                                            </IconButton>
+                                          </Tooltip>
+                                        </ListItemSecondaryAction>
+                                      </ListItemButton>
                                     </ListItem>
                                   ))}
                                 </List>
@@ -792,6 +809,26 @@ const ProgramasPersonalizados = () => {
           {notification.message}
         </Alert>
       </Snackbar>
+
+      {/* Modal para ver detalles del subprograma */}
+      <Dialog
+        open={openSubprogramaDetail}
+        onClose={handleCloseSubprogramaDetail}
+        maxWidth="md"
+        fullWidth
+      >
+        {selectedSubprograma && (
+          <>
+            <DialogTitle>{selectedSubprograma.nombre}</DialogTitle>
+            <DialogContent>
+              <SubprogramaMultimediaViewer
+                subprograma={selectedSubprograma}
+                onClose={handleCloseSubprogramaDetail}
+              />
+            </DialogContent>
+          </>
+        )}
+      </Dialog>
     </SidebarMenu>
   );
 };
