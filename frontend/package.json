@@ -45,7 +45,6 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "https://proyectofisio.onrender.com",
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "assert": "^2.0.0",

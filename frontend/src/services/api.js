@@ -1,13 +1,11 @@
 import axios from 'axios';
+import config from '../config';
 
 // Crear instancia de Axios con configuración base
 const axiosInstance = axios.create({
-    baseURL: process.env.REACT_APP_API_URL || 'https://proyectofisio.onrender.com',
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*'
-    },
-    timeout: 30000, // 30 segundos para dar más tiempo al backend
+    baseURL: config.API_URL,
+    headers: config.DEFAULT_HEADERS,
+    timeout: config.API_TIMEOUT
 });
 
 // Interceptor para las solicitudes
@@ -98,7 +96,6 @@ const fetchWithAuth = async (url, method = 'GET', data = null, options = {}) => 
         const token = localStorage.getItem('token');
         if (!token) {
             console.error('No hay token para realizar la solicitud autenticada:', url);
-            // NO redirigimos automáticamente
             throw new Error('No hay token de autenticación');
         }
         
@@ -121,38 +118,7 @@ const fetchWithAuth = async (url, method = 'GET', data = null, options = {}) => 
         console.log(`Respuesta recibida de ${url}:`, response.status);
         return response.data;
     } catch (error) {
-        console.error(`Error en ${method} ${url}:`, error);
-        
-        // Contador de intentos para evitar ciclos infinitos
-        const retryCount = options.retryCount || 0;
-        
-        // Si es un 403, propagamos el error sin intentar refrescar la sesión
-        // ya que probablemente es un problema de permisos, no de autenticación
-        if (error.response && error.response.status === 403) {
-            console.log('Error 403: Acceso prohibido. Posible problema de permisos.');
-            throw error;
-        }
-        
-        // Solo intentamos refrescar la sesión para errores 401 (no autenticado)
-        if (error.response && error.response.status === 401 && retryCount < 1) {
-            console.log('Intentando refrescar la sesión...');
-            try {
-                const refreshed = await authService.refreshSession();
-                if (refreshed) {
-                    // Reintentar la solicitud original
-                    console.log('Sesión refrescada, reintentando solicitud original...');
-                    return fetchWithAuth(url, method, data, {...options, retryCount: retryCount + 1});
-                }
-                // No hacemos redirección automática
-            } catch (refreshError) {
-                console.error('Error al refrescar la sesión:', refreshError);
-                // No hacemos redirección automática
-            }
-        } else if (error.response && error.response.status === 401 && retryCount >= 1) {
-            // Si ya intentamos refrescar la sesión, cerramos sesión pero NO redirigimos automáticamente
-            authService.logout();
-        }
-        
+        console.error(`Error en solicitud ${method} a ${url}:`, error);
         throw error;
     }
 };
