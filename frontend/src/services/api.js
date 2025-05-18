@@ -1373,7 +1373,133 @@ const programasPersonalizadosService = {
       console.error('Error al enviar comentario:', error);
       throw error;
     }
-  }
+  },
+
+  // Pasos de subprograma
+  getPasosBySubprogramaId: async (subprogramaId) => {
+    try {
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/subprogramas/${subprogramaId}/pasos`;
+      
+      const response = await axios.get(url, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener pasos:', error);
+      return [];
+    }
+  },
+
+  getPasoById: async (pasoId) => {
+    try {
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/subprogramas/pasos/${pasoId}`;
+      
+      const response = await axios.get(url, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error al obtener paso:', error);
+      throw error;
+    }
+  },
+
+  createPaso: async (subprogramaId, pasoData) => {
+    try {
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/subprogramas/${subprogramaId}/pasos`;
+      
+      const response = await axios.post(url, pasoData, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error al crear paso:', error);
+      throw error;
+    }
+  },
+
+  updatePaso: async (pasoId, pasoData) => {
+    try {
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/subprogramas/pasos/${pasoId}`;
+      
+      const response = await axios.put(url, pasoData, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error al actualizar paso:', error);
+      throw error;
+    }
+  },
+
+  deletePaso: async (pasoId) => {
+    try {
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/subprogramas/pasos/${pasoId}`;
+      
+      const response = await axios.delete(url, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error al eliminar paso:', error);
+      throw error;
+    }
+  },
+
+  uploadPasoVideo: async (pasoId, formData) => {
+    try {
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/subprogramas/pasos/${pasoId}/video`;
+      
+      const response = await axios.post(url, formData, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error al subir video del paso:', error);
+      throw error;
+    }
+  },
+
+  uploadPasoImagenes: async (pasoId, formData) => {
+    try {
+      const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/subprogramas/pasos/${pasoId}/imagenes`;
+      
+      const response = await axios.post(url, formData, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error al subir imágenes del paso:', error);
+      throw error;
+    }
+  },
 };
 
 // Servicio para gestión de facturas

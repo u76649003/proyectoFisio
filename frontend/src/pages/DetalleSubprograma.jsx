@@ -30,6 +30,8 @@ import {
 import SidebarMenu from '../components/SidebarMenu';
 import SubprogramaMultimediaViewer from '../components/SubprogramaMultimediaViewer';
 import SubprogramaFormMultimedia from '../components/SubprogramaFormMultimedia';
+import PasosViewer from '../components/PasosViewer';
+import PasoFormMultimedia from '../components/PasoFormMultimedia';
 import { programasPersonalizadosService, authService } from '../services/api';
 
 const TabPanel = (props) => {
@@ -59,10 +61,13 @@ const DetalleSubprograma = () => {
   const [programa, setPrograma] = useState(null);
   const [subprograma, setSubprograma] = useState(null);
   const [ejercicios, setEjercicios] = useState([]);
+  const [pasos, setPasos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [tabValue, setTabValue] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
+  const [isCreatingPaso, setIsCreatingPaso] = useState(false);
+  const [editingPaso, setEditingPaso] = useState(null);
   
   // Estado para notificaciones
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
@@ -86,6 +91,10 @@ const DetalleSubprograma = () => {
         if (subprogramaData && subprogramaData.ejercicios) {
           setEjercicios(subprogramaData.ejercicios);
         }
+        
+        // Cargar pasos del subprograma
+        const pasosData = await programasPersonalizadosService.getPasosBySubprogramaId(subprogramaId);
+        setPasos(pasosData);
         
       } catch (err) {
         console.error('Error al cargar datos:', err);
@@ -151,6 +160,83 @@ const DetalleSubprograma = () => {
   // Regresar a la vista de programa
   const handleBack = () => {
     navigate(`/programas-personalizados/${programaId}`);
+  };
+  
+  // Manejar creación de un nuevo paso
+  const handleCreatePaso = () => {
+    setIsCreatingPaso(true);
+    setEditingPaso(null);
+  };
+  
+  // Manejar edición de un paso existente
+  const handleEditPaso = (paso) => {
+    setEditingPaso(paso);
+    setIsCreatingPaso(true);
+  };
+  
+  // Cancelar creación/edición de paso
+  const handleCancelPaso = () => {
+    setIsCreatingPaso(false);
+    setEditingPaso(null);
+  };
+  
+  // Guardar un paso (nuevo o editado)
+  const handleSavePaso = async (paso) => {
+    try {
+      setLoading(true);
+      
+      // Recargar los pasos después de guardar
+      const pasosData = await programasPersonalizadosService.getPasosBySubprogramaId(subprogramaId);
+      setPasos(pasosData);
+      
+      setIsCreatingPaso(false);
+      setEditingPaso(null);
+      
+      setNotification({
+        open: true,
+        message: editingPaso ? 'Paso actualizado correctamente' : 'Paso creado correctamente',
+        severity: 'success'
+      });
+      
+    } catch (err) {
+      console.error('Error al guardar paso:', err);
+      setNotification({
+        open: true,
+        message: 'Error al guardar el paso',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Eliminar un paso
+  const handleDeletePaso = async (pasoId) => {
+    try {
+      setLoading(true);
+      
+      await programasPersonalizadosService.deletePaso(pasoId);
+      
+      // Recargar los pasos después de eliminar
+      const pasosData = await programasPersonalizadosService.getPasosBySubprogramaId(subprogramaId);
+      setPasos(pasosData);
+      
+      setNotification({
+        open: true,
+        message: 'Paso eliminado correctamente',
+        severity: 'success'
+      });
+      
+    } catch (err) {
+      console.error('Error al eliminar paso:', err);
+      setNotification({
+        open: true,
+        message: 'Error al eliminar el paso',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
   
   return (
@@ -222,6 +308,11 @@ const DetalleSubprograma = () => {
                     label={`Ejercicios (${ejercicios.length})`} 
                     id="tab-2" 
                     aria-controls="tabpanel-2" 
+                  />
+                  <Tab 
+                    label={`Pasos (${pasos.length})`} 
+                    id="tab-3" 
+                    aria-controls="tabpanel-3" 
                   />
                 </Tabs>
               </Box>
@@ -363,6 +454,61 @@ const DetalleSubprograma = () => {
                     </List>
                   )}
                 </Paper>
+              </TabPanel>
+              
+              {/* Pestaña de Pasos */}
+              <TabPanel value={tabValue} index={3}>
+                {isCreatingPaso ? (
+                  <Paper sx={{ p: 3 }}>
+                    <PasoFormMultimedia
+                      pasoId={editingPaso ? editingPaso.id : null}
+                      subprogramaId={subprogramaId}
+                      initialData={editingPaso}
+                      onSave={handleSavePaso}
+                      onCancel={handleCancelPaso}
+                    />
+                  </Paper>
+                ) : (
+                  <Paper sx={{ p: 3 }}>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                      <Typography variant="h6">
+                        Secuencia de pasos
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        startIcon={<AddIcon />}
+                        onClick={handleCreatePaso}
+                      >
+                        Añadir paso
+                      </Button>
+                    </Box>
+                    <Divider sx={{ mb: 2 }} />
+                    
+                    {pasos.length === 0 ? (
+                      <Box textAlign="center" py={4}>
+                        <Typography variant="body1" color="text.secondary" paragraph>
+                          No hay pasos definidos para este subprograma.
+                        </Typography>
+                        <Button
+                          variant="outlined"
+                          color="primary"
+                          startIcon={<AddIcon />}
+                          onClick={handleCreatePaso}
+                          sx={{ mt: 1 }}
+                        >
+                          Crear el primer paso
+                        </Button>
+                      </Box>
+                    ) : (
+                      <PasosViewer 
+                        pasos={pasos} 
+                        onEdit={handleEditPaso}
+                        onDelete={handleDeletePaso}
+                      />
+                    )}
+                  </Paper>
+                )}
               </TabPanel>
             </>
           )}

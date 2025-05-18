@@ -5,9 +5,11 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.proyectofisio.domain.model.Ejercicio;
 import com.proyectofisio.domain.model.Subprograma;
+import com.proyectofisio.domain.model.PasoSubprograma;
 import com.proyectofisio.infrastructure.adapters.output.persistence.entity.ProgramaPersonalizadoEntity;
 import com.proyectofisio.infrastructure.adapters.output.persistence.entity.SubprogramaEntity;
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.ProgramaPersonalizadoRepository;
@@ -19,7 +21,10 @@ import lombok.RequiredArgsConstructor;
 public class SubprogramaMapper {
     
     private final ProgramaPersonalizadoRepository programaPersonalizadoRepository;
-    private final EjercicioMapper ejercicioMapper;
+    @Autowired
+    private EjercicioMapper ejercicioMapper;
+    @Autowired
+    private PasoSubprogramaMapper pasoSubprogramaMapper;
     
     public Subprograma toModel(SubprogramaEntity entity) {
         if (entity == null) {
@@ -34,6 +39,14 @@ public class SubprogramaMapper {
                 .collect(Collectors.toList());
         }
         
+        List<PasoSubprograma> pasos = List.of();
+        if (entity.getPasos() != null) {
+            pasos = entity.getPasos().stream()
+                .sorted(Comparator.comparing(p -> p.getNumeroPaso()))
+                .map(pasoSubprogramaMapper::toModel)
+                .collect(Collectors.toList());
+        }
+        
         return Subprograma.builder()
             .id(entity.getId())
             .nombre(entity.getNombre())
@@ -41,10 +54,10 @@ public class SubprogramaMapper {
             .orden(entity.getOrden())
             .videoReferencia(entity.getVideoReferencia())
             .esEnlaceExterno(entity.getEsEnlaceExterno())
-            .imagenesUrls(entity.getImagenesUrls())
             .programaPersonalizadoId(entity.getProgramaPersonalizado() != null ? 
                 entity.getProgramaPersonalizado().getId() : null)
             .ejercicios(ejercicios)
+            .pasos(pasos)
             .fechaCreacion(entity.getFechaCreacion())
             .fechaActualizacion(entity.getFechaActualizacion())
             .build();
@@ -68,7 +81,6 @@ public class SubprogramaMapper {
             .orden(model.getOrden())
             .videoReferencia(model.getVideoReferencia())
             .esEnlaceExterno(model.getEsEnlaceExterno())
-            .imagenesUrls(model.getImagenesUrls())
             .programaPersonalizado(programaEntity)
             .fechaCreacion(model.getFechaCreacion())
             .fechaActualizacion(model.getFechaActualizacion())

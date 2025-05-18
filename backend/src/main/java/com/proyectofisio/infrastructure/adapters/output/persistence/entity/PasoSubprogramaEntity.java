@@ -7,7 +7,6 @@ import java.util.List;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
@@ -16,7 +15,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,25 +22,22 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "subprogramas")
+@Table(name = "pasos_subprograma")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SubprogramaEntity {
+public class PasoSubprogramaEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(nullable = false)
-    private String nombre;
+    @Column(name = "numero_paso", nullable = false)
+    private Integer numeroPaso;
     
     @Column(columnDefinition = "TEXT")
     private String descripcion;
-    
-    @Column(nullable = false)
-    private Integer orden;
     
     @Column(name = "video_referencia")
     private String videoReferencia;
@@ -50,21 +45,13 @@ public class SubprogramaEntity {
     @Column(name = "es_enlace_externo")
     private Boolean esEnlaceExterno;
     
-    @OneToMany(mappedBy = "subprograma", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<PasoSubprogramaEntity> pasos = new ArrayList<>();
+    @ElementCollection
+    @Column(name = "imagen_url")
+    private List<String> imagenesUrls = new ArrayList<>();
     
     @ManyToOne
-    @JoinColumn(name = "programa_personalizado_id", nullable = false)
-    private ProgramaPersonalizadoEntity programaPersonalizado;
-    
-    @OneToMany(mappedBy = "subprograma", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<SubprogramaEjercicioEntity> subprogramaEjercicios = new ArrayList<>();
-    
-    @OneToMany(mappedBy = "subprograma", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<ComentarioPacienteEntity> comentariosPaciente = new ArrayList<>();
+    @JoinColumn(name = "subprograma_id", nullable = false)
+    private SubprogramaEntity subprograma;
     
     @CreationTimestamp
     @Column(name = "fecha_creacion", updatable = false)

@@ -8,6 +8,7 @@ import com.proyectofisio.domain.model.ComentarioPaciente;
 import com.proyectofisio.domain.model.Ejercicio;
 import com.proyectofisio.domain.model.ProgramaPersonalizado;
 import com.proyectofisio.domain.model.Subprograma;
+import com.proyectofisio.domain.model.PasoSubprograma;
 
 public interface ProgramaPersonalizadoServicePort {
     
@@ -87,4 +88,11 @@ public interface ProgramaPersonalizadoServicePort {
     List<ComentarioPaciente> getComentariosNoLeidos();
     
     long getCountComentariosNoLeidos();
+    
+    // Métodos para gestionar pasos de subprograma
+    PasoSubprograma crearPasoSubprograma(PasoSubprograma paso);
+    PasoSubprograma getPasoSubprogramaById(Long id);
+    List<PasoSubprograma> getPasosBySubprogramaId(Long subprogramaId);
+    PasoSubprograma updatePasoSubprograma(Long id, PasoSubprograma paso);
+    void deletePasoSubprograma(Long id);
 } 

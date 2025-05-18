@@ -16,19 +16,23 @@ import com.proyectofisio.domain.model.ComentarioPaciente;
 import com.proyectofisio.domain.model.Ejercicio;
 import com.proyectofisio.domain.model.ProgramaPersonalizado;
 import com.proyectofisio.domain.model.Subprograma;
+import com.proyectofisio.domain.model.PasoSubprograma;
 import com.proyectofisio.infrastructure.adapters.output.persistence.entity.EjercicioEntity;
 import com.proyectofisio.infrastructure.adapters.output.persistence.entity.SubprogramaEjercicioEntity;
+import com.proyectofisio.infrastructure.adapters.output.persistence.entity.PasoSubprogramaEntity;
 import com.proyectofisio.infrastructure.adapters.output.persistence.mapper.AccessTokenMapper;
 import com.proyectofisio.infrastructure.adapters.output.persistence.mapper.ComentarioPacienteMapper;
 import com.proyectofisio.infrastructure.adapters.output.persistence.mapper.EjercicioMapper;
 import com.proyectofisio.infrastructure.adapters.output.persistence.mapper.ProgramaPersonalizadoMapper;
 import com.proyectofisio.infrastructure.adapters.output.persistence.mapper.SubprogramaMapper;
+import com.proyectofisio.infrastructure.adapters.output.persistence.mapper.PasoSubprogramaMapper;
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.AccessTokenRepository;
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.ComentarioPacienteRepository;
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.EjercicioRepository;
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.ProgramaPersonalizadoRepository;
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.SubprogramaRepository;
 import com.proyectofisio.infrastructure.adapters.output.persistence.repository.SubprogramaEjercicioRepository;
+import com.proyectofisio.infrastructure.adapters.output.persistence.repository.PasoSubprogramaRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -42,12 +46,14 @@ public class ProgramaPersonalizadoService implements ProgramaPersonalizadoServic
     private final AccessTokenRepository accessTokenRepository;
     private final ComentarioPacienteRepository comentarioRepository;
     private final SubprogramaEjercicioRepository subprogramaEjercicioRepository;
+    private final PasoSubprogramaRepository pasoSubprogramaRepository;
     
     private final ProgramaPersonalizadoMapper programaMapper;
     private final SubprogramaMapper subprogramaMapper;
     private final EjercicioMapper ejercicioMapper;
     private final AccessTokenMapper accessTokenMapper;
     private final ComentarioPacienteMapper comentarioMapper;
+    private final PasoSubprogramaMapper pasoSubprogramaMapper;
     
     // Implementación de métodos para programas personalizados
     
@@ -475,5 +481,89 @@ public class ProgramaPersonalizadoService implements ProgramaPersonalizadoServic
     @Override
     public long getCountComentariosNoLeidos() {
         return comentarioRepository.countByLeidoFalse();
+    }
+    
+    // Implementación de métodos para pasos de subprograma
+    @Override
+    @Transactional
+    public PasoSubprograma crearPasoSubprograma(PasoSubprograma paso) {
+        // Verificar que el subprograma existe
+        if (!subprogramaRepository.existsById(paso.getSubprogramaId())) {
+            throw new IllegalArgumentException("Subprograma no encontrado con id: " + paso.getSubprogramaId());
+        }
+        
+        // Obtener el último número de paso para este subprograma y asignar el siguiente
+        Integer ultimoNumeroPaso = pasoSubprogramaRepository.findMaxNumeroPasoBySubprogramaId(paso.getSubprogramaId());
+        int nuevoPaso = (ultimoNumeroPaso != null) ? ultimoNumeroPaso + 1 : 1;
+        paso.setNumeroPaso(nuevoPaso);
+        
+        var entity = pasoSubprogramaMapper.toEntity(paso);
+        var savedEntity = pasoSubprogramaRepository.save(entity);
+        return pasoSubprogramaMapper.toModel(savedEntity);
+    }
+    
+    @Override
+    public PasoSubprograma getPasoSubprogramaById(Long id) {
+        var entity = pasoSubprogramaRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Paso no encontrado con id: " + id));
+        return pasoSubprogramaMapper.toModel(entity);
+    }
+    
+    @Override
+    public List<PasoSubprograma> getPasosBySubprogramaId(Long subprogramaId) {
+        var entities = pasoSubprogramaRepository.findBySubprogramaIdOrderByNumeroPasoAsc(subprogramaId);
+        return pasoSubprogramaMapper.toModelList(entities);
+    }
+    
+    @Override
+    @Transactional
+    public PasoSubprograma updatePasoSubprograma(Long id, PasoSubprograma paso) {
+        var existingEntity = pasoSubprogramaRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Paso no encontrado con id: " + id));
+        
+        // Actualizar campos
+        existingEntity.setDescripcion(paso.getDescripcion());
+        
+        if (paso.getVideoReferencia() != null) {
+            existingEntity.setVideoReferencia(paso.getVideoReferencia());
+        }
+        
+        if (paso.getEsEnlaceExterno() != null) {
+            existingEntity.setEsEnlaceExterno(paso.getEsEnlaceExterno());
+        }
+        
+        if (paso.getImagenesUrls() != null) {
+            existingEntity.setImagenesUrls(paso.getImagenesUrls());
+        }
+        
+        var updatedEntity = pasoSubprogramaRepository.save(existingEntity);
+        return pasoSubprogramaMapper.toModel(updatedEntity);
+    }
+    
+    @Override
+    @Transactional
+    public void deletePasoSubprograma(Long id) {
+        if (!pasoSubprogramaRepository.existsById(id)) {
+            throw new IllegalArgumentException("Paso no encontrado con id: " + id);
+        }
+        
+        // Obtener el paso actual para conocer su subprograma y número
+        var pasoEntity = pasoSubprogramaRepository.findById(id).orElseThrow();
+        Long subprogramaId = pasoEntity.getSubprograma().getId();
+        int numeroPasoEliminado = pasoEntity.getNumeroPaso();
+        
+        // Eliminar el paso
+        pasoSubprogramaRepository.deleteById(id);
+        
+        // Reordenar los pasos restantes
+        var pasosRestantes = pasoSubprogramaRepository.findBySubprogramaIdOrderByNumeroPasoAsc(subprogramaId);
+        int nuevoOrden = 1;
+        
+        for (var paso : pasosRestantes) {
+            if (paso.getNumeroPaso() > numeroPasoEliminado) {
+                paso.setNumeroPaso(nuevoOrden++);
+                pasoSubprogramaRepository.save(paso);
+            }
+        }
     }
 } 

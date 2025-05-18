@@ -12,16 +12,14 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Subprograma {
+public class PasoSubprograma {
     private Long id;
-    private String nombre;
+    private Integer numeroPaso;
     private String descripcion;
-    private Integer orden;
-    private Long programaPersonalizadoId;
-    private List<Ejercicio> ejercicios;
     private String videoReferencia;
     private Boolean esEnlaceExterno;
+    private List<String> imagenesUrls;
+    private Long subprogramaId;
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaActualizacion;
-    private List<PasoSubprograma> pasos;
 } 

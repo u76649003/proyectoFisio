@@ -52,6 +52,9 @@ import org.springframework.beans.factory.annotation.Value;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import com.proyectofisio.domain.model.PasoSubprograma;
+import com.proyectofisio.infrastructure.adapters.input.rest.dto.PasoSubprogramaRequest;
+
 @RestController
 @RequestMapping("/api/programas-personalizados")
 @RequiredArgsConstructor
@@ -265,7 +268,6 @@ public class ProgramaPersonalizadoController {
                 .orden(request.getOrden())
                 .videoReferencia(request.getVideoReferencia())
                 .esEnlaceExterno(request.getEsEnlaceExterno())
-                .imagenesUrls(request.getImagenesUrls())
                 .programaPersonalizadoId(programaId)
                 .build();
         
@@ -334,7 +336,6 @@ public class ProgramaPersonalizadoController {
                 .orden(request.getOrden())
                 .videoReferencia(request.getVideoReferencia())
                 .esEnlaceExterno(request.getEsEnlaceExterno())
-                .imagenesUrls(request.getImagenesUrls())
                 .programaPersonalizadoId(existingSubprograma.getProgramaPersonalizadoId())
                 .build();
         
@@ -371,7 +372,6 @@ public class ProgramaPersonalizadoController {
                     .orden(existingSubprograma.getOrden())
                     .videoReferencia(videoUrl)
                     .esEnlaceExterno(false)
-                    .imagenesUrls(existingSubprograma.getImagenesUrls())
                     .programaPersonalizadoId(existingSubprograma.getProgramaPersonalizadoId())
                     .build();
             
@@ -385,54 +385,6 @@ public class ProgramaPersonalizadoController {
             log.error("Error al subir video: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new MessageResponse("Error al subir video: " + e.getMessage()));
-        }
-    }
-    
-    // Endpoint para subir imágenes de un subprograma
-    @PostMapping(value = "/subprogramas/{id}/imagenes", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
-    public ResponseEntity<?> uploadSubprogramaImagenes(
-            @PathVariable Long id,
-            @RequestParam("imagenes") List<MultipartFile> imagenesFiles) {
-        
-        try {
-            // Obtener el subprograma existente
-            Subprograma existingSubprograma = programaService.getSubprogramaById(id);
-            
-            // Lista para almacenar las URLs de las imágenes
-            List<String> imagenesUrls = new ArrayList<>();
-            
-            // Si ya hay imágenes, mantenerlas
-            if (existingSubprograma.getImagenesUrls() != null) {
-                imagenesUrls.addAll(existingSubprograma.getImagenesUrls());
-            }
-            
-            // Guardar cada imagen y añadir su URL
-            for (MultipartFile imagenFile : imagenesFiles) {
-                String imagenUrl = guardarMultimedia(imagenFile, "imagenes");
-                imagenesUrls.add(imagenUrl);
-            }
-            
-            // Actualizar el subprograma con las URLs de las imágenes
-            Subprograma subprogramaToUpdate = Subprograma.builder()
-                    .id(id)
-                    .nombre(existingSubprograma.getNombre())
-                    .descripcion(existingSubprograma.getDescripcion())
-                    .orden(existingSubprograma.getOrden())
-                    .videoReferencia(existingSubprograma.getVideoReferencia())
-                    .esEnlaceExterno(existingSubprograma.getEsEnlaceExterno())
-                    .imagenesUrls(imagenesUrls)
-                    .programaPersonalizadoId(existingSubprograma.getProgramaPersonalizadoId())
-                    .build();
-            
-            programaService.updateSubprograma(id, subprogramaToUpdate);
-            
-            return ResponseEntity.ok(imagenesUrls);
-            
-        } catch (Exception e) {
-            log.error("Error al subir imágenes: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new MessageResponse("Error al subir imágenes: " + e.getMessage()));
         }
     }
     
@@ -671,5 +623,263 @@ public class ProgramaPersonalizadoController {
         }
         
         return ResponseEntity.ok(subprograma);
+    }
+
+    // Endpoints para la gestión de pasos de subprograma
+
+    @PostMapping("/subprogramas/{subprogramaId}/pasos")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
+    public ResponseEntity<PasoSubprograma> crearPasoSubprograma(
+            @PathVariable Long subprogramaId,
+            @RequestBody PasoSubprogramaRequest request) {
+        
+        // Obtener el usuario autenticado
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        
+        // Obtener usuario por email
+        Usuario usuario = usuarioService.obtenerUsuarioPorEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con email: " + email));
+        
+        Long empresaId = usuario.getEmpresaId();
+        
+        // Obtener el subprograma
+        Subprograma subprograma = programaService.getSubprogramaById(subprogramaId);
+        
+        // Obtener el programa al que pertenece el subprograma
+        ProgramaPersonalizado programa = programaService.getProgramaPersonalizadoById(subprograma.getProgramaPersonalizadoId());
+        
+        // Verificar que el programa pertenece a la empresa del usuario
+        if (!programa.getEmpresaId().equals(empresaId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(null);
+        }
+        
+        PasoSubprograma paso = PasoSubprograma.builder()
+                .descripcion(request.getDescripcion())
+                .videoReferencia(request.getVideoReferencia())
+                .esEnlaceExterno(request.getEsEnlaceExterno())
+                .subprogramaId(subprogramaId)
+                .build();
+        
+        return ResponseEntity.status(HttpStatus.CREATED).body(programaService.crearPasoSubprograma(paso));
+    }
+
+    @GetMapping("/subprogramas/{subprogramaId}/pasos")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
+    public ResponseEntity<List<PasoSubprograma>> getPasosBySubprogramaId(@PathVariable Long subprogramaId) {
+        // Obtener el usuario autenticado
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        
+        // Obtener usuario por email
+        Usuario usuario = usuarioService.obtenerUsuarioPorEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con email: " + email));
+        
+        Long empresaId = usuario.getEmpresaId();
+        
+        // Obtener el subprograma
+        Subprograma subprograma = programaService.getSubprogramaById(subprogramaId);
+        
+        // Obtener el programa al que pertenece el subprograma
+        ProgramaPersonalizado programa = programaService.getProgramaPersonalizadoById(subprograma.getProgramaPersonalizadoId());
+        
+        // Verificar que el programa pertenece a la empresa del usuario
+        if (!programa.getEmpresaId().equals(empresaId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(null);
+        }
+        
+        return ResponseEntity.ok(programaService.getPasosBySubprogramaId(subprogramaId));
+    }
+
+    @GetMapping("/subprogramas/pasos/{id}")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
+    public ResponseEntity<PasoSubprograma> getPasoById(@PathVariable Long id) {
+        // Obtener el usuario autenticado
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        
+        // Obtener usuario por email
+        Usuario usuario = usuarioService.obtenerUsuarioPorEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con email: " + email));
+        
+        Long empresaId = usuario.getEmpresaId();
+        
+        // Obtener el paso
+        PasoSubprograma paso = programaService.getPasoSubprogramaById(id);
+        
+        // Obtener el subprograma
+        Subprograma subprograma = programaService.getSubprogramaById(paso.getSubprogramaId());
+        
+        // Obtener el programa al que pertenece el subprograma
+        ProgramaPersonalizado programa = programaService.getProgramaPersonalizadoById(subprograma.getProgramaPersonalizadoId());
+        
+        // Verificar que el programa pertenece a la empresa del usuario
+        if (!programa.getEmpresaId().equals(empresaId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(null);
+        }
+        
+        return ResponseEntity.ok(paso);
+    }
+
+    @PutMapping("/subprogramas/pasos/{id}")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
+    public ResponseEntity<PasoSubprograma> updatePaso(
+            @PathVariable Long id,
+            @RequestBody PasoSubprogramaRequest request) {
+        
+        // Obtener el usuario autenticado
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        
+        // Obtener usuario por email
+        Usuario usuario = usuarioService.obtenerUsuarioPorEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con email: " + email));
+        
+        Long empresaId = usuario.getEmpresaId();
+        
+        // Obtener el paso existente
+        PasoSubprograma existingPaso = programaService.getPasoSubprogramaById(id);
+        
+        // Obtener el subprograma
+        Subprograma subprograma = programaService.getSubprogramaById(existingPaso.getSubprogramaId());
+        
+        // Obtener el programa al que pertenece el subprograma
+        ProgramaPersonalizado programa = programaService.getProgramaPersonalizadoById(subprograma.getProgramaPersonalizadoId());
+        
+        // Verificar que el programa pertenece a la empresa del usuario
+        if (!programa.getEmpresaId().equals(empresaId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(null);
+        }
+        
+        PasoSubprograma pasoToUpdate = PasoSubprograma.builder()
+                .id(id)
+                .numeroPaso(existingPaso.getNumeroPaso())
+                .descripcion(request.getDescripcion())
+                .videoReferencia(request.getVideoReferencia())
+                .esEnlaceExterno(request.getEsEnlaceExterno())
+                .subprogramaId(existingPaso.getSubprogramaId())
+                .build();
+        
+        return ResponseEntity.ok(programaService.updatePasoSubprograma(id, pasoToUpdate));
+    }
+
+    @DeleteMapping("/subprogramas/pasos/{id}")
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
+    public ResponseEntity<Void> deletePaso(@PathVariable Long id) {
+        // Obtener el usuario autenticado
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        
+        // Obtener usuario por email
+        Usuario usuario = usuarioService.obtenerUsuarioPorEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con email: " + email));
+        
+        Long empresaId = usuario.getEmpresaId();
+        
+        // Obtener el paso
+        PasoSubprograma paso = programaService.getPasoSubprogramaById(id);
+        
+        // Obtener el subprograma
+        Subprograma subprograma = programaService.getSubprogramaById(paso.getSubprogramaId());
+        
+        // Obtener el programa al que pertenece el subprograma
+        ProgramaPersonalizado programa = programaService.getProgramaPersonalizadoById(subprograma.getProgramaPersonalizadoId());
+        
+        // Verificar que el programa pertenece a la empresa del usuario
+        if (!programa.getEmpresaId().equals(empresaId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .build();
+        }
+        
+        programaService.deletePasoSubprograma(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Endpoint para subir video de un paso
+    @PostMapping(value = "/subprogramas/pasos/{id}/video", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
+    public ResponseEntity<?> uploadPasoVideo(
+            @PathVariable Long id,
+            @RequestParam("video") MultipartFile videoFile) {
+        
+        try {
+            // Obtener el paso existente
+            PasoSubprograma existingPaso = programaService.getPasoSubprogramaById(id);
+            
+            // Guardar video en el servidor y obtener URL
+            String videoUrl = guardarMultimedia(videoFile, "videos");
+            
+            // Actualizar el paso con la URL del video
+            PasoSubprograma pasoToUpdate = PasoSubprograma.builder()
+                    .id(id)
+                    .numeroPaso(existingPaso.getNumeroPaso())
+                    .descripcion(existingPaso.getDescripcion())
+                    .videoReferencia(videoUrl)
+                    .esEnlaceExterno(false)
+                    .subprogramaId(existingPaso.getSubprogramaId())
+                    .build();
+            
+            programaService.updatePasoSubprograma(id, pasoToUpdate);
+            
+            Map<String, String> response = new HashMap<>();
+            response.put("videoUrl", videoUrl);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("Error al subir video: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse("Error al subir video: " + e.getMessage()));
+        }
+    }
+
+    // Endpoint para subir imágenes de un paso
+    @PostMapping(value = "/subprogramas/pasos/{id}/imagenes", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA')")
+    public ResponseEntity<?> uploadPasoImagenes(
+            @PathVariable Long id,
+            @RequestParam("imagenes") List<MultipartFile> imagenesFiles) {
+        
+        try {
+            // Obtener el paso existente
+            PasoSubprograma existingPaso = programaService.getPasoSubprogramaById(id);
+            
+            // Lista para almacenar las URLs de las imágenes
+            List<String> imagenesUrls = new ArrayList<>();
+            
+            // Si ya hay imágenes, mantenerlas
+            if (existingPaso.getImagenesUrls() != null) {
+                imagenesUrls.addAll(existingPaso.getImagenesUrls());
+            }
+            
+            // Guardar cada imagen y añadir su URL
+            for (MultipartFile imagenFile : imagenesFiles) {
+                String imagenUrl = guardarMultimedia(imagenFile, "imagenes");
+                imagenesUrls.add(imagenUrl);
+            }
+            
+            // Actualizar el paso con las URLs de las imágenes
+            PasoSubprograma pasoToUpdate = PasoSubprograma.builder()
+                    .id(id)
+                    .numeroPaso(existingPaso.getNumeroPaso())
+                    .descripcion(existingPaso.getDescripcion())
+                    .videoReferencia(existingPaso.getVideoReferencia())
+                    .esEnlaceExterno(existingPaso.getEsEnlaceExterno())
+                    .imagenesUrls(imagenesUrls)
+                    .subprogramaId(existingPaso.getSubprogramaId())
+                    .build();
+            
+            programaService.updatePasoSubprograma(id, pasoToUpdate);
+            
+            return ResponseEntity.ok(imagenesUrls);
+            
+        } catch (Exception e) {
+            log.error("Error al subir imágenes: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse("Error al subir imágenes: " + e.getMessage()));
+        }
     }
 } 
