@@ -93,7 +93,9 @@ const DetalleSubprograma = () => {
         }
         
         // Cargar pasos del subprograma
+        console.log("Cargando pasos del subprograma ID:", subprogramaId);
         const pasosData = await programasPersonalizadosService.getPasosBySubprogramaId(subprogramaId);
+        console.log("Pasos cargados:", pasosData);
         setPasos(pasosData);
         
       } catch (err) {
@@ -181,16 +183,47 @@ const DetalleSubprograma = () => {
   };
   
   // Guardar un paso (nuevo o editado)
-  const handleSavePaso = async (paso) => {
+  const handleSavePaso = async (paso, closeAfterSave = true) => {
     try {
       setLoading(true);
+      
+      // Guardar el paso
+      if (editingPaso) {
+        // Actualizar paso existente
+        await programasPersonalizadosService.updatePaso(paso.id, paso);
+      } else {
+        // Crear nuevo paso
+        await programasPersonalizadosService.createPaso(subprogramaId, paso);
+      }
       
       // Recargar los pasos después de guardar
       const pasosData = await programasPersonalizadosService.getPasosBySubprogramaId(subprogramaId);
       setPasos(pasosData);
       
-      setIsCreatingPaso(false);
-      setEditingPaso(null);
+      // Solo cerramos el formulario si se indica explícitamente
+      if (closeAfterSave) {
+        setIsCreatingPaso(false);
+        setEditingPaso(null);
+      } else {
+        // Si estamos editando un paso, mantenemos el estado de edición
+        if (editingPaso) {
+          // No hacemos nada, mantenemos el editingPaso actual
+          console.log("Manteniendo formulario abierto después de actualizar paso:", paso.id);
+        } else {
+          // Si es un paso nuevo, limpiamos el estado
+          setEditingPaso(null);
+        }
+        
+        // Mostrar una notificación más visible y con duración más larga
+        setNotification({
+          open: true,
+          message: editingPaso ? 'Paso actualizado correctamente. Lista de pasos actualizada.' : 'Paso creado correctamente.',
+          severity: 'success',
+          autoHideDuration: 4000
+        });
+        
+        return; // No mostrar la notificación normal
+      }
       
       setNotification({
         open: true,
@@ -290,8 +323,16 @@ const DetalleSubprograma = () => {
               <SubprogramaFormMultimedia
                 subprogramaId={subprogramaId}
                 initialData={subprograma}
+                pasos={pasos}
                 onSave={handleSaveSubprograma}
                 onCancel={handleCancelEdit}
+                onCreatePaso={handleCreatePaso}
+                onEditPaso={handleEditPaso}
+                onDeletePaso={handleDeletePaso}
+                onSavePaso={handleSavePaso}
+                onCancelPaso={handleCancelPaso}
+                isCreatingPaso={isCreatingPaso}
+                editingPaso={editingPaso}
               />
             </Paper>
           ) : (
@@ -305,12 +346,12 @@ const DetalleSubprograma = () => {
                   <Tab label="Información" id="tab-0" aria-controls="tabpanel-0" />
                   <Tab label="Contenido multimedia" id="tab-1" aria-controls="tabpanel-1" />
                   <Tab 
-                    label={`Ejercicios (${ejercicios.length})`} 
+                    label={`Pasos y Ejercicios (${pasos.length + ejercicios.length})`} 
                     id="tab-2" 
                     aria-controls="tabpanel-2" 
                   />
                   <Tab 
-                    label={`Pasos (${pasos.length})`} 
+                    label={`Gestión de Pasos (${pasos.length})`} 
                     id="tab-3" 
                     aria-controls="tabpanel-3" 
                   />
@@ -361,12 +402,55 @@ const DetalleSubprograma = () => {
                 <SubprogramaMultimediaViewer subprograma={subprograma} />
               </TabPanel>
               
-              {/* Pestaña de Ejercicios */}
+              {/* Pestaña de Pasos y Ejercicios */}
               <TabPanel value={tabValue} index={2}>
                 <Paper sx={{ p: 3 }}>
+                  {/* Sección de pasos del ejercicio */}
+                  <Box mb={4}>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                      <Typography variant="h6">
+                        Pasos a seguir {pasos && pasos.length > 0 ? `(${pasos.length})` : ''}
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        startIcon={<AddIcon />}
+                        onClick={handleCreatePaso}
+                      >
+                        Añadir paso
+                      </Button>
+                    </Box>
+                    <Divider sx={{ mb: 2 }} />
+                    
+                    {(!pasos || pasos.length === 0) ? (
+                      <Box textAlign="center" py={3}>
+                        <Typography variant="body1" color="text.secondary" paragraph>
+                          No hay pasos definidos para este subprograma.
+                        </Typography>
+                        <Button
+                          variant="outlined"
+                          color="primary"
+                          startIcon={<AddIcon />}
+                          onClick={handleCreatePaso}
+                        >
+                          Crear el primer paso
+                        </Button>
+                      </Box>
+                    ) : (
+                      <PasosViewer 
+                        pasos={pasos} 
+                        onEdit={handleEditPaso}
+                        onDelete={handleDeletePaso}
+                      />
+                    )}
+                  </Box>
+                  
+                  <Divider sx={{ my: 3 }} />
+                  
+                  {/* Sección de ejercicios */}
                   <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                     <Typography variant="h6">
-                      Ejercicios asignados
+                      Ejercicios asignados {ejercicios && ejercicios.length > 0 ? `(${ejercicios.length})` : ''}
                     </Typography>
                     <Button
                       variant="contained"
@@ -380,7 +464,7 @@ const DetalleSubprograma = () => {
                   <Divider sx={{ mb: 2 }} />
                   
                   {ejercicios.length === 0 ? (
-                    <Box textAlign="center" py={4}>
+                    <Box textAlign="center" py={3}>
                       <Typography variant="body1" color="text.secondary" paragraph>
                         No hay ejercicios asignados a este subprograma.
                       </Typography>
@@ -389,7 +473,6 @@ const DetalleSubprograma = () => {
                         color="primary"
                         startIcon={<AddIcon />}
                         onClick={() => navigate(`/programas-personalizados/subprogramas/${subprogramaId}/agregar-ejercicios`)}
-                        sx={{ mt: 1 }}
                       >
                         Agregar el primer ejercicio
                       </Button>
@@ -456,7 +539,7 @@ const DetalleSubprograma = () => {
                 </Paper>
               </TabPanel>
               
-              {/* Pestaña de Pasos */}
+              {/* Pestaña de Gestión de Pasos */}
               <TabPanel value={tabValue} index={3}>
                 {isCreatingPaso ? (
                   <Paper sx={{ p: 3 }}>
@@ -472,7 +555,7 @@ const DetalleSubprograma = () => {
                   <Paper sx={{ p: 3 }}>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                       <Typography variant="h6">
-                        Secuencia de pasos
+                        Secuencia de pasos {pasos && pasos.length > 0 ? `(${pasos.length})` : ''}
                       </Typography>
                       <Button
                         variant="contained"
@@ -485,7 +568,7 @@ const DetalleSubprograma = () => {
                     </Box>
                     <Divider sx={{ mb: 2 }} />
                     
-                    {pasos.length === 0 ? (
+                    {(!pasos || pasos.length === 0) ? (
                       <Box textAlign="center" py={4}>
                         <Typography variant="body1" color="text.secondary" paragraph>
                           No hay pasos definidos para este subprograma.
@@ -518,7 +601,7 @@ const DetalleSubprograma = () => {
       {/* Notificación */}
       <Snackbar
         open={notification.open}
-        autoHideDuration={2000}
+        autoHideDuration={notification.autoHideDuration || 2000}
         onClose={() => setNotification({ ...notification, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >

@@ -1378,7 +1378,9 @@ const programasPersonalizadosService = {
   // Pasos de subprograma
   getPasosBySubprogramaId: async (subprogramaId) => {
     try {
+      console.log("Solicitando pasos para el subprograma:", subprogramaId);
       const url = `${axiosInstance.defaults.baseURL}/programas-personalizados/subprogramas/${subprogramaId}/pasos`;
+      console.log("URL de consulta:", url);
       
       const response = await axios.get(url, {
         headers: {
@@ -1387,6 +1389,7 @@ const programasPersonalizadosService = {
         }
       });
       
+      console.log("Respuesta del servidor para pasos:", response.data);
       return response.data;
     } catch (error) {
       console.error('Error al obtener pasos:', error);

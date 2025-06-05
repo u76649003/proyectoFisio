@@ -19,19 +19,23 @@ import {
   CardMedia,
   CardContent,
   CardActions,
-  Tooltip
+  Tooltip,
+  Tab,
+  Tabs
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
   Link as LinkIcon,
   Cancel as CancelIcon,
   Delete as DeleteIcon,
+  Movie as MovieIcon,
   Add as AddIcon,
-  Image as ImageIcon,
-  Movie as MovieIcon
+  List as ListIcon
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { programasPersonalizadosService } from '../services/api';
+import PasosViewer from './PasosViewer';
+import PasoFormMultimedia from './PasoFormMultimedia';
 
 // Estilo para la sección de drag & drop
 const UploadZone = styled(Paper)(({ theme, isDragActive }) => ({
@@ -90,44 +94,84 @@ const VideoPreview = ({ url, isExternal, onRemove }) => {
   );
 };
 
-// Componente para vista previa de imágenes
-const ImagePreview = ({ url, onRemove }) => {
+// Componente de panel de pestañas
+const TabPanel = (props) => {
+  const { children, value, index, ...other } = props;
+
   return (
-    <Card sx={{ mb: 2 }}>
-      <CardMedia
-        component="img"
-        height="140"
-        image={url}
-        alt="Imagen del ejercicio"
-      />
-      <CardActions sx={{ justifyContent: 'flex-end', py: 0 }}>
-        <IconButton color="error" onClick={onRemove} size="small">
-          <DeleteIcon fontSize="small" />
-        </IconButton>
-      </CardActions>
-    </Card>
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`tabpanel-${index}`}
+      aria-labelledby={`tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ pt: 2 }}>
+          {children}
+        </Box>
+      )}
+    </div>
   );
 };
 
-const SubprogramaFormMultimedia = ({ subprogramaId, initialData, onSave, onCancel }) => {
+const SubprogramaFormMultimedia = ({ 
+  subprogramaId, 
+  initialData, 
+  pasos: initialPasos = [],
+  onSave,
+  onCancel,
+  onCreatePaso,
+  onEditPaso,
+  onDeletePaso,
+  onSavePaso,
+  onCancelPaso,
+  isCreatingPaso: parentIsCreatingPaso,
+  editingPaso: parentEditingPaso
+}) => {
   const [formData, setFormData] = useState({
     nombre: initialData ? initialData.nombre : '',
     descripcion: initialData ? initialData.descripcion : '',
     orden: initialData ? initialData.orden : (initialData ? initialData.orden : 1),
     videoReferencia: initialData ? initialData.videoReferencia : '',
-    esEnlaceExterno: initialData ? initialData.esEnlaceExterno : false,
-    imagenesUrls: initialData ? initialData.imagenesUrls : []
+    esEnlaceExterno: initialData ? initialData.esEnlaceExterno : false
   });
   
   const [videoType, setVideoType] = useState('none');
   const [videoFile, setVideoFile] = useState(null);
   const [videoUrl, setVideoUrl] = useState('');
-  const [imageFiles, setImageFiles] = useState([]);
-  const [imageUrls, setImageUrls] = useState([]);
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isDragActive, setIsDragActive] = useState(false);
+  const [tabValue, setTabValue] = useState(0);
+  
+  // Estados para gestión de pasos
+  const [pasos, setPasos] = useState(initialPasos);
+  const [isCreatingPaso, setIsCreatingPaso] = useState(parentIsCreatingPaso || false);
+  const [editingPaso, setEditingPaso] = useState(parentEditingPaso || null);
+  const [pasoStatusMessage, setPasoStatusMessage] = useState(null);
+  
+  // Limpiar mensaje de estado después de unos segundos
+  useEffect(() => {
+    if (pasoStatusMessage) {
+      const timer = setTimeout(() => {
+        setPasoStatusMessage(null);
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [pasoStatusMessage]);
+  
+  // Sincronizar estados con props
+  useEffect(() => {
+    if (parentIsCreatingPaso !== undefined) {
+      setIsCreatingPaso(parentIsCreatingPaso);
+    }
+    if (parentEditingPaso !== undefined) {
+      setEditingPaso(parentEditingPaso);
+    }
+  }, [parentIsCreatingPaso, parentEditingPaso]);
   
   // Cargar datos iniciales si se proporcionan
   useEffect(() => {
@@ -137,8 +181,7 @@ const SubprogramaFormMultimedia = ({ subprogramaId, initialData, onSave, onCance
         descripcion: initialData.descripcion || '',
         orden: initialData.orden || 1,
         videoReferencia: initialData.videoReferencia || '',
-        esEnlaceExterno: initialData.esEnlaceExterno || false,
-        imagenesUrls: initialData.imagenesUrls || []
+        esEnlaceExterno: initialData.esEnlaceExterno || false
       });
       
       // Configurar tipo de video
@@ -148,13 +191,42 @@ const SubprogramaFormMultimedia = ({ subprogramaId, initialData, onSave, onCance
           setVideoUrl(initialData.videoReferencia);
         }
       }
-      
-      // Configurar imágenes
-      if (initialData.imagenesUrls && initialData.imagenesUrls.length > 0) {
-        setImageUrls(initialData.imagenesUrls);
-      }
     }
   }, [initialData]);
+
+  // Actualizar pasos cuando cambian
+  useEffect(() => {
+    if (initialPasos && initialPasos.length > 0) {
+      setPasos(initialPasos);
+    }
+  }, [initialPasos]);
+
+  // Cargar pasos del subprograma si existe
+  useEffect(() => {
+    if (subprogramaId) {
+      const cargarPasos = async () => {
+        try {
+          // Si se proporcionaron pasos iniciales, no es necesario cargarlos
+          if (initialPasos && initialPasos.length > 0) {
+            setPasos(initialPasos);
+            return;
+          }
+          
+          const pasosData = await programasPersonalizadosService.getPasosBySubprogramaId(subprogramaId);
+          setPasos(pasosData);
+        } catch (err) {
+          console.error('Error al cargar pasos:', err);
+        }
+      };
+      
+      cargarPasos();
+    }
+  }, [subprogramaId, initialPasos]);
+  
+  // Manejar cambios en las pestañas
+  const handleChangeTab = (event, newValue) => {
+    setTabValue(newValue);
+  };
   
   // Manejar cambios en los campos de texto
   const handleChange = (e) => {
@@ -218,14 +290,6 @@ const SubprogramaFormMultimedia = ({ subprogramaId, initialData, onSave, onCance
     }
   };
   
-  // Manejar carga de imágenes
-  const handleImageUpload = (e) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      setImageFiles([...imageFiles, ...newFiles]);
-    }
-  };
-  
   // Remover video
   const handleRemoveVideo = () => {
     setVideoFile(null);
@@ -236,24 +300,6 @@ const SubprogramaFormMultimedia = ({ subprogramaId, initialData, onSave, onCance
       esEnlaceExterno: false
     });
     setVideoType('none');
-  };
-  
-  // Remover una imagen del array de archivos
-  const handleRemoveImageFile = (index) => {
-    const newFiles = [...imageFiles];
-    newFiles.splice(index, 1);
-    setImageFiles(newFiles);
-  };
-  
-  // Remover una imagen URL existente
-  const handleRemoveImageUrl = (index) => {
-    const newUrls = [...imageUrls];
-    newUrls.splice(index, 1);
-    setImageUrls(newUrls);
-    setFormData({
-      ...formData,
-      imagenesUrls: newUrls
-    });
   };
   
   // Subir video al servidor
@@ -272,21 +318,109 @@ const SubprogramaFormMultimedia = ({ subprogramaId, initialData, onSave, onCance
     }
   };
   
-  // Subir imágenes al servidor
-  const uploadImages = async () => {
-    if (imageFiles.length === 0) return [];
-    
+  // Manejar creación de un nuevo paso
+  const handleCreatePaso = () => {
+    if (onCreatePaso) {
+      onCreatePaso();
+    } else {
+      setIsCreatingPaso(true);
+      setEditingPaso(null);
+    }
+  };
+  
+  // Manejar edición de un paso existente
+  const handleEditPaso = (paso) => {
+    if (onEditPaso) {
+      onEditPaso(paso);
+    } else {
+      setEditingPaso(paso);
+      setIsCreatingPaso(true);
+    }
+  };
+  
+  // Cancelar creación/edición de paso
+  const handleCancelPaso = () => {
+    setPasoStatusMessage(null);
+    if (onCancelPaso) {
+      onCancelPaso();
+    } else {
+      setIsCreatingPaso(false);
+      setEditingPaso(null);
+    }
+  };
+  
+  // Guardar un paso (nuevo o editado)
+  const handleSavePaso = async (paso, closeAfterSave = false) => {
     try {
-      const formData = new FormData();
-      imageFiles.forEach(file => {
-        formData.append('imagenes', file);
-      });
+      setLoading(true);
       
-      const response = await programasPersonalizadosService.uploadSubprogramaImagenes(subprogramaId, formData);
-      return response;
-    } catch (error) {
-      console.error('Error al subir imágenes:', error);
-      throw new Error('Error al subir las imágenes. Inténtalo de nuevo.');
+      if (onSavePaso) {
+        await onSavePaso(paso, closeAfterSave);
+      } else {
+        // Recargar los pasos
+        const pasosData = await programasPersonalizadosService.getPasosBySubprogramaId(subprogramaId);
+        setPasos(pasosData);
+      }
+      
+      // Solo cerramos el formulario si se indica explícitamente
+      if (closeAfterSave) {
+        setIsCreatingPaso(false);
+        setEditingPaso(null);
+        // Mostrar mensaje de éxito
+        setPasoStatusMessage({
+          text: editingPaso ? 'Paso actualizado correctamente' : 'Paso creado correctamente',
+          severity: 'success'
+        });
+      } else {
+        // Limpiar el formulario para crear un nuevo paso
+        setEditingPaso(null);
+        // Mostrar mensaje pero mantener el formulario abierto
+        setPasoStatusMessage({
+          text: editingPaso ? 'Paso actualizado. Puedes seguir editando.' : 'Paso creado. Puedes añadir otro.',
+          severity: 'success'
+        });
+      }
+    } catch (err) {
+      console.error('Error al guardar paso:', err);
+      setError('Error al guardar el paso: ' + (err.message || 'Inténtalo de nuevo.'));
+      setPasoStatusMessage({
+        text: 'Error al guardar el paso',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Eliminar un paso
+  const handleDeletePaso = async (pasoId) => {
+    try {
+      setLoading(true);
+      
+      if (onDeletePaso) {
+        await onDeletePaso(pasoId);
+      } else {
+        await programasPersonalizadosService.deletePaso(pasoId);
+        
+        // Recargar los pasos
+        const pasosData = await programasPersonalizadosService.getPasosBySubprogramaId(subprogramaId);
+        setPasos(pasosData);
+      }
+      
+      // Mostrar mensaje de éxito
+      setPasoStatusMessage({
+        text: 'Paso eliminado correctamente',
+        severity: 'success'
+      });
+    } catch (err) {
+      console.error('Error al eliminar paso:', err);
+      setError('Error al eliminar el paso: ' + (err.message || 'Inténtalo de nuevo.'));
+      setPasoStatusMessage({
+        text: 'Error al eliminar el paso',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -326,16 +460,6 @@ const SubprogramaFormMultimedia = ({ subprogramaId, initialData, onSave, onCance
             esEnlaceExterno: true
           });
         }
-        
-        // 3. Subir imágenes si hay nuevas
-        if (imageFiles.length > 0) {
-          const newImageUrls = await uploadImages();
-          const allImageUrls = [...imageUrls, ...newImageUrls];
-          subprogramaData.imagenesUrls = allImageUrls;
-          await programasPersonalizadosService.updateSubprograma(subprogramaId, {
-            imagenesUrls: allImageUrls
-          });
-        }
       } else {
         // Si es un nuevo subprograma, todo se maneja en el componente padre
         if (videoType === 'external' && videoUrl) {
@@ -357,6 +481,22 @@ const SubprogramaFormMultimedia = ({ subprogramaId, initialData, onSave, onCance
   
   return (
     <Box component="form" onSubmit={handleSubmit} noValidate>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+        <Tabs 
+          value={tabValue} 
+          onChange={handleChangeTab}
+          aria-label="subprograma tabs"
+        >
+          <Tab label="Información básica" id="tab-0" />
+          <Tab 
+            label="Pasos" 
+            id="tab-1" 
+            disabled={!subprogramaId}
+          />
+        </Tabs>
+      </Box>
+      
+      <TabPanel value={tabValue} index={0}>
       {/* Sección de datos básicos */}
       <Typography variant="h6" gutterBottom>
         Información básica
@@ -518,70 +658,79 @@ const SubprogramaFormMultimedia = ({ subprogramaId, initialData, onSave, onCance
           )}
         </Box>
       )}
+      </TabPanel>
       
-      <Divider sx={{ my: 3 }} />
-      
-      {/* Sección de imágenes */}
-      <Box display="flex" justifyContent="space-between" alignItems="center">
+      <TabPanel value={tabValue} index={1}>
+        {!subprogramaId ? (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            Debes guardar el subprograma antes de poder agregar pasos
+          </Alert>
+        ) : isCreatingPaso ? (
+          <Box>
         <Typography variant="h6" gutterBottom>
-          Imágenes de referencia
+              {editingPaso ? 'Editar paso' : 'Nuevo paso'}
+            </Typography>
+            <PasoFormMultimedia
+              pasoId={editingPaso ? editingPaso.id : null}
+              subprogramaId={subprogramaId}
+              initialData={editingPaso}
+              onSave={handleSavePaso}
+              onCancel={handleCancelPaso}
+            />
+          </Box>
+        ) : (
+          <Box>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="h6">
+                Secuencia de pasos {pasos && pasos.length > 0 ? `(${pasos.length})` : ''}
         </Typography>
         <Button
-          variant="outlined"
+                variant="contained"
+                color="primary"
           startIcon={<AddIcon />}
-          component="label"
+                onClick={handleCreatePaso}
           disabled={loading}
         >
-          Añadir imágenes
-          <input
-            type="file"
-            multiple
-            accept="image/*"
-            hidden
-            onChange={handleImageUpload}
-          />
+                Añadir paso
         </Button>
       </Box>
       
-      <Grid container spacing={2} mt={1}>
-        {/* Imágenes ya subidas */}
-        {imageUrls.map((url, index) => (
-          <Grid item xs={12} sm={6} md={4} key={`url-${index}`}>
-            <ImagePreview
-              url={url}
-              onRemove={() => handleRemoveImageUrl(index)}
-            />
-          </Grid>
-        ))}
-        
-        {/* Imágenes seleccionadas pero aún no subidas */}
-        {imageFiles.map((file, index) => (
-          <Grid item xs={12} sm={6} md={4} key={`file-${index}`}>
-            <Card sx={{ mb: 2 }}>
-              <CardMedia
-                component="img"
-                height="140"
-                image={URL.createObjectURL(file)}
-                alt={`Imagen ${index + 1}`}
-              />
-              <CardContent sx={{ py: 1 }}>
-                <Typography variant="caption" noWrap>
-                  {file.name}
+            {pasoStatusMessage && (
+              <Alert 
+                severity={pasoStatusMessage.severity} 
+                sx={{ mb: 2 }}
+                onClose={() => setPasoStatusMessage(null)}
+              >
+                {pasoStatusMessage.text}
+              </Alert>
+            )}
+            
+            {(!pasos || pasos.length === 0) ? (
+              <Box textAlign="center" py={4}>
+                <ListIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="body1" color="text.secondary" paragraph>
+                  No hay pasos definidos para este subprograma.
                 </Typography>
-              </CardContent>
-              <CardActions sx={{ justifyContent: 'flex-end', py: 0 }}>
-                <IconButton
-                  color="error"
-                  onClick={() => handleRemoveImageFile(index)}
-                  size="small"
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={handleCreatePaso}
+                  disabled={loading}
                 >
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </CardActions>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+                  Crear el primer paso
+                </Button>
+              </Box>
+            ) : (
+              <PasosViewer 
+                pasos={pasos} 
+                onEdit={handleEditPaso}
+                onDelete={handleDeletePaso}
+              />
+            )}
+          </Box>
+        )}
+      </TabPanel>
       
       {error && (
         <Alert severity="error" sx={{ mt: 2 }}>

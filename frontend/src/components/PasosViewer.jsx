@@ -104,6 +104,21 @@ const PasosViewer = ({ pasos = [], onEdit, onDelete }) => {
     return url;
   };
   
+  // Obtener URL completa para archivos multimedia (videos e imágenes)
+  const getFullMediaUrl = (url) => {
+    if (!url) return '';
+    
+    // Si ya es una URL completa (comienza con http), devolverla tal cual
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // Si es una ruta relativa, añadirle la URL base de la API
+    const baseUrl = process.env.REACT_APP_API_URL || 'https://proyectofisio.onrender.com';
+    // Asegurarnos de que la URL no tenga doble barra
+    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+  
   if (!pasos || pasos.length === 0) {
     return (
       <Box py={3} textAlign="center">
@@ -252,7 +267,7 @@ const PasosViewer = ({ pasos = [], onEdit, onDelete }) => {
                     <CardMedia
                       component="video"
                       height={isMobile ? 200 : 400}
-                      image={paso.videoReferencia}
+                      src={getFullMediaUrl(paso.videoReferencia)}
                       controls
                     />
                   )}
@@ -274,7 +289,7 @@ const PasosViewer = ({ pasos = [], onEdit, onDelete }) => {
                         <CardMedia
                           component="img"
                           height="180"
-                          image={url}
+                          image={getFullMediaUrl(url)}
                           alt={`Imagen ${imgIndex + 1}`}
                         />
                         <CardActions sx={{ justifyContent: 'flex-end', py: 0.5 }}>
@@ -282,7 +297,7 @@ const PasosViewer = ({ pasos = [], onEdit, onDelete }) => {
                             <IconButton
                               color="primary"
                               component="a"
-                              href={url}
+                              href={getFullMediaUrl(url)}
                               target="_blank"
                               download
                               size="small"

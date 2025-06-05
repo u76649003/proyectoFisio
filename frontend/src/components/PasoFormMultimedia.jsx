@@ -51,12 +51,27 @@ const UploadZone = styled(Paper)(({ theme, isDragActive }) => ({
 
 // Componente para vista previa de imagen
 const ImagePreview = ({ url, onRemove }) => {
+  // Obtener URL completa para imagen
+  const getFullImageUrl = (url) => {
+    if (!url) return '';
+    
+    // Si ya es una URL completa (comienza con http), devolverla tal cual
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // Si es una ruta relativa, añadirle la URL base de la API
+    const baseUrl = process.env.REACT_APP_API_URL || 'https://proyectofisio.onrender.com';
+    // Asegurarnos de que la URL no tenga doble barra
+    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+  
   return (
     <Card sx={{ mb: 2 }}>
       <CardMedia
         component="img"
         height="140"
-        image={url}
+        image={getFullImageUrl(url)}
         alt="Imagen"
       />
       <CardActions sx={{ justifyContent: 'space-between', py: 0.5 }}>
@@ -64,7 +79,7 @@ const ImagePreview = ({ url, onRemove }) => {
           <IconButton
             color="primary"
             component="a"
-            href={url}
+            href={getFullImageUrl(url)}
             target="_blank"
             download
             size="small"
@@ -88,6 +103,21 @@ const ImagePreview = ({ url, onRemove }) => {
 
 // Componente para vista previa de video
 const VideoPreview = ({ url, onRemove, esEnlaceExterno }) => {
+  // Obtener URL completa para video
+  const getFullVideoUrl = (url) => {
+    if (!url) return '';
+    
+    // Si ya es una URL completa o es un enlace externo, devolverla tal cual
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // Si es una ruta relativa, añadirle la URL base de la API
+    const baseUrl = process.env.REACT_APP_API_URL || 'https://proyectofisio.onrender.com';
+    // Asegurarnos de que la URL no tenga doble barra
+    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+  
   // Adaptar URL de YouTube si es necesario
   const getYouTubeEmbedUrl = (url) => {
     if (!url) return null;
@@ -104,7 +134,7 @@ const VideoPreview = ({ url, onRemove, esEnlaceExterno }) => {
   };
   
   // URL para videos de YouTube o embebidos
-  const embedUrl = esEnlaceExterno ? getYouTubeEmbedUrl(url) : url;
+  const embedUrl = esEnlaceExterno ? getYouTubeEmbedUrl(url) : getFullVideoUrl(url);
   
   return (
     <Card sx={{ mb: 2, maxWidth: '100%' }}>
@@ -120,7 +150,7 @@ const VideoPreview = ({ url, onRemove, esEnlaceExterno }) => {
         <CardMedia
           component="video"
           height="200"
-          src={url}
+          src={embedUrl}
           alt="Video"
           controls
         />
@@ -183,6 +213,22 @@ const PasoFormMultimedia = ({ pasoId, subprogramaId, initialData, onSave, onCanc
       }
     }
   }, [initialData]);
+  
+  // Resetear el formulario para añadir un nuevo paso
+  const resetForm = () => {
+    setFormData({
+      descripcion: '',
+      videoReferencia: '',
+      esEnlaceExterno: false,
+      imagenesUrls: []
+    });
+    setVideoType('none');
+    setVideoFile(null);
+    setVideoUrl('');
+    setImageFiles([]);
+    setImageUrls([]);
+    setError(null);
+  };
   
   // Manejar cambios en los campos de texto
   const handleChange = (e) => {
@@ -319,7 +365,7 @@ const PasoFormMultimedia = ({ pasoId, subprogramaId, initialData, onSave, onCanc
   };
   
   // Manejar envío del formulario
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e, continueEditing = false) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -366,12 +412,14 @@ const PasoFormMultimedia = ({ pasoId, subprogramaId, initialData, onSave, onCanc
         }
         
         // 4. Llamar al callback con los datos actualizados
+        // Pasamos explícitamente si queremos cerrar el formulario o no
+        console.log("Paso actualizado, closeAfterSave=", !continueEditing);
         onSave({
           ...initialData,
           ...pasoData,
           numeroPaso: numeroPaso,
           imagenesUrls: imageFiles.length > 0 ? [...imageUrls, ...(await uploadImages())] : imageUrls
-        });
+        }, !continueEditing);
       } else {
         // Es un nuevo paso
         if (videoType === 'external' && videoUrl) {
@@ -399,7 +447,13 @@ const PasoFormMultimedia = ({ pasoId, subprogramaId, initialData, onSave, onCanc
         }
         
         // 4. Llamar al callback con los datos creados
-        onSave(createdPaso);
+        // Pasamos explícitamente si queremos cerrar el formulario o no, igual que en actualizar
+        onSave(createdPaso, !continueEditing);
+        
+        // 5. Si vamos a continuar añadiendo, resetear el formulario
+        if (continueEditing) {
+          resetForm();
+        }
       }
     } catch (error) {
       console.error('Error al guardar paso:', error);
@@ -407,6 +461,35 @@ const PasoFormMultimedia = ({ pasoId, subprogramaId, initialData, onSave, onCanc
     } finally {
       setLoading(false);
     }
+  };
+  
+  // Manejar actualizar paso sin cerrar formulario
+  const handleUpdatePaso = (e) => {
+    e.preventDefault();
+    
+    // Bloquear formulario durante la carga
+    setLoading(true);
+    
+    // Explícitamente indicamos que queremos mantener el formulario abierto
+    // El valor false para closeAfterSave indica que no debe cerrar el formulario
+    handleSubmit(e, false);
+  };
+  
+  // Manejar crear nuevo paso sin cerrar formulario
+  const handleCreatePaso = (e) => {
+    e.preventDefault();
+    
+    // Bloquear formulario durante la carga
+    setLoading(true);
+    
+    // Explícitamente indicamos que queremos mantener el formulario abierto
+    // El valor false para closeAfterSave indica que no debe cerrar el formulario
+    handleSubmit(e, false);
+  };
+  
+  // Manejar guardar y crear otro paso
+  const handleSaveAndAddAnother = (e) => {
+    handleSubmit(e, true);
   };
   
   return (
@@ -630,8 +713,21 @@ const PasoFormMultimedia = ({ pasoId, subprogramaId, initialData, onSave, onCanc
         >
           Cancelar
         </Button>
+        {!pasoId && (
+          <Button
+            type="button"
+            variant="contained"
+            color="info"
+            onClick={handleSaveAndAddAnother}
+            disabled={loading || !formData.descripcion}
+            startIcon={loading && <CircularProgress size={20} color="inherit" />}
+          >
+            Guardar y añadir otro
+          </Button>
+        )}
         <Button
-          type="submit"
+          type="button"
+          onClick={pasoId ? handleUpdatePaso : handleCreatePaso}
           variant="contained"
           color="primary"
           disabled={loading || !formData.descripcion}
