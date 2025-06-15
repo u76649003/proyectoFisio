@@ -1,14 +1,15 @@
 package com.proyectofisio.infrastructure.config;
 
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.Contact;
+import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.Components;
+import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import io.swagger.v3.oas.models.Components;
-import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.info.Contact;
-import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.security.SecurityRequirement;
-import io.swagger.v3.oas.models.security.SecurityScheme;
 
 @Configuration
 public class OpenApiConfig {
@@ -17,23 +18,29 @@ public class OpenApiConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("FisioAyuda API")
-                        .version("1.0.0")
-                        .description("API RESTful para la gestión de clínicas de fisioterapia")
+                        .title("API de Proyecto Fisio")
+                        .description("API REST para la gestión de clínicas de fisioterapia")
+                        .version("1.0")
                         .contact(new Contact()
-                                .name("FisioAyuda")
-                                .email("info@fisioayuda.com")
-                                .url("https://fisioayuda.com")))
-                .addSecurityItem(new SecurityRequirement().addList("Bearer Authentication"))
+                                .name("Proyecto Fisio")
+                                .email("contacto@proyectofisio.com"))
+                        .license(new License()
+                                .name("Apache 2.0")
+                                .url("http://www.apache.org/licenses/LICENSE-2.0.html")))
+                .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                 .components(new Components()
-                        .addSecuritySchemes("Bearer Authentication", createAPIKeyScheme()));
+                        .addSecuritySchemes("bearerAuth", new SecurityScheme()
+                                .name("bearerAuth")
+                                .type(SecurityScheme.Type.HTTP)
+                                .scheme("bearer")
+                                .bearerFormat("JWT")));
     }
 
-    private SecurityScheme createAPIKeyScheme() {
-        return new SecurityScheme()
-                .name("Authorization")
-                .type(SecurityScheme.Type.HTTP)
-                .scheme("bearer")
-                .bearerFormat("JWT");
+    @Bean
+    public GroupedOpenApi publicApi() {
+        return GroupedOpenApi.builder()
+                .group("public")
+                .packagesToScan("com.proyectofisio.infrastructure.adapters.input.rest")
+                .build();
     }
 } 

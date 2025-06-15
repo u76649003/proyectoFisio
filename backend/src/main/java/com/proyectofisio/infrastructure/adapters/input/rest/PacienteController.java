@@ -7,21 +7,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.proyectofisio.application.ports.input.PacienteServicePort;
 import com.proyectofisio.domain.model.Paciente;
 import com.proyectofisio.infrastructure.adapters.input.rest.docs.PacienteControllerDocs;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+
 @RestController
 @RequestMapping("/api/pacientes")
+@Tag(name = "Pacientes", description = "API para la gestión de pacientes")
+@SecurityRequirement(name = "bearerAuth")
 public class PacienteController implements PacienteControllerDocs {
 
     private final PacienteServicePort pacienteService;
@@ -31,6 +33,11 @@ public class PacienteController implements PacienteControllerDocs {
         this.pacienteService = pacienteService;
     }
 
+    @Operation(summary = "Crear un nuevo paciente", description = "Crea un nuevo paciente en el sistema")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Paciente creado exitosamente"),
+        @ApiResponse(responseCode = "400", description = "Datos del paciente inválidos")
+    })
     @Override
     @PostMapping
     @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
@@ -43,10 +50,16 @@ public class PacienteController implements PacienteControllerDocs {
         }
     }
 
+    @Operation(summary = "Obtener paciente por ID", description = "Obtiene la información de un paciente específico por su ID")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Paciente encontrado"),
+        @ApiResponse(responseCode = "404", description = "Paciente no encontrado")
+    })
     @Override
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('DUENO') or hasAuthority('FISIOTERAPEUTA') or hasAuthority('RECEPCIONISTA')")
-    public ResponseEntity<?> obtenerPacientePorId(@PathVariable Long id) {
+    public ResponseEntity<?> obtenerPacientePorId(
+            @Parameter(description = "ID del paciente", required = true) @PathVariable Long id) {
         return pacienteService.obtenerPacientePorId(id)
                 .map(paciente -> new ResponseEntity<>(paciente, HttpStatus.OK))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));

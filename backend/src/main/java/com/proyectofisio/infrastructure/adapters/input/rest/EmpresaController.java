@@ -39,7 +39,7 @@ public class EmpresaController implements EmpresaControllerDocs {
     @Value("${app.uploads.dir:uploads}")
     private String uploadDir;
     
-    @Value("${app.base.url:http://localhost:8080}")
+    @Value("${app.base.url:http://localhost:8081}")
     private String baseUrl;
 
     @Autowired

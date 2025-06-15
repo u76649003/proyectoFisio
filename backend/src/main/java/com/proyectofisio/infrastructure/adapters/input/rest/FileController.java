@@ -40,7 +40,7 @@ public class FileController implements FileControllerDocs {
     @Value("${app.uploads.dir:uploads}")
     private String uploadDir;
     
-    @Value("${app.base.url:http://localhost:8080}")
+    @Value("${app.base.url:http://localhost:8081}")
     private String baseUrl;
     
     private final EmpresaServicePort empresaService;
