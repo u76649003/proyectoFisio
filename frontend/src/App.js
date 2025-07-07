@@ -204,7 +204,7 @@ const ProtectedRoute = ({ children }) => {
 // Precargar recursos críticos
 const preloadResources = () => {
   // Precargar API usando un endpoint público que no requiera autenticación
-  fetch('https://proyectofisio.onrender.com/api/auth/health-check', { 
+  fetch('http://localhost:8081/api/auth/health-check', { 
     method: 'GET',
     mode: 'cors',
     cache: 'no-store',

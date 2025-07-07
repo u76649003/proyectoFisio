@@ -1,3 +1,21 @@
 {
-    "java.compile.nullAnalysis.mode": "automatic"
+    "java.home": "C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.6.7-hotspot",
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-21",
+            "path": "C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.6.7-hotspot",
+            "default": true
+        }
+    ],
+    "java.debug.settings.hotCodeReplace": "auto",
+    "java.debug.settings.enableRunDebugCodeLens": true,
+    "java.debug.settings.console": "internalConsole",
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.import.gradle.enabled": false,
+    "java.import.maven.enabled": true,
+    "java.maven.downloadSources": true,
+    "java.maven.updateSnapshots": true,
+    "java.server.launchMode": "Standard",
+    "java.debug.settings.onBuildFailureProceed": true
 }

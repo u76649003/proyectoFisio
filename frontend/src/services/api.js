@@ -1,12 +1,23 @@
 import axios from 'axios';
 import config from '../config';
 
+// Debug: Verificar la URL que se está usando
+console.log('🔍 Debug API Configuration:');
+console.log('   - API_URL from config:', config.API_URL);
+console.log('   - NODE_ENV:', process.env.NODE_ENV);
+console.log('   - REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
+
 // Crear instancia de Axios con configuración base
 const axiosInstance = axios.create({
     baseURL: config.API_URL,
     headers: config.DEFAULT_HEADERS,
     timeout: config.API_TIMEOUT
 });
+
+// Debug: Verificar la configuración de axios
+console.log('🔍 Axios Instance Configuration:');
+console.log('   - baseURL:', axiosInstance.defaults.baseURL);
+console.log('   - headers:', axiosInstance.defaults.headers);
 
 // Interceptor para las solicitudes
 axiosInstance.interceptors.request.use(
@@ -973,7 +984,7 @@ const programasPersonalizadosService = {
       const token = localStorage.getItem('token');
       
       // Obtener URL base
-      const baseURL = axiosInstance.defaults.baseURL || 'https://proyectofisio.onrender.com';
+      const baseURL = axiosInstance.defaults.baseURL || 'http://localhost:8081/api';
       
       // La URL no necesita incluir el ID de empresa porque el backend ya filtra
       // por la empresa del usuario autenticado basado en el token JWT

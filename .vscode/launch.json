@@ -1,0 +1,119 @@
+{
+    // Use IntelliSense para saber los atributos posibles.
+    // Mantenga el puntero para ver las descripciones de los existentes atributos.
+    // Para más información, visite: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "🔧 Debug Backend (Spring Boot)",
+            "request": "launch",
+            "mainClass": "com.proyectofisio.BackendApplication",
+            "projectName": "backend",
+            "env": {
+                "SPRING_PROFILES_ACTIVE": "local"
+            },
+            "vmArgs": "-Dspring.profiles.active=local",
+            "noDebug": false,
+            "console": "internalConsole"
+        },
+        {
+            "type": "java",
+            "name": "🔧 Debug Backend (No Debug Mode)",
+            "request": "launch",
+            "mainClass": "com.proyectofisio.BackendApplication",
+            "projectName": "backend",
+            "env": {
+                "SPRING_PROFILES_ACTIVE": "local"
+            },
+            "vmArgs": "-Dspring.profiles.active=local",
+            "noDebug": true,
+            "console": "internalConsole"
+        },
+        {
+            "type": "java",
+            "request": "attach",
+            "name": "🔗 Attach to Backend (Remote Debug)",
+            "hostName": "localhost",
+            "port": 5005
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "🌐 Debug Frontend (React)",
+            "program": "${workspaceFolder}/frontend/node_modules/.bin/react-scripts",
+            "args": ["start"],
+            "cwd": "${workspaceFolder}/frontend",
+            "env": {
+                "BROWSER": "none",
+                "NODE_OPTIONS": "--openssl-legacy-provider"
+            },
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "🌐 Debug Frontend (Chrome)",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/frontend/src",
+            "sourceMapPathOverrides": {
+                "webpack:///src/*": "${webRoot}/*"
+            },
+            "userDataDir": "${workspaceFolder}/.vscode/chrome-debug-profile"
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "🧪 Debug Tests (Frontend)",
+            "program": "${workspaceFolder}/frontend/node_modules/.bin/react-scripts",
+            "args": ["test", "--runInBand", "--no-cache"],
+            "cwd": "${workspaceFolder}/frontend",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen"
+        },
+        {
+            "type": "java",
+            "name": "🧪 Debug Tests (Backend)",
+            "request": "launch",
+            "mainClass": "org.junit.platform.console.ConsoleLauncher",
+            "projectName": "backend",
+            "args": "--class-path target/test-classes --scan-class-path",
+            "vmArgs": "-ea"
+        },
+        {
+            "type": "java",
+            "name": "📁 Debug Current Java File",
+            "request": "launch",
+            "mainClass": "${file}"
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "🔧 Debug Node.js Script",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "🚀 Debug Full Stack (Backend + Frontend)",
+            "configurations": [
+                "🔧 Debug Backend (No Debug Mode)",
+                "🌐 Debug Frontend (React)"
+            ],
+            "stopAll": true
+        },
+        {
+            "name": "🌐 Debug Frontend Complete (React + Chrome)",
+            "configurations": [
+                "🌐 Debug Frontend (React)",
+                "🌐 Debug Frontend (Chrome)"
+            ],
+            "stopAll": true
+        }
+    ]
+}
